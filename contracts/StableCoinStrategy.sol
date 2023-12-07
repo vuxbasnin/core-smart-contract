@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
@@ -31,6 +30,13 @@ contract StableCoinStrategy is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         _cap = cap;
     }
 
+    function initialize(
+        address _owner
+    ) external initializer {
+        __ReentrancyGuard_init();
+        __Ownable_init(_owner);
+    }
+
     function deposit(uint256 amount) external nonReentrant {
         require(amount > 0, "Deposit amount must be greater than zero");
 
@@ -40,11 +46,6 @@ contract StableCoinStrategy is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         totalSupply += shares;
         totalBalance += amount;
-        console.log(
-            "[SMC] - deposit: totalSupply = %d; totalBalance = %d",
-            totalSupply,
-            totalBalance
-        );
         balances[msg.sender] += shares;
 
         emit Deposit(msg.sender, amount, shares);
