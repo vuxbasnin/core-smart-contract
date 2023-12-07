@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
+import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
@@ -9,12 +10,15 @@ import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 contract StableCoinStrategy is OwnableUpgradeable, ReentrancyGuardUpgradeable {
-    address public immutable asset;
-    uint256 private _totalSupply;
-    uint256 private _cap;
-    uint256 private _totalBalance;
-    address private _stakingVendor;
     uint256 constant decimals = 18;
+    uint256 constant singleShare = 10 ** decimals;
+    uint256 internal constant PLACEHOLDER_UINT = 1;
+
+    address public immutable asset;
+    uint256 public totalSupply;
+    uint256 public totalBalance;
+    uint256 private _cap;
+    address private _stakingVendor;
 
     mapping(address => uint256) private balances;
 
@@ -24,42 +28,37 @@ contract StableCoinStrategy is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     constructor(address _asset, uint256 cap) {
         require(_asset != address(0), "Invalid asset address");
         asset = _asset;
-        _totalBalance = 0;
         _cap = cap;
     }
 
     function deposit(uint256 amount) external nonReentrant {
-        require(amount > 0, "Cannot deposit 0");
-        uint256 currentSharePrice = pricePerShare();
-
-        uint256 sharesToMint;
-        if (_totalSupply == 0) {
-            // Initial share price is 1:1
-            sharesToMint = amount;
-        } else {
-            // Calculate the number of shares based on the current share price
-            sharesToMint = (amount * (10 ** decimals)) / currentSharePrice;
-        }
-
-        require(sharesToMint > 0, "Shares must be greater than 0");
-        balances[msg.sender] += sharesToMint;
-        _totalSupply += sharesToMint;
-        _totalBalance += amount;
+        require(amount > 0, "Deposit amount must be greater than zero");
 
         IERC20(asset).transferFrom(msg.sender, address(this), amount);
-        emit Deposit(msg.sender, amount, sharesToMint);
+
+        uint256 shares = assetToShares(amount, pricePerShare());
+
+        totalSupply += shares;
+        totalBalance += amount;
+        console.log(
+            "[SMC] - deposit: totalSupply = %d; totalBalance = %d",
+            totalSupply,
+            totalBalance
+        );
+        balances[msg.sender] += shares;
+
+        emit Deposit(msg.sender, amount, shares);
     }
 
     function withdraw(uint256 amount) external nonReentrant {
-        require(amount > 0, "Cannot withdraw 0");
+        require(amount > 0, "Withdrawal amount must be greater than zero");
+        uint256 currentPricePerShare = pricePerShare();
+        uint256 shares = assetToShares(amount, currentPricePerShare);
+        require(balances[msg.sender] >= shares, "Insufficient balance");
 
-        uint256 sharesToBurn = (amount * (10 ** decimals)) / pricePerShare();
-        require(sharesToBurn > 0, "Insufficient shares");
-        require(balances[msg.sender] >= sharesToBurn, "Insufficient balance");
-        require(_totalBalance >= amount, "Insufficient vault balance");
-
-        balances[msg.sender] -= sharesToBurn;
-        _totalBalance -= amount;
+        totalSupply -= shares;
+        totalBalance -= amount;
+        balances[msg.sender] -= shares;
 
         IERC20(asset).transfer(msg.sender, amount);
 
@@ -67,9 +66,25 @@ contract StableCoinStrategy is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     function pricePerShare() public view returns (uint256) {
-        if (_totalSupply == 0) return 0;
+        if (totalSupply == 0) return singleShare;
+        return (totalBalance * singleShare) / totalSupply;
+    }
 
-        return (_totalBalance * (10 ** decimals)) / _totalSupply;
+    function sharesToAsset(
+        uint256 shares,
+        uint256 assetPerShare
+    ) internal pure returns (uint256) {
+        require(assetPerShare > PLACEHOLDER_UINT, "Invalid assetPerShare");
+
+        return (shares * assetPerShare) / singleShare;
+    }
+
+    function assetToShares(
+        uint256 assetAmount,
+        uint256 assetPerShare
+    ) internal pure returns (uint256) {
+        require(assetPerShare > PLACEHOLDER_UINT, "Invalid assetPerShare");
+        return (assetAmount * singleShare) / assetPerShare;
     }
 
     function rebalance(uint256 amount) external nonReentrant {
@@ -91,8 +106,14 @@ contract StableCoinStrategy is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         //
     }
 
-    function closeRound() external nonReentrant {
+    function closeRound(int256 profitOrLoss) external nonReentrant {
         _checkOwner();
+
+        if (profitOrLoss > 0) {
+            totalBalance += uint256(profitOrLoss);
+        } else {
+            totalBalance -= uint256(-profitOrLoss);
+        }
 
         // update _totalBalance update from Staking, Options
 
@@ -106,13 +127,5 @@ contract StableCoinStrategy is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     function balanceOf(address account) public view returns (uint256) {
         return balances[account];
-    }
-
-    function totalSupply() public view returns (uint256) {
-        return _totalSupply;
-    }
-
-    function totalBalance() public view returns (uint256) {
-        return _totalBalance;
     }
 }
