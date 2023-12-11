@@ -6,20 +6,21 @@ import {
 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../extensions/RockOnyxAccessControl.sol";
 import "../lib/ShareMath.sol";
+import "../interfaces/IPriceFeedProxy.sol";
+import "../interfaces/ISwapProxy.sol";
+import "../interfaces/ILido.sol";
+import "../extensions/RockOnyxAccessControl.sol";
+import "../extensions/RockOnyxSwap.sol";
+import "../oracles/PriceFeedOracle.sol";
 
-interface ILido {
-    function submit() external payable returns (uint256);
-}
-
-contract RockOnyxUSDTStrategy  {
-
+contract RockOnyxUSDTStrategy is RockOnyxAccessControl, PriceFeedOracle, RockOnyxSwap{
     ILido LIDO;
 
     /************************************************
      *  EVENTS
      ***********************************************/
 
-    constructor(address lidoAddress) {
+    constructor(address lidoAddress, address priceFeed, address swapAddress) PriceFeedOracle(priceFeed) RockOnyxSwap(swapAddress){
         LIDO = ILido(lidoAddress);
     }
 
@@ -27,6 +28,14 @@ contract RockOnyxUSDTStrategy  {
      * @notice submit amount to Stake on Lido
      */
     function stakeToVender(uint256 amount) external {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
         LIDO.submit{value: amount}();
+    }
+
+    function swapToEth(uint256 amount) external {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        swapProxy.swap(amount);
     }
 }

@@ -13,7 +13,7 @@ contract PriceFeedOracle {
     }
 
     // Get the latest ETH price
-    function getLatestEthereumPrice() external view returns (int256) {
+    function getLatestEthereumPrice() external view returns (uint256) {
         return priceFeed.getLastEthPrice();
     }
 }

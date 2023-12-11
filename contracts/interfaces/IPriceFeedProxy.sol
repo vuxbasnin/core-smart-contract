@@ -2,5 +2,5 @@
 pragma solidity ^0.8.19;
 
 interface IPriceFeedProxy {
-    function getLastEthPrice() external view returns(int256);
+    function getLastEthPrice() external view returns(uint256);
 }
