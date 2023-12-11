@@ -13,6 +13,6 @@ contract RockOnyxSwap {
     }
 
     function swap(uint256 amount) external returns (uint256) {
-        return swapProxy.Swap(amount);
+        return swapProxy.swap(amount);
     }
 }

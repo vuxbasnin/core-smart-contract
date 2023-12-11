@@ -21,7 +21,7 @@ contract UniswapSwap is ISwapProxy {
         USDT = _usdt;
     }
 
-    function Swap(uint256 amountIn) external returns (uint256 amountOut) {
+    function swap(uint256 amountIn) external returns (uint256 amountOut) {
         TransferHelper.safeApprove(USDT, address(swapRouter), amountIn);
 
         ISwapRouter.ExactInputSingleParams memory params =
