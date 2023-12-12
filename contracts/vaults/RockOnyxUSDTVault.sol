@@ -1,4 +1,4 @@
-    // SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
@@ -6,8 +6,9 @@ import {
 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../extensions/RockOnyxAccessControl.sol";
 import "../lib/ShareMath.sol";
+import "../strategies/RockOnyxStakingStrategy.sol";
 
-contract RockOnyxUSDTVault is RockOnyxAccessControl{
+contract RockOnyxUSDTVault is RockOnyxAccessControl, RockOnyxStakingStrategy{
      using SafeERC20 for IERC20;
      using ShareMath for DepositReceipt;
 
@@ -23,11 +24,12 @@ contract RockOnyxUSDTVault is RockOnyxAccessControl{
     event InitiateWithdraw(address indexed account, uint256 amount, uint256 shares);
     event Withdraw(address indexed account, uint256 amount, uint256 shares);
 
-    constructor(address asset) {
-        vaultParams = VaultParams(18, asset, 1000, 1_000_000);
-        vaultState = VaultState(0, 0);
+    constructor(address asset, address lidoAddress, address priceFeed, address swapAddress) 
+        RockOnyxStakingStrategy(lidoAddress, priceFeed, swapAddress) {
+            vaultParams = VaultParams(18, asset, 1000, 1_000_000);
+            vaultState = VaultState(0, 0);
 
-        _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
+            _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
     }
 
     /**
@@ -44,7 +46,7 @@ contract RockOnyxUSDTVault is RockOnyxAccessControl{
         depositReceipt.shares += shares;
 
         vaultState.totalAssets += amount;
-        vaultState.totalBalance += amount;
+        vaultState.totalBalance += shares;
 
         return shares;
     }
@@ -57,10 +59,10 @@ contract RockOnyxUSDTVault is RockOnyxAccessControl{
         if(vaultState.totalAssets <= 0) 
             return amount;
 
-        return amount / (vaultState.totalAssets / vaultState.totalBalance); 
+        return ShareMath.assetToShares(amount, (vaultState.totalAssets / vaultState.totalBalance), vaultParams.decimals); 
     }
 
-    function deposit(uint256 amount) external {
+    function deposit(uint256 amount) external nonReentrant{
         require(amount > 0, "INVALID_DEPOSIT_AMOUNT");
 
         uint256 shares = _depositFor(amount, msg.sender);
@@ -79,10 +81,9 @@ contract RockOnyxUSDTVault is RockOnyxAccessControl{
      * @notice Initiates a withdrawal that can be processed once the round completes
      * @param numShares is the number of shares to withdraw
      */
-    function _initiateWithdraw(uint256 numShares) internal {
+    function _initiateWithdraw(uint256 numShares) internal nonReentrant{
         DepositReceipt memory depositReceipt = depositReceipts[msg.sender];
 
-        require(numShares > 0, "INVALID_SHARES");
         require(depositReceipt.shares >= numShares, "INVALID_SHARES");
 
         Withdrawal storage withdrawal = withdrawals[msg.sender];
@@ -92,7 +93,7 @@ contract RockOnyxUSDTVault is RockOnyxAccessControl{
     /**
      * @notice Completes a scheduled withdrawal from a past round. Uses finalized pps for the round
      */
-    function completeWithdraw(address withdrawaler) internal {
+    function completeWithdraw(address withdrawaler) internal nonReentrant{
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         Withdrawal storage withdrawal = withdrawals[withdrawaler];

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "../structs/rockOnyxStructs.sol";
+import "../structs/RockOnyxStructs.sol";
 
 library ShareMath {
 
