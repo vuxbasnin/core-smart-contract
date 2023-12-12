@@ -9,8 +9,7 @@ import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 contract StableCoinStrategy is OwnableUpgradeable, ReentrancyGuardUpgradeable {
-    uint256 constant decimals = 18;
-    uint256 constant singleShare = 10 ** decimals;
+    uint256 constant singleShare = 10 ** 18;
     uint256 internal constant PLACEHOLDER_UINT = 1;
 
     address public immutable asset;
