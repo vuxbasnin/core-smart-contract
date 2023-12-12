@@ -22,3 +22,5 @@ contracts/lib/artifacts
 contracts/oracles/artifacts
 contracts/strategies/artifacts
 contracts/structs/artifacts
+package-lock.json
+yarn.lock
