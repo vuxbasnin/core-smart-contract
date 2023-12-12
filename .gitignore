@@ -12,3 +12,13 @@ node_modules
 # solidity-coverage files
 /coverage
 /coverage.json
+contracts/artifacts
+contracts/extensions/artifacts
+contracts/artifacts
+.deps/npm
+contracts/vaults/artifacts
+contracts/interfaces/artifacts
+contracts/lib/artifacts
+contracts/oracles/artifacts
+contracts/strategies/artifacts
+contracts/structs/artifacts
