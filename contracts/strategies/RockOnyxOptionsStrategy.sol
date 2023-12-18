@@ -24,5 +24,5 @@ contract RockOnyxOptiontrategy is RockOnyxAccessControl, ReentrancyGuard{
 
         console.log(amount);
     }
-
+    
 }

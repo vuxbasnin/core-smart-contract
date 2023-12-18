@@ -28,12 +28,11 @@ library ShareMath {
     }
 
     function pricePerShare(
-        uint256 totalSupply,
-        uint256 totalBalance,
+        uint256 totalShares,
+        uint256 totalAssets,
         uint256 decimals
     ) internal pure returns (uint256) {
-        uint256 singleShare = 10**decimals;
         return
-            totalSupply > 0 ? singleShare * totalBalance / totalSupply : singleShare;
+            totalShares > 0 ? totalAssets * (10**decimals) / totalShares : (10**decimals);
     }
 }

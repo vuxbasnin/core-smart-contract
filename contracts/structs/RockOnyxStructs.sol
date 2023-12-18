@@ -9,8 +9,8 @@ struct VaultParams {
 }
 
 struct VaultState {
-    uint256 totalBalance;
     uint256 totalAssets;
+    uint256 totalShares;
 }
 
 struct DepositReceipt {

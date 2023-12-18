@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
+
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
     SafeERC20
 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../extensions/RockOnyxAccessControl.sol";
 import "../lib/ShareMath.sol";
-import "../strategies/RockOnyxStakingStrategy.sol";
+import "../strategies/RockOnyxEthLiquidityStrategy.sol";
 
-contract RockOnyxUSDTVault is RockOnyxAccessControl, RockOnyxStakingStrategy{
+contract RockOnyxUSDTVault is RockOnyxAccessControl, RockOnyxEthLiquidityStrategy{
      using SafeERC20 for IERC20;
      using ShareMath for DepositReceipt;
 
@@ -17,18 +18,18 @@ contract RockOnyxUSDTVault is RockOnyxAccessControl, RockOnyxStakingStrategy{
     VaultParams public vaultParams;
     VaultState public vaultState;
 
-    /************************************************
+    /************************************************    
      *  EVENTS
      ***********************************************/
     event Deposit(address indexed account, uint256 amount, uint256 shares);
     event InitiateWithdraw(address indexed account, uint256 amount, uint256 shares);
     event Withdraw(address indexed account, uint256 amount, uint256 shares);
 
-    constructor(address asset, address lidoAddress, address priceFeed, address swapAddress) 
-        RockOnyxStakingStrategy(lidoAddress, priceFeed, swapAddress) {
-            vaultParams = VaultParams(18, asset, 1000, 1_000_000);
+    constructor(address _asset, address _venderLiquidityProxy, address _swapProxy, address _getPriceAddress, address _usd, address _weth, address _wstEth) 
+        RockOnyxEthLiquidityStrategy(_venderLiquidityProxy, _swapProxy, _getPriceAddress, _usd, _weth, _wstEth) {
+            vaultParams = VaultParams(18, _asset, 1000, 1_000_000);
             vaultState = VaultState(0, 0);
-
+            
             _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
     }
 
@@ -46,20 +47,20 @@ contract RockOnyxUSDTVault is RockOnyxAccessControl, RockOnyxStakingStrategy{
         depositReceipt.shares += shares;
 
         vaultState.totalAssets += amount;
-        vaultState.totalBalance += shares;
+        vaultState.totalShares += shares;
 
         return shares;
     }
 
     /**
      * @notice Mints the vault shares to the creditor
-     * shares = amount / pricePerShare <=> amount / (vaultState.totalAssets / vaultState.totalBalance)
+     * shares = amount / pricePerShare <=> amount / (vaultState.totalAssets / vaultState.totalShares)
      */
     function _issueShares(uint256 amount) view  private returns(uint256) {
         if(vaultState.totalAssets <= 0) 
             return amount;
 
-        return ShareMath.assetToShares(amount, (vaultState.totalAssets / vaultState.totalBalance), vaultParams.decimals); 
+        return ShareMath.assetToShares(amount, (vaultState.totalAssets / vaultState.totalShares), vaultParams.decimals); 
     }
 
     function deposit(uint256 amount) external nonReentrant{
@@ -75,6 +76,24 @@ contract RockOnyxUSDTVault is RockOnyxAccessControl, RockOnyxStakingStrategy{
         );
 
         emit Deposit(msg.sender, amount, shares);
+    }
+
+    /**
+     * @notice Rebalance amount
+     * 60% stake ETH and WSTETH to staking vender
+     * 20% stake USDT to staking vender
+     * 20% to option vender
+     */
+    function rebalance() external nonReentrant {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        uint256 depositToEthLiquidityStrategyAmount = vaultState.totalAssets * 60 / 100;
+        uint256 depositToOptionStrategyAmount = vaultState.totalAssets * 20 / 100;
+        uint256 depositToCashAmount = vaultState.totalAssets * 20 / 100;
+
+        depositToEthLiquidityStrategy(depositToEthLiquidityStrategyAmount);
+        
+        vaultState.totalAssets -= (depositToEthLiquidityStrategyAmount + depositToOptionStrategyAmount + depositToCashAmount);
     }
 
     /**
@@ -107,7 +126,7 @@ contract RockOnyxUSDTVault is RockOnyxAccessControl, RockOnyxStakingStrategy{
         uint256 withdrawAmount =
             ShareMath.sharesToAsset(
                 withdrawal.shares,
-                vaultState.totalAssets / vaultState.totalBalance,
+                vaultState.totalAssets / vaultState.totalShares,
                 vaultParams.decimals
             );
 
