@@ -7,6 +7,7 @@ import "../extensions/RockOnyxAccessControl.sol";
 import "../lib/ShareMath.sol";
 import "../strategies/RockOnyxEthLiquidityStrategy.sol";
 import "../strategies/RockOnyxOptionsStrategy.sol";
+import "hardhat/console.sol";
 
 contract RockOnyxUSDTVault is
     RockOnyxAccessControl,
@@ -37,6 +38,7 @@ contract RockOnyxUSDTVault is
         address _venderLiquidityProxy,
         address _swapProxy,
         address _optionsVendorProxy,
+        address _optionsReceiver,
         address _getPriceAddress,
         address _usd,
         address _weth,
@@ -50,7 +52,7 @@ contract RockOnyxUSDTVault is
             _weth,
             _wstEth
         )
-        RockOnyxOptionStrategy(_optionsVendorProxy)
+        RockOnyxOptionStrategy(_optionsVendorProxy, _optionsReceiver)
     {
         vaultParams = VaultParams(18, _asset, 1000, 1_000_000);
         vaultState = VaultState(0, 0);
@@ -68,7 +70,7 @@ contract RockOnyxUSDTVault is
         address creditor
     ) private returns (uint256) {
         require(
-            vaultState.totalAssets + amount <= vaultParams.cap,
+            vaultState.totalAssets + amount >= vaultParams.cap,
             "EXCEED_CAP"
         );
         require(amount >= vaultParams.minimumSupply, "INVALID_DEPOSIT_AMOUNT");
@@ -128,7 +130,10 @@ contract RockOnyxUSDTVault is
             100;
         uint256 depositToCashAmount = (vaultState.totalAssets * 20) / 100;
 
+        console.log("Handle rebalance, depositToOptionStrategyAmount = %s", depositToOptionStrategyAmount);
+
         depositToEthLiquidityStrategy(depositToEthLiquidityStrategyAmount);
+        depositToOptionsStrategy(depositToOptionStrategyAmount);
 
         vaultState.totalAssets -= (depositToEthLiquidityStrategyAmount +
             depositToOptionStrategyAmount +
@@ -174,5 +179,9 @@ contract RockOnyxUSDTVault is
         depositReceipt.shares -= withdrawal.shares;
 
         IERC20(vaultParams.asset).safeTransfer(msg.sender, withdrawAmount);
+    }
+
+    function balanceOf(address account) public view returns (uint256) {
+        return depositReceipts[account].shares;
     }
 }

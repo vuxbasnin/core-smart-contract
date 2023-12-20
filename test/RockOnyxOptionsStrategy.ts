@@ -74,6 +74,18 @@ describe("RockOnyxUSDTVault", function () {
     console.log("Deployed AEVO contract at address %s", aevoProxyAddress);
   }
 
+  // Helper function for deposit
+  async function deposit(user: Signer, amount: BigNumberish) {
+    const userAddress = await user.getAddress();
+    console.log(
+      `Depositing ${ethers.formatEther(amount)} USDC for ${userAddress}`
+    );
+    await mockUSDC
+      .connect(user)
+      .approve(await rockOnyxUSDTVault.getAddress(), amount);
+    await rockOnyxUSDTVault.connect(user).deposit(amount);
+  }
+
   beforeEach(async function () {
     RockOnyxUSDTVault = await ethers.getContractFactory("RockOnyxUSDTVault");
     [owner, user] = await ethers.getSigners();
@@ -88,6 +100,7 @@ describe("RockOnyxUSDTVault", function () {
       camelotLiquidityAddress,
       camelotSwapAddress,
       aevoProxyAddress,
+      await user.getAddress(),
       "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
       "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
       "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
@@ -99,16 +112,27 @@ describe("RockOnyxUSDTVault", function () {
     // Mint USDC tokens to user
     await mockUSDC.mint(await owner.getAddress(), ethers.parseEther("10000"));
 
-    const userAddress = await owner.getAddress();
-    const amount = 1000;
+    // User1 deposits 1000
+    await deposit(owner, ethers.parseEther("1000"));
+
+    const totalBalance = await rockOnyxUSDTVault.balanceOf(
+      await owner.getAddress()
+    );
     console.log(
-      `Depositing ${ethers.parseEther(amount.toString())} USDC for ${userAddress}`
+      "Number of shares of %s after deposit %s",
+      await owner.getAddress(),
+      ethers.formatEther(totalBalance)
+    );
+
+    // rebalance portfolio
+    await rockOnyxUSDTVault.connect(owner).rebalance();
+
+    const amount = 200;
+    console.log(
+      `Depositing ${ethers.parseEther(amount.toString())} USDC options`
     );
     await rockOnyxUSDTVault
       .connect(owner)
-      .depositToVendor(
-        "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-        ethers.parseEther(amount.toString())
-      );
+      .depositToVendor(ethers.parseEther(amount.toString()));
   });
 });
