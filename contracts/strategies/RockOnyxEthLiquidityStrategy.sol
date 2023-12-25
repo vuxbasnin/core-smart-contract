@@ -90,12 +90,7 @@ contract RockOnyxEthLiquidityStrategy is
             .rebalancePool(usdAmount);
 
         ethLiquidityAsset.totalEth += swapTo(usd, ethUsdAmount, weth, 100);
-        ethLiquidityAsset.totalWstETH += swapTo(
-            usd,
-            wstEthUsdAmount,
-            wstEth,
-            100
-        );
+        ethLiquidityAsset.totalWstETH += swapTo(usd, wstEthUsdAmount, wstEth, 100);
         ethLiquidityAsset.totalUSDT -= usdAmount;
     }
 

@@ -15,9 +15,12 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       forking: {
-        url: "https://mainnet.infura.io/v3/85cde589ce754dafa0a57001c326104d",
-        blockNumber: 14448950,
+        url: "https://arbitrum-mainnet.infura.io/v3/85cde589ce754dafa0a57001c326104d",
+        blockNumber: 162977851
       },
+    },
+    localhost: {
+      url: "http://127.0.0.1:8545"
     },
   },
 };
