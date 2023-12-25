@@ -45,6 +45,11 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         console.log("Handle depositToOptionsStrategy, unAllocatedBalance = %s", unAllocatedBalance);
     }
 
+    function withdrawFromOptionsStrategy(uint256 amount) internal {
+        unAllocatedBalance -= amount;
+        console.log("Handle withdrawFromOptionsStrategy, unAllocatedBalance = %s", unAllocatedBalance);
+    }
+
     /**
      * @notice submit amount to deposit to Vendor
      */
