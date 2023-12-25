@@ -7,12 +7,14 @@ import "../interfaces/ISwapRouter.sol";
 
 contract BaseSwap is ISwapProxy {
     ISwapRouter public immutable swapRouter;
+    uint24 private fee;
 
-    constructor(ISwapRouter _swapRouter) {
+    constructor(ISwapRouter _swapRouter, uint24 _fee) {
         swapRouter = _swapRouter;
+        fee = _fee;
     }
 
-    function swapTo(address recipient, address tokenIn, uint256 amountIn, address tokenOut, uint24 fee) external returns (uint256 amountOut) {
+    function swapTo(address recipient, address tokenIn, uint256 amountIn, address tokenOut) external returns (uint256 amountOut) {
         TransferHelper.safeApprove(tokenIn, address(swapRouter), amountIn);
 
         ISwapRouter.ExactInputSingleParams memory params =

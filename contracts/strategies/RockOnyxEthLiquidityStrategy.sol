@@ -49,22 +49,39 @@ contract RockOnyxEthLiquidityStrategy is RockOnyxAccessControl, ReentrancyGuard{
         ethLiquidityAsset.totalUSDT += _amount;
     }
 
-    function mintPosition(uint256 amount0ToAdd, uint256 amount1ToAdd) external returns (uint tokenId, uint128 liquidity, uint amount0, uint amount1){
+    function mintPosition() external nonReentrant returns (uint tokenId, uint128 liquidity, uint amount0, uint amount1) {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        return venderLiquidity.mintPosition(weth, amount0ToAdd, wstEth, amount1ToAdd);
+        (tokenId, liquidity, amount0, amount1) = venderLiquidity.mintPosition(weth, ethLiquidityAsset.totalEth, wstEth, ethLiquidityAsset.totalWstETH);
+        ethLiquidityAsset.totalEth -= amount0;
+        ethLiquidityAsset.totalWstETH -= amount1;
+
+        return (tokenId, liquidity, amount0, amount1);
     }
 
-    function swapTo(address tokenIn, uint256 amountIn, address tokenOut, uint24 fee) private returns (uint256 amountOut) {
-        return swapProxy.swapTo(address(this), tokenIn, amountIn, tokenOut, fee);
+    function rePosition() external nonReentrant returns (uint tokenId, uint128 liquidity, uint amount0, uint amount1) {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        
+        (tokenId, liquidity, amount0, amount1) = venderLiquidity.mintPosition(weth, ethLiquidityAsset.totalEth, wstEth, ethLiquidityAsset.totalWstETH);
+        ethLiquidityAsset.totalEth -= amount0;
+        ethLiquidityAsset.totalWstETH -= amount1;
+
+        return (tokenId, liquidity, amount0, amount1);
     }
 
-    function rebalancePool(uint256 usdAmount) external {
-        (uint256 ethUsdAmount, uint256 wstEthUsdAmount) = venderLiquidity.rebalancePool(usdAmount);
+    function swapTo(address tokenIn, uint256 amountIn, address tokenOut) private nonReentrant returns (uint256 amountOut) {
+        return swapProxy.swapTo(address(this), tokenIn, amountIn, tokenOut);
+    }
 
-        ethLiquidityAsset.totalEth += swapTo(usd, ethUsdAmount, weth, 100);
-        ethLiquidityAsset.totalWstETH += swapTo(usd, wstEthUsdAmount, wstEth, 100);
-        ethLiquidityAsset.totalUSDT -= usdAmount;
+    function rebalancePool() external nonReentrant{
+        uint256 ethWstEthPrice =  _getEthPrice() / _getWstEthPrice();
+        uint256 ethUsdAmount = ethLiquidityAsset.totalUSDT * ethWstEthPrice;
+        uint256 wstEthUsdAmount = ethLiquidityAsset.totalUSDT - ethUsdAmount;
+
+        ethLiquidityAsset.totalEth += swapTo(usd, ethUsdAmount, weth);
+        ethLiquidityAsset.totalWstETH += swapTo(usd, wstEthUsdAmount, wstEth);
+        ethLiquidityAsset.totalUSDT = 0;
     }
 
     function _getEthPrice() private view returns(uint256){
@@ -76,6 +93,8 @@ contract RockOnyxEthLiquidityStrategy is RockOnyxAccessControl, ReentrancyGuard{
     }
 
     function getTotalAssets() internal view returns (uint256){
-        return ethLiquidityAsset.totalUSDT + ethLiquidityAsset.totalEth * _getEthPrice() + ethLiquidityAsset.totalWstETH * _getWstEthPrice();
+        return ethLiquidityAsset.totalUSDT + 
+                ethLiquidityAsset.totalEth * _getEthPrice() + 
+                ethLiquidityAsset.totalWstETH * _getWstEthPrice();
     }
 }
