@@ -2,9 +2,7 @@
 pragma solidity ^0.8.19;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {
-    SafeERC20
-} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "../extensions/RockOnyxAccessControl.sol";
 import "../lib/ShareMath.sol";
@@ -19,7 +17,10 @@ struct EthLiquidityAsset {
     uint256 totalUSDT;
 }
 
-contract RockOnyxEthLiquidityStrategy is RockOnyxAccessControl, ReentrancyGuard{
+contract RockOnyxEthLiquidityStrategy is
+    RockOnyxAccessControl,
+    ReentrancyGuard
+{
     EthLiquidityAsset private ethLiquidityAsset;
     IVenderLiquidityProxy internal venderLiquidity;
     ISwapProxy internal swapProxy;
@@ -33,14 +34,21 @@ contract RockOnyxEthLiquidityStrategy is RockOnyxAccessControl, ReentrancyGuard{
      *  EVENTS
      ***********************************************/
 
-    constructor(address _venderLiquidityAddress, address _swapAddress, address _getPriceAddress, address _usd, address _weth, address _wstEth) {
+    constructor(
+        address _venderLiquidityAddress,
+        address _swapAddress,
+        address _getPriceAddress,
+        address _usd,
+        address _weth,
+        address _wstEth
+    ) {
         venderLiquidity = IVenderLiquidityProxy(_venderLiquidityAddress);
         swapProxy = ISwapProxy(_swapAddress);
         getPriceProxy = IGetPriceProxy(_getPriceAddress);
         usd = _usd;
         weth = _weth;
         wstEth = _wstEth;
-        ethLiquidityAsset = EthLiquidityAsset(0,0,0);
+        ethLiquidityAsset = EthLiquidityAsset(0, 0, 0);
     }
 
     function depositToEthLiquidityStrategy(uint256 _amount) internal {
@@ -84,11 +92,11 @@ contract RockOnyxEthLiquidityStrategy is RockOnyxAccessControl, ReentrancyGuard{
         ethLiquidityAsset.totalUSDT = 0;
     }
 
-    function _getEthPrice() private view returns(uint256){
+    function _getEthPrice() private view returns (uint256) {
         return getPriceProxy.getEthPrice();
     }
 
-    function _getWstEthPrice() private view returns(uint256){
+    function _getWstEthPrice() private view returns (uint256) {
         return getPriceProxy.getWstEthPrice();
     }
 

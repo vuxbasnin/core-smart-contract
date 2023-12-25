@@ -2,35 +2,62 @@
 pragma solidity ^0.8.19;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {
-    SafeERC20
-} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../extensions/RockOnyxAccessControl.sol";
 import "../lib/ShareMath.sol";
 import "../strategies/RockOnyxEthLiquidityStrategy.sol";
+import "../strategies/RockOnyxOptionsStrategy.sol";
+import "hardhat/console.sol";
 
-contract RockOnyxUSDTVault is RockOnyxAccessControl, RockOnyxEthLiquidityStrategy{
-     using SafeERC20 for IERC20;
-     using ShareMath for DepositReceipt;
+contract RockOnyxUSDTVault is
+    RockOnyxAccessControl,
+    RockOnyxEthLiquidityStrategy,
+    RockOnyxOptionStrategy
+{
+    using SafeERC20 for IERC20;
+    using ShareMath for DepositReceipt;
 
     mapping(address => DepositReceipt) public depositReceipts;
     mapping(address => Withdrawal) public withdrawals;
     VaultParams public vaultParams;
     VaultState public vaultState;
 
-    /************************************************    
+    /************************************************
      *  EVENTS
      ***********************************************/
     event Deposit(address indexed account, uint256 amount, uint256 shares);
-    event InitiateWithdraw(address indexed account, uint256 amount, uint256 shares);
+    event InitiateWithdraw(
+        address indexed account,
+        uint256 amount,
+        uint256 shares
+    );
     event Withdraw(address indexed account, uint256 amount, uint256 shares);
 
-    constructor(address _asset, address _venderLiquidityProxy, address _swapProxy, address _getPriceAddress, address _usd, address _weth, address _wstEth) 
-        RockOnyxEthLiquidityStrategy(_venderLiquidityProxy, _swapProxy, _getPriceAddress, _usd, _weth, _wstEth) {
-            vaultParams = VaultParams(18, _asset, 1000, 1_000_000);
-            vaultState = VaultState(0, 0);
-            
-            _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
+    constructor(
+        address _asset,
+        address _venderLiquidityProxy,
+        address _swapProxy,
+        address _optionsVendorProxy,
+        address _optionsReceiver,
+        address _getPriceAddress,
+        address _usd,
+        address _weth,
+        address _wstEth
+    )
+        RockOnyxEthLiquidityStrategy(
+            _venderLiquidityProxy,
+            _swapProxy,
+            _getPriceAddress,
+            _usd,
+            _weth,
+            _wstEth
+        )
+        RockOnyxOptionStrategy(_optionsVendorProxy, _optionsReceiver)
+    {
+        vaultParams = VaultParams(18, _asset, 1000, 1_000_000);
+        vaultState = VaultState(0, 0);
+
+        _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
     }
 
     /**
@@ -38,8 +65,14 @@ contract RockOnyxUSDTVault is RockOnyxAccessControl, RockOnyxEthLiquidityStrateg
      * @param amount is the amount of `asset` deposited
      * @param creditor is the address to receieve the deposit
      */
-    function _depositFor(uint256 amount, address creditor) private returns (uint256) {
-        require(vaultState.totalAssets + amount <= vaultParams.cap, "EXCEED_CAP");
+    function _depositFor(
+        uint256 amount,
+        address creditor
+    ) private returns (uint256) {
+        require(
+            vaultState.totalAssets + amount >= vaultParams.cap,
+            "EXCEED_CAP"
+        );
         require(amount >= vaultParams.minimumSupply, "INVALID_DEPOSIT_AMOUNT");
 
         uint256 shares = _issueShares(amount);
@@ -56,14 +89,18 @@ contract RockOnyxUSDTVault is RockOnyxAccessControl, RockOnyxEthLiquidityStrateg
      * @notice Mints the vault shares to the creditor
      * shares = amount / pricePerShare <=> amount / (vaultState.totalAssets / vaultState.totalShares)
      */
-    function _issueShares(uint256 amount) view  private returns(uint256) {
-        if(vaultState.totalAssets <= 0) 
-            return amount;
+    function _issueShares(uint256 amount) private view returns (uint256) {
+        if (vaultState.totalAssets <= 0) return amount;
 
-        return ShareMath.assetToShares(amount, (vaultState.totalAssets / vaultState.totalShares), vaultParams.decimals); 
+        return
+            ShareMath.assetToShares(
+                amount,
+                (vaultState.totalAssets / vaultState.totalShares),
+                vaultParams.decimals
+            );
     }
 
-    function deposit(uint256 amount) external nonReentrant{
+    function deposit(uint256 amount) external nonReentrant {
         require(amount > 0, "INVALID_DEPOSIT_AMOUNT");
 
         uint256 shares = _depositFor(amount, msg.sender);
@@ -87,20 +124,27 @@ contract RockOnyxUSDTVault is RockOnyxAccessControl, RockOnyxEthLiquidityStrateg
     function rebalance() external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        uint256 depositToEthLiquidityStrategyAmount = vaultState.totalAssets * 60 / 100;
-        uint256 depositToOptionStrategyAmount = vaultState.totalAssets * 20 / 100;
-        uint256 depositToCashAmount = vaultState.totalAssets * 20 / 100;
+        uint256 depositToEthLiquidityStrategyAmount = (vaultState.totalAssets *
+            60) / 100;
+        uint256 depositToOptionStrategyAmount = (vaultState.totalAssets * 20) /
+            100;
+        uint256 depositToCashAmount = (vaultState.totalAssets * 20) / 100;
+
+        console.log("Handle rebalance, depositToOptionStrategyAmount = %s", depositToOptionStrategyAmount);
 
         depositToEthLiquidityStrategy(depositToEthLiquidityStrategyAmount);
-        
-        vaultState.totalAssets -= (depositToEthLiquidityStrategyAmount + depositToOptionStrategyAmount + depositToCashAmount);
+        depositToOptionsStrategy(depositToOptionStrategyAmount);
+
+        vaultState.totalAssets -= (depositToEthLiquidityStrategyAmount +
+            depositToOptionStrategyAmount +
+            depositToCashAmount);
     }
 
     /**
      * @notice Initiates a withdrawal that can be processed once the round completes
      * @param numShares is the number of shares to withdraw
      */
-    function _initiateWithdraw(uint256 numShares) internal nonReentrant{
+    function _initiateWithdraw(uint256 numShares) internal nonReentrant {
         DepositReceipt memory depositReceipt = depositReceipts[msg.sender];
 
         require(depositReceipt.shares >= numShares, "INVALID_SHARES");
@@ -112,7 +156,7 @@ contract RockOnyxUSDTVault is RockOnyxAccessControl, RockOnyxEthLiquidityStrateg
     /**
      * @notice Completes a scheduled withdrawal from a past round. Uses finalized pps for the round
      */
-    function completeWithdraw(address withdrawaler) internal nonReentrant{
+    function completeWithdraw(address withdrawaler) internal nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         Withdrawal storage withdrawal = withdrawals[withdrawaler];
@@ -123,21 +167,21 @@ contract RockOnyxUSDTVault is RockOnyxAccessControl, RockOnyxEthLiquidityStrateg
         // We leave the round number as non-zero to save on gas for subsequent writes
         withdrawal.shares = 0;
 
-        uint256 withdrawAmount =
-            ShareMath.sharesToAsset(
-                withdrawal.shares,
-                vaultState.totalAssets / vaultState.totalShares,
-                vaultParams.decimals
-            );
+        uint256 withdrawAmount = ShareMath.sharesToAsset(
+            withdrawal.shares,
+            vaultState.totalAssets / vaultState.totalShares,
+            vaultParams.decimals
+        );
 
         emit Withdraw(msg.sender, withdrawAmount, withdrawal.shares);
 
         DepositReceipt memory depositReceipt = depositReceipts[withdrawaler];
         depositReceipt.shares -= withdrawal.shares;
 
-        IERC20(vaultParams.asset).safeTransfer(
-            msg.sender,
-            withdrawAmount
-        );
+        IERC20(vaultParams.asset).safeTransfer(msg.sender, withdrawAmount);
+    }
+
+    function balanceOf(address account) public view returns (uint256) {
+        return depositReceipts[account].shares;
     }
 }
