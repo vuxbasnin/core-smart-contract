@@ -21,11 +21,11 @@ contract BaseGetPrice is IGetPriceProxy {
         return getPriceOf(usdcEthPoolAddress, USDC_DECIMALS, ETH_DECIMALS);
     }
 
-    function getWstEthPrice() external view returns (uint256 price) {
+    function getWstEthPrice() public view returns (uint256 price) {
         return getEthPrice() * getEthWstEthPrice();
     }
 
-    function getEthWstEthPrice() private view returns (uint256 price) {
+    function getEthWstEthPrice() public view returns (uint256 price) {
         return getPriceOf(ethWstEthPoolAddress, ETH_DECIMALS, ETH_DECIMALS);
     }
 
@@ -35,6 +35,6 @@ contract BaseGetPrice is IGetPriceProxy {
     }
 
     function sqrtPriceX96ToPrice(uint160 sqrtPriceX96, uint8 token1Decimals, uint8 token2Decimals) private pure returns(uint256){
-        return sqrtPriceX96 ** 2 * 10 ** (token1Decimals - token2Decimals) /  2 ** 192;
+        return uint256(sqrtPriceX96) ** 2 * 10 ** (token1Decimals - token2Decimals) /  2 ** 192;
     }
 }

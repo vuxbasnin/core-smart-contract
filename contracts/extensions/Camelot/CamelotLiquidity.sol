@@ -18,8 +18,9 @@ import "../../interfaces/IUniswapV3Pool.sol";
     }
     
 contract CamelotLiquidity is IVenderLiquidityProxy, IERC721Receiver, RockOnyxAccessControl, ReentrancyGuard {
-    int24 private MIN_TICK_PERCENTAGE;
-    int24 private MAX_TICK_PERCENTAGE;
+    int24 private LOW_TICK_RANGE;
+    int24 private UP_TICK_RANGE;
+    int24 private tickSpacing = 1;
     uint24 private fee;
     INonfungiblePositionManager private nonfungiblePositionManager;
     
@@ -63,8 +64,8 @@ contract CamelotLiquidity is IVenderLiquidityProxy, IERC721Receiver, RockOnyxAcc
     ) external nonReentrant returns (uint tokenId, uint128 liquidity, uint amount0, uint amount1) {
         (,int24 curTick,,,,,) = IUniswapV3Pool(ethWstEthPoolAddress).slot0();
 
-            int24 lowerTick = curTick - (curTick * MIN_TICK_PERCENTAGE / 100);
-            int24 upperTick = curTick + (curTick * MAX_TICK_PERCENTAGE / 100);
+        int24 lowerTick = curTick - LOW_TICK_RANGE * tickSpacing;
+        int24 upperTick = curTick + UP_TICK_RANGE * tickSpacing;
 
         IERC20(token0).transferFrom(msg.sender, address(this), amount0ToAdd);
         IERC20(token1).transferFrom(msg.sender, address(this), amount1ToAdd);
@@ -140,10 +141,10 @@ contract CamelotLiquidity is IVenderLiquidityProxy, IERC721Receiver, RockOnyxAcc
         (liquidity, amount0, amount1) = nonfungiblePositionManager.increaseLiquidity(params);
     }
 
-    function setTickPercentage(int24 minTick, int24 maxTick) public {
+    function setTickPercentage(int24 lowTickRange, int24 upTickRange) public {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        MIN_TICK_PERCENTAGE = minTick;
-        MAX_TICK_PERCENTAGE = maxTick;
+        LOW_TICK_RANGE = lowTickRange;
+        UP_TICK_RANGE = upTickRange;
     }
 }
