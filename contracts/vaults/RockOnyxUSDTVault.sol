@@ -39,6 +39,7 @@ contract RockOnyxUSDTVault is
         address _swapProxy,
         address _optionsVendorProxy,
         address _optionsReceiver,
+        address _optionsAssetAddress,
         address _getPriceAddress,
         address _usd,
         address _weth,
@@ -52,7 +53,11 @@ contract RockOnyxUSDTVault is
             _weth,
             _wstEth
         )
-        RockOnyxOptionStrategy(_optionsVendorProxy, _optionsReceiver)
+        RockOnyxOptionStrategy(
+            _optionsVendorProxy,
+            _optionsReceiver,
+            _optionsAssetAddress
+        )
     {
         vaultParams = VaultParams(18, _asset, 1000, 1_000_000);
         vaultState = VaultState(0, 0);
@@ -130,7 +135,10 @@ contract RockOnyxUSDTVault is
             100;
         uint256 depositToCashAmount = (vaultState.totalAssets * 20) / 100;
 
-        console.log("Handle rebalance, depositToOptionStrategyAmount = %s", depositToOptionStrategyAmount);
+        console.log(
+            "Handle rebalance, depositToOptionStrategyAmount = %s",
+            depositToOptionStrategyAmount
+        );
 
         depositToEthLiquidityStrategy(depositToEthLiquidityStrategyAmount);
         depositToOptionsStrategy(depositToOptionStrategyAmount);

@@ -7,9 +7,11 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "hardhat/console.sol";
 import "../extensions/RockOnyxAccessControl.sol";
 import "../interfaces/IOptionsVendorProxy.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     address internal vendorAddress;
+    address internal optionsAssetAddress;
     address internal optionsReceiver;
     IOptionsVendorProxy internal optionsVendor;
     uint256 internal allocatedBalance;
@@ -32,12 +34,13 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         uint256 newBalance
     );
 
-    constructor(address _vendorAddress, address _optionsReceiver) {
+    constructor(address _vendorAddress, address _optionsReceiver, address _optionsAssetAddress) {
         vendorAddress = _vendorAddress;
         optionsVendor = IOptionsVendorProxy(vendorAddress);
         allocatedBalance = 0;
         unAllocatedBalance = 0;
         optionsReceiver = _optionsReceiver;
+        optionsAssetAddress = _optionsAssetAddress;
     }
 
     function depositToOptionsStrategy(uint256 amount) internal {
@@ -56,6 +59,10 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     function depositToVendor(uint256 amount) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
         require(amount <= unAllocatedBalance, "INVALID_DEPOSIT_VENDOR_AMOUNT");
+
+        console.log("Deposit to vendor in strategy %d", amount);
+
+        IERC20(optionsAssetAddress).approve(address(optionsVendor), amount);
 
         optionsVendor.depositToVendor(optionsReceiver, amount, vendorAddress);
         unAllocatedBalance -= amount;

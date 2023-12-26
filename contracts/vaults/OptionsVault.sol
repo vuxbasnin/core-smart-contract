@@ -23,13 +23,18 @@ contract OptionsTestVault is RockOnyxOptionStrategy {
         address _asset,
         address _optionsVendorProxy,
         address _optionsReceiver,
+        address _optionsAssetAddress,
         uint256 cap
-    ) RockOnyxOptionStrategy(_optionsVendorProxy, _optionsReceiver) {
+    ) RockOnyxOptionStrategy(_optionsVendorProxy, _optionsReceiver, _optionsAssetAddress) {
         require(_asset != address(0), "Invalid asset address");
         asset = _asset;
         _cap = cap;
 
         _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
+    }
+
+    function topUpGasFees() public payable {
+        console.log("sender %s, amount %s", msg.sender, msg.value);
     }
 
     function deposit(uint256 amount) external nonReentrant {

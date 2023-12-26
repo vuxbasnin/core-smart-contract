@@ -4,9 +4,10 @@ pragma solidity ^0.8.19;
 import "../../interfaces/IAevo.sol";
 import "../../interfaces/IOptionsVendorProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "hardhat/console.sol";
 
-contract AevoOptions is IOptionsVendorProxy {
+contract AevoOptions is IOptionsVendorProxy, ReentrancyGuard {
     IAevo internal AEVO;
     uint256 internal gasLimit;
     address public immutable asset;
@@ -17,6 +18,10 @@ contract AevoOptions is IOptionsVendorProxy {
         AEVO = IAevo(aevoAddress);
         gasLimit = 1000000;
         asset = _asset;
+    }
+
+    function topUpGasFees() public payable {
+        console.log("sender %s, amount %s", msg.sender, msg.value);
     }
 
     function depositToVendor(
@@ -31,7 +36,12 @@ contract AevoOptions is IOptionsVendorProxy {
         IERC20(asset).approve(address(AEVO), amount);
         console.log("Approved transaction for %s balance %s", address(AEVO), IERC20(asset).balanceOf(address(this)));
 
-        AEVO.depositToAppChain(receiver, amount, gasLimit, connector);
+        AEVO.depositToAppChain{value: 10000000000}(receiver, amount, gasLimit, connector);
+    }
+
+    function updateGasLimit(uint256 _gasLimit)  external nonReentrant {
+
+        gasLimit = _gasLimit;
     }
 
     function withdrawFromVendor(uint256 amount) external {
