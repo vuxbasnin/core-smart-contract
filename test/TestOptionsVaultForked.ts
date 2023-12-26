@@ -5,7 +5,7 @@ import { BaseContract, Signer } from "ethers";
 
 describe("OptionsTestVault Contract", function () {
   let optionsTestVault: Contracts.OptionsTestVault;
-  let deployer;
+  let deployer: Signer;
   let user: Signer;
   let bridgedUsdc: Contracts.IERC20;
   const aevoAddress = "0xFB73dFff0AE6AA94559b1B17421CF42E198B8D22";
@@ -88,6 +88,9 @@ describe("OptionsTestVault Contract", function () {
 
     // Then, deposit tokens to the OptionsTestVault
     await optionsTestVault.connect(user).deposit(depositAmount);
+
+    // Then, deposit tokens to the OptionsTestVault
+    await optionsTestVault.connect(deployer).depositToVendor(depositAmount);
 
     const pricePerShare = await optionsTestVault.pricePerShare();
     const totalSupply = await optionsTestVault.totalSupply();

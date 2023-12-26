@@ -21,13 +21,13 @@ async function main() {
   console.log("Deploying contracts with the account:", deployer.address);
 
   // Deploy AevoOptions and set optionsVendorProxy
-  const optionsVendorProxy = await deployAevoOptions();
+  // const optionsVendorProxy = await deployAevoOptions();
 
   // Deploy OptionsTestVault
   const OptionsTestVault = await ethers.getContractFactory("OptionsTestVault");
   const optionsTestVault = await OptionsTestVault.deploy(
     assetAddress,
-    optionsVendorProxy,
+    "0x76aF5aFE79B0f29da885c9c5BFeb73F79dfC2A11",
     optionsReceiver,
     cap
   );
