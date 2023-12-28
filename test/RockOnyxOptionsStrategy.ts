@@ -11,6 +11,7 @@ describe("RockOnyxUSDTVault", function () {
   let RockOnyxUSDTVault;
   let rockOnyxUSDTVault: Contracts.RockOnyxUSDTVault;
   let usdcAddress: string;
+  let usdceAddress: string;
   let mockUSDC: MockERC20;
   let camelotLiquidityContract: Contracts.CamelotLiquidity;
   let camelotLiquidityAddress: string;
@@ -23,13 +24,17 @@ describe("RockOnyxUSDTVault", function () {
   let mockAEVO: Contracts.MockAEVO;
 
   let owner: Signer, user: Signer;
+  const aevoConnectorAddress = "0x69Adf49285c25d9f840c577A0e3cb134caF944D3";
 
   async function deployMockUSDC() {
     // Deploy a mock USDC contract and mint tokens
     const MockUSDC = await ethers.getContractFactory("MockERC20");
-    mockUSDC = (await MockUSDC.deploy()) as MockERC20;
+    mockUSDC = (await MockUSDC.deploy("USDC", "USDC")) as MockERC20;
     usdcAddress = await mockUSDC.getAddress();
     console.log("Deployed mUSDC at address %s", usdcAddress);
+
+    const mockUSDCe = (await MockUSDC.deploy("USDCe", "USDCe")) as MockERC20;
+    usdceAddress = await mockUSDCe.getAddress();
   }
 
   async function deployLiquidityContract() {
@@ -68,7 +73,10 @@ describe("RockOnyxUSDTVault", function () {
 
     const factory = await ethers.getContractFactory("AevoOptions");
     aevoOptionsContract = (await factory.deploy(
-      await mockAEVO.getAddress()
+      usdceAddress,
+      await mockAEVO.getAddress(),
+      aevoConnectorAddress
+
     )) as Contracts.AevoOptions;
     aevoProxyAddress = await aevoOptionsContract.getAddress();
     console.log("Deployed AEVO contract at address %s", aevoProxyAddress);
@@ -101,6 +109,7 @@ describe("RockOnyxUSDTVault", function () {
       camelotSwapAddress,
       aevoProxyAddress,
       await user.getAddress(),
+      usdceAddress,
       "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
       "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
       "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",

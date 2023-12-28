@@ -1,0 +1,183 @@
+{
+	"compiler": {
+		"version": "0.8.22+commit.4fc1097e"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_asset",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "aevoAddress",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_connector",
+						"type": "address"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "constructor"
+			},
+			{
+				"inputs": [],
+				"name": "ReentrancyGuardReentrantCall",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "asset",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "receiver",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					}
+				],
+				"name": "depositToVendor",
+				"outputs": [],
+				"stateMutability": "payable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "topUpGasFees",
+				"outputs": [],
+				"stateMutability": "payable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "_gasLimit",
+						"type": "uint256"
+					}
+				],
+				"name": "updateGasLimit",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					}
+				],
+				"name": "withdrawFromVendor",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"errors": {
+				"ReentrancyGuardReentrantCall()": [
+					{
+						"details": "Unauthorized reentrant call."
+					}
+				]
+			},
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"contracts/extensions/Aevo/AevoOptions.sol": "AevoOptions"
+		},
+		"evmVersion": "paris",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"@openzeppelin/contracts/token/ERC20/IERC20.sol": {
+			"keccak256": "0xc6a8ff0ea489379b61faa647490411b80102578440ab9d84e9a957cc12164e70",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://0ea104e577e63faea3b69c415637e99e755dcbf64c5833d7140c35a714d6d90c",
+				"dweb:/ipfs/Qmau6x4Ns9XdyynRCNNp3RhLqijJjFm7z5fyZazfYFGYdq"
+			]
+		},
+		"@openzeppelin/contracts/utils/ReentrancyGuard.sol": {
+			"keccak256": "0xf980daa263b661ab8ddee7d4fd833c7da7e7995e2c359ff1f17e67e4112f2236",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://7448ab095d6940130bcf76ba47a2eab14148c83119523b93dd89f6d84edd6c02",
+				"dweb:/ipfs/QmawrZ4voKQjH3oomXT3Kuheb3Mnmo2VvVpxg8Ne5UJUrd"
+			]
+		},
+		"contracts/extensions/Aevo/AevoOptions.sol": {
+			"keccak256": "0xb7896713b28a4a5d6a5fdbd3e0b2939fcf84abdc41c09b303f386d9055d72256",
+			"license": "UNLICENSED",
+			"urls": [
+				"bzz-raw://6415da918c8abba88cecbb6589f17a60f9b379c0cd8326044c49e37d95459e7f",
+				"dweb:/ipfs/QmdrCWpYwWRzETBay2gyuBDbnrt9DpKcKiPApim7vC2ULe"
+			]
+		},
+		"contracts/interfaces/IAevo.sol": {
+			"keccak256": "0xb76fb535b143963a3d2655c00e101819ca541297c30d2a2c9ee65f3f44efd51d",
+			"license": "UNLICENSED",
+			"urls": [
+				"bzz-raw://b80cae26fb35cd9a75589705d08d0e74d81fd96b7b45417fed8c83bf9c99a2ff",
+				"dweb:/ipfs/QmVUrNpWEmpp8QLtgxbmF1qJ1kJYFPEuXBBfwkNh6cnJCw"
+			]
+		},
+		"contracts/interfaces/IOptionsVendorProxy.sol": {
+			"keccak256": "0x2595b4ed233c43dcfa27465714cbc3924a3899724b4bb6a6cc3c26f77ac144dc",
+			"license": "UNLICENSED",
+			"urls": [
+				"bzz-raw://519f1aa1e4aa97e95fcf1e7917505e9b2dc3c523d17a8002f7703a20728b7c81",
+				"dweb:/ipfs/QmNMPUjaqLNPjcQQUDmTb3jWY9ncRQjuwTvBApmrbLYAWo"
+			]
+		},
+		"hardhat/console.sol": {
+			"keccak256": "0x7434453e6d3b7d0e5d0eb7846ffdbc27f0ccf3b163591263739b628074dc103a",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://49355f780520494d1d5a0f01858385e51bb5280ce0ecfb960f16995065dca395",
+				"dweb:/ipfs/QmSwJ6C5QLz6xKeQZS8wbwjU1KxRFTYfwbGmtzisd5sRW4"
+			]
+		}
+	},
+	"version": 1
+}

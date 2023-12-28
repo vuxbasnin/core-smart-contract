@@ -56,7 +56,10 @@ contract RockOnyxUSDTVault is
         RockOnyxOptionStrategy(
             _optionsVendorProxy,
             _optionsReceiver,
-            _optionsAssetAddress
+            _optionsAssetAddress,
+            _asset,
+            _swapProxy,
+            _getPriceAddress
         )
     {
         vaultParams = VaultParams(18, _asset, 1000, 1_000_000);

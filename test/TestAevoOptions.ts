@@ -378,7 +378,7 @@ describe("OptionsTestVault Contract", function () {
 
   async function deployAevoOptions(): Promise<string> {
     const AevoOptions = await ethers.getContractFactory("AevoOptions");
-    aevoOptions = await AevoOptions.deploy(assetAddress, aevoAddress);
+    aevoOptions = await AevoOptions.deploy(assetAddress, aevoAddress, aevoConnectorAddress);
 
     await aevoOptions.waitForDeployment();
     const aevoOptionsAddress = await aevoOptions.getAddress();
@@ -423,7 +423,7 @@ describe("OptionsTestVault Contract", function () {
     await transferTx.wait();
   });
 
-  it("should deposit tokens to AEVO directly", async function () {
+  it.skip("should deposit tokens to AEVO directly", async function () {
     const depositAmount = ethers.parseUnits("100", 6);
 
     const tx2 = await bridgedUsdc

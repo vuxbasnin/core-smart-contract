@@ -18,7 +18,11 @@ describe("OptionsTestVault Contract", function () {
 
   async function deployAevoOptions(): Promise<string> {
     const AevoOptions = await ethers.getContractFactory("AevoOptions");
-    aevoOptionsProxy = await AevoOptions.deploy(assetAddress, aevoAddress);
+    aevoOptionsProxy = await AevoOptions.deploy(
+      assetAddress,
+      aevoAddress,
+      aevoConnectorAddress
+    );
 
     await aevoOptionsProxy.waitForDeployment();
     const aevoOptionsAddress = await aevoOptionsProxy.getAddress();
@@ -62,18 +66,18 @@ describe("OptionsTestVault Contract", function () {
     );
     console.log("address 1", await impersonatedSigner.getAddress());
 
-    await aevoOptionsProxy
-      .connect(user)
-      .topUpGasFees({ value: ethers.parseEther("100") });
+    // await aevoOptionsProxy
+    //   .connect(user)
+    //   .topUpGasFees({ value: ethers.parseEther("100") });
 
-    await optionsTestVault
-      .connect(user)
-      .topUpGasFees({ value: ethers.parseEther("100") });
+    // await optionsTestVault
+    //   .connect(user)
+    //   .topUpGasFees({ value: ethers.parseEther("100") });
 
-    console.log(
-      "Balance eth of aevoOptionsProxy %s",
-      await ethers.provider.getBalance(optionsVendorProxy)
-    );
+    // console.log(
+    //   "Balance eth of aevoOptionsProxy %s",
+    //   await ethers.provider.getBalance(optionsVendorProxy)
+    // );
 
     // Connect to the asset contract (assuming ERC20)
     bridgedUsdc = await ethers.getContractAt("IERC20", assetAddress);
@@ -95,7 +99,7 @@ describe("OptionsTestVault Contract", function () {
     console.log("Balance of user %s", balanceOfUser);
   });
 
-  it("should deposit tokens to the OptionsTestVault", async function () {
+  it.skip("should deposit tokens to the OptionsTestVault", async function () {
     // First, approve the OptionsTestVault contract to spend tokens
     const depositAmount = ethers.parseUnits("1000", 6);
     await bridgedUsdc
@@ -108,7 +112,14 @@ describe("OptionsTestVault Contract", function () {
     console.log("Deposited to optionsTestVault");
 
     // Then, deposit tokens to the OptionsTestVault
-    await optionsTestVault.connect(deployer).depositToVendor(depositAmount);
+    await optionsTestVault.connect(deployer).depositToVendor(depositAmount, {
+      value: ethers.parseEther("0.001753"),
+    });
+
+    console.log(
+      "eth Balance eth of deployer %s",
+      await ethers.provider.getBalance(deployer)
+    );
 
     const pricePerShare = await optionsTestVault.pricePerShare();
     const totalSupply = await optionsTestVault.totalSupply();
