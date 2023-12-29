@@ -24,8 +24,19 @@ contract OptionsTestVault is RockOnyxOptionStrategy {
         address _optionsVendorProxy,
         address _optionsReceiver,
         address _optionsAssetAddress,
-        uint256 cap
-    ) RockOnyxOptionStrategy(_optionsVendorProxy, _optionsReceiver, _optionsAssetAddress) {
+        uint256 cap,
+        address _swapProxy,
+        address _getPriceAddress
+    )
+        RockOnyxOptionStrategy(
+            _optionsVendorProxy,
+            _optionsReceiver,
+            _optionsAssetAddress,
+            _optionsAssetAddress,
+            _swapProxy,
+            _getPriceAddress
+        )
+    {
         require(_asset != address(0), "Invalid asset address");
         asset = _asset;
         _cap = cap;
@@ -110,7 +121,6 @@ contract OptionsTestVault is RockOnyxOptionStrategy {
     }
 
     function closeRound(int256 profitOrLoss) external nonReentrant {
-
         if (profitOrLoss > 0) {
             totalBalance += uint256(profitOrLoss);
         } else {

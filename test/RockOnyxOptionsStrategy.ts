@@ -26,21 +26,10 @@ describe("RockOnyxUSDTVault", function () {
   let owner: Signer, user: Signer;
   const aevoConnectorAddress = "0x69Adf49285c25d9f840c577A0e3cb134caF944D3";
 
-  async function deployMockUSDC() {
-    // Deploy a mock USDC contract and mint tokens
-    const MockUSDC = await ethers.getContractFactory("MockERC20");
-    mockUSDC = (await MockUSDC.deploy("USDC", "USDC")) as MockERC20;
-    usdcAddress = await mockUSDC.getAddress();
-    console.log("Deployed mUSDC at address %s", usdcAddress);
-
-    const mockUSDCe = (await MockUSDC.deploy("USDCe", "USDCe")) as MockERC20;
-    usdceAddress = await mockUSDCe.getAddress();
-  }
-
   async function deployLiquidityContract() {
     const factory = await ethers.getContractFactory("CamelotLiquidity");
     camelotLiquidityContract = (await factory.deploy(
-      "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+      "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // _nonfungiblePositionManager
     )) as Contracts.CamelotLiquidity;
     camelotLiquidityAddress = await camelotLiquidityContract.getAddress();
     console.log(
@@ -50,11 +39,10 @@ describe("RockOnyxUSDTVault", function () {
   }
 
   async function deployCamelotSwapContract() {
-    const mockSwapRouterFactory = await ethers.getContractFactory(
-      "MockSwapRouter"
+    const swapRouter = await ethers.getContractAt(
+      "ISwapRouter",
+      "0xE592427A0AEce92De3Edee1F18E0157C05861564"
     );
-    const swapRouter =
-      (await mockSwapRouterFactory.deploy()) as Contracts.MockSwapRouter;
 
     const factory = await ethers.getContractFactory("CamelotSwap");
     camelotSwapContract = (await factory.deploy(
@@ -76,7 +64,6 @@ describe("RockOnyxUSDTVault", function () {
       usdceAddress,
       await mockAEVO.getAddress(),
       aevoConnectorAddress
-
     )) as Contracts.AevoOptions;
     aevoProxyAddress = await aevoOptionsContract.getAddress();
     console.log("Deployed AEVO contract at address %s", aevoProxyAddress);
@@ -142,6 +129,8 @@ describe("RockOnyxUSDTVault", function () {
     );
     await rockOnyxUSDTVault
       .connect(owner)
-      .depositToVendor(ethers.parseEther(amount.toString()));
+      .depositToVendor(ethers.parseEther(amount.toString()), {
+        value: ethers.parseEther("0.1"), // Optional: Sending Ether along with the transaction
+      });
   });
 });

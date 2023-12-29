@@ -18,8 +18,8 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     IOptionsVendorProxy internal optionsVendor;
     uint256 internal allocatedBalance;
     uint256 internal unAllocatedBalance;
-    ISwapProxy internal swapProxy;
-    IGetPriceProxy internal getPriceProxy;
+    ISwapProxy private swapProxy;
+    IGetPriceProxy private getPriceProxy;
 
     /************************************************
      *  EVENTS
@@ -61,10 +61,18 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
 
         // Ensure the contract has enough allowance to perform the swap
         IERC20(vaultAssetAddress).approve(address(swapProxy), amountIn);
+        console.log("swapProxy %s", address(swapProxy));
 
         // Perform the swap from vaultAsset to optionsAsset
         uint24 fee = 100; // This should be determined based on your requirements or pricing oracle
         uint256 swappedAmount = swapProxy.swapTo(address(this), vaultAssetAddress, amountIn, optionsAssetAddress, fee);
+
+        console.log("Swap to USDC.e %s", swappedAmount);
+
+        // After the swap, the contract should hold the swapped tokens in optionsAssetAddress
+        // Update the unAllocatedBalance with the swapped amount
+        uint256 swappedAmount1 = IERC20(optionsAssetAddress).balanceOf(address(this));
+        console.log("swappedAmount1 %s", swappedAmount1);
 
         unAllocatedBalance += swappedAmount;
 
