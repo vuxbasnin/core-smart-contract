@@ -8,7 +8,11 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "../RockOnyxAccessControl.sol";
 import "hardhat/console.sol";
 
-contract AevoOptions is IOptionsVendorProxy, ReentrancyGuard, RockOnyxAccessControl {
+contract AevoOptions is
+    IOptionsVendorProxy,
+    ReentrancyGuard,
+    RockOnyxAccessControl
+{
     IAevo internal AEVO;
     uint256 internal gasLimit;
     address public immutable asset;
@@ -26,14 +30,24 @@ contract AevoOptions is IOptionsVendorProxy, ReentrancyGuard, RockOnyxAccessCont
         console.log("sender %s, amount %s", msg.sender, msg.value);
     }
 
-    function depositToVendor(address receiver, uint256 amount) external payable nonReentrant {
+    function depositToVendor(
+        address receiver,
+        uint256 amount
+    ) external payable nonReentrant {
         require(amount > 0, "INVALID_DEPOSIT_AMOUNT");
-        console.log("Depositing to vendor from %s", msg.sender);
+        console.log(
+            "[AevoOptions] Depositing to vendor from %s, asset %s, amount %d",
+            msg.sender,
+            asset,
+            amount
+        );
 
         IERC20(asset).transferFrom(msg.sender, address(this), amount);
+        console.log("[AevoOptions] transfered from %s", msg.sender);
+
         IERC20(asset).approve(address(AEVO), amount);
         console.log(
-            "Approved transaction for %s balance %s, ETH %s",
+            "[AevoOptions] Approved transaction for %s balance %s, ETH %s",
             address(AEVO),
             IERC20(asset).balanceOf(address(this)),
             address(this).balance
@@ -47,7 +61,10 @@ contract AevoOptions is IOptionsVendorProxy, ReentrancyGuard, RockOnyxAccessCont
             connector
         );
 
-        console.log("Balance of AevoOptions after depositToAppChain %s", address(this).balance);
+        console.log(
+            "[AevoOptions] Balance of AevoOptions after depositToAppChain %s",
+            address(this).balance
+        );
     }
 
     function withdrawFromVendor(uint256 amount) external {

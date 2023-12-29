@@ -89,6 +89,7 @@ contract RockOnyxUSDTVault is
 
         vaultState.totalAssets += amount;
         vaultState.totalShares += shares;
+        console.log("Vault Deposit vaultState.totalShares %s, shares %s", vaultState.totalShares, shares);
 
         return shares;
     }
@@ -124,12 +125,12 @@ contract RockOnyxUSDTVault is
     }
 
     /**
-     * @notice Rebalance amount
+     * @notice AllocateAssets amount
      * 60% stake ETH and WSTETH to staking vender
      * 20% stake USDT to staking vender
      * 20% to option vender
      */
-    function rebalance() external nonReentrant {
+    function allocateAssets() external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         uint256 depositToEthLiquidityStrategyAmount = (vaultState.totalAssets *
@@ -139,8 +140,8 @@ contract RockOnyxUSDTVault is
         uint256 depositToCashAmount = (vaultState.totalAssets * 20) / 100;
 
         console.log(
-            "Handle rebalance, depositToOptionStrategyAmount = %s",
-            depositToOptionStrategyAmount
+            "Handle allocateAssets, depositToOptionStrategyAmount = %s, vaultState.totalAssets= %s",
+            depositToOptionStrategyAmount, vaultState.totalAssets
         );
 
         depositToEthLiquidityStrategy(depositToEthLiquidityStrategyAmount);

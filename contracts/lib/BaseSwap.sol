@@ -15,12 +15,17 @@ contract BaseSwap is ISwapProxy {
         fee = _fee;
     }
 
-    function swapTo(address recipient, address tokenIn, uint256 amountIn, address tokenOut, uint24 fee) external returns (uint256 amountOut) {
+    function swapTo(
+        address recipient,
+        address tokenIn,
+        uint256 amountIn,
+        address tokenOut
+    ) external returns (uint256 amountOut) {
         IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
         TransferHelper.safeApprove(tokenIn, address(swapRouter), amountIn);
-        
-        ISwapRouter.ExactInputSingleParams memory params =
-            ISwapRouter.ExactInputSingleParams({
+
+        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
+            .ExactInputSingleParams({
                 tokenIn: tokenIn,
                 tokenOut: tokenOut,
                 fee: fee,
