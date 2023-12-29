@@ -84,7 +84,7 @@ contract RockOnyxUSDTVault is
         require(amount >= vaultParams.minimumSupply, "INVALID_DEPOSIT_AMOUNT");
 
         uint256 shares = _issueShares(amount);
-        DepositReceipt memory depositReceipt = depositReceipts[creditor];
+        DepositReceipt storage depositReceipt = depositReceipts[creditor];
         depositReceipt.shares += shares;
 
         vaultState.totalAssets += amount;
@@ -104,7 +104,7 @@ contract RockOnyxUSDTVault is
         return
             ShareMath.assetToShares(
                 amount,
-                (vaultState.totalAssets / vaultState.totalShares),
+                ShareMath.pricePerShare(vaultState.totalShares, vaultState.totalAssets, 18),
                 vaultParams.decimals
             );
     }
@@ -195,5 +195,13 @@ contract RockOnyxUSDTVault is
 
     function balanceOf(address account) public view returns (uint256) {
         return depositReceipts[account].shares;
+    }
+
+    function pricePerShare() public view returns (uint256) {
+        return ShareMath.pricePerShare(vaultState.totalShares, vaultState.totalAssets, 18);
+    }
+
+    function totalAssets() public view returns (uint256) {
+        return vaultState.totalAssets;
     }
 }

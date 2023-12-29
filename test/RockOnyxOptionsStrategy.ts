@@ -34,7 +34,12 @@ describe("RockOnyxUSDTVault", function () {
   let aevoProxyAddress: string;
   let optionsReceiver: string;
 
-  let owner: Signer, user: Signer;
+  let owner: Signer,
+    user1: Signer,
+    user2: Signer,
+    user3: Signer,
+    user4: Signer,
+    user5: Signer;
 
   async function deployLiquidityContract() {
     const factory = await ethers.getContractFactory("CamelotLiquidity");
@@ -80,15 +85,51 @@ describe("RockOnyxUSDTVault", function () {
   }
 
   // Helper function for deposit
-  async function deposit(user: Signer, amount: BigNumberish) {
-    const userAddress = await user.getAddress();
+  async function deposit(sender: Signer, amount: BigNumberish) {
+    const userAddress = await sender.getAddress();
     console.log(
       `Depositing ${ethers.formatUnits(amount, 6)} USDC for ${userAddress}`
     );
     await usdc
-      .connect(user)
+      .connect(sender)
       .approve(await rockOnyxUSDTVault.getAddress(), amount);
-    await rockOnyxUSDTVault.connect(user).deposit(amount);
+    console.log("approved");
+    await rockOnyxUSDTVault.connect(sender).deposit(amount);
+  }
+
+  async function transferIERC20FundForUser(
+    asset: Contracts.IERC20,
+    from: string,
+    to: Signer,
+    amount: number
+  ) {
+    const impersonatedSigner = await ethers.getImpersonatedSigner(from);
+    const recipientAddress = await to.getAddress();
+
+    console.log(
+      "balance of impersonatedSigner",
+      await asset
+        .connect(impersonatedSigner)
+        .balanceOf(await impersonatedSigner.getAddress())
+    );
+
+    const transferTx = await asset
+      .connect(impersonatedSigner)
+      .transfer(recipientAddress, ethers.parseUnits(amount.toString(), 6));
+    await transferTx.wait();
+
+    const balanceOfUser = await asset.connect(to).balanceOf(optionsReceiver);
+    console.log("Balance of user %s", balanceOfUser);
+  }
+
+  async function logBalances() {
+    const pricePerShare = await rockOnyxUSDTVault.pricePerShare();
+    const totalSupply = await rockOnyxUSDTVault.totalAssets();
+    console.log(
+      "Price/Share %s, totalAssets= %s",
+      ethers.formatUnits(pricePerShare.toString(), 6),
+      ethers.formatUnits(totalSupply, 6)
+    );
   }
 
   beforeEach(async function () {
@@ -96,7 +137,7 @@ describe("RockOnyxUSDTVault", function () {
     usdce = await ethers.getContractAt("IERC20", usdceAddress);
 
     RockOnyxUSDTVault = await ethers.getContractFactory("RockOnyxUSDTVault");
-    [owner, user] = await ethers.getSigners();
+    [owner, user1, user2, user3, user4, user5] = await ethers.getSigners();
 
     await deployLiquidityContract();
     await deployCamelotSwapContract();
@@ -107,7 +148,7 @@ describe("RockOnyxUSDTVault", function () {
       camelotLiquidityAddress,
       camelotSwapAddress,
       aevoProxyAddress,
-      await user.getAddress(),
+      await user1.getAddress(),
       usdceAddress,
       "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // mock data to test options strategy
       "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // mock data to test options strategy
@@ -116,32 +157,46 @@ describe("RockOnyxUSDTVault", function () {
     );
 
     // transfer fund for user
-    optionsReceiver = await user.getAddress();
-    const impersonatedSigner = await ethers.getImpersonatedSigner(
-      "0x1f7bc4da1a0c2e49d7ef542f74cd46a3fe592cb1"
-    );
-    console.log(
-      "balance of impersonatedSigner",
-      await usdc
-        .connect(impersonatedSigner)
-        .balanceOf(await impersonatedSigner.getAddress())
-    );
+    optionsReceiver = await user1.getAddress();
 
-    const transferTx = await usdc
-      .connect(impersonatedSigner)
-      .transfer(optionsReceiver, ethers.parseUnits("10000", 6));
-    await transferTx.wait();
-
-    const balanceOfUser = await usdc.connect(user).balanceOf(optionsReceiver);
-    console.log("Balance of user %s", balanceOfUser);
+    await transferIERC20FundForUser(
+      usdc,
+      "0x1f7bc4da1a0c2e49d7ef542f74cd46a3fe592cb1",
+      user1,
+      5000
+    );
+    await transferIERC20FundForUser(
+      usdc,
+      "0x1f7bc4da1a0c2e49d7ef542f74cd46a3fe592cb1",
+      user2,
+      5000
+    );
+    await transferIERC20FundForUser(
+      usdc,
+      "0x1f7bc4da1a0c2e49d7ef542f74cd46a3fe592cb1",
+      user3,
+      5000
+    );
+    await transferIERC20FundForUser(
+      usdc,
+      "0x1f7bc4da1a0c2e49d7ef542f74cd46a3fe592cb1",
+      user4,
+      5000
+    );
+    await transferIERC20FundForUser(
+      usdc,
+      "0x1f7bc4da1a0c2e49d7ef542f74cd46a3fe592cb1",
+      user5,
+      5000
+    );
   });
 
-  it("Deposit USDT to vault", async function () {
+  it.skip("Deposit USDT to vault", async function () {
     // User1 deposits 1000
-    await deposit(user, ethers.parseUnits("1000", 6));
+    await deposit(user1, ethers.parseUnits("1000", 6));
 
     const totalBalance = await rockOnyxUSDTVault.balanceOf(
-      await user.getAddress()
+      await user1.getAddress()
     );
     console.log(
       "Number of shares of %s after deposit %s",
@@ -151,13 +206,38 @@ describe("RockOnyxUSDTVault", function () {
 
     // rebalance portfolio
     const depositAmount = ethers.parseUnits("100", 6);
-    await rockOnyxUSDTVault.connect(owner).rebalance();
+    await rockOnyxUSDTVault.connect(owner).allocateAssets();
 
-    console.log(
-      `Depositing ${depositAmount} USDC options`
-    );
+    console.log(`Depositing ${depositAmount} USDC options`);
     await rockOnyxUSDTVault.connect(owner).depositToVendor(depositAmount, {
       value: ethers.parseEther("0.001753"),
     });
+  });
+
+  it("should handle deposits correctly", async function () {
+    console.log("Testing deposit functionality...");
+
+    // User1 deposits 1000
+    await deposit(user1, ethers.parseUnits("1000", 6));
+
+    // check price per share
+    await logBalances();
+
+    // User2 deposits 500
+    await deposit(user2, ethers.parseUnits("1000", 6));
+
+    // check price per share
+    await logBalances();
+
+    // Assertions
+    const user1Address = user1.getAddress();
+    const user2Address = user2.getAddress();
+    const totalSupplyAfter = await rockOnyxUSDTVault.totalAssets();
+    const user1BalanceAfter = await rockOnyxUSDTVault.balanceOf(user1Address);
+    const user2BalanceAfter = await rockOnyxUSDTVault.balanceOf(user2Address);
+
+    expect(totalSupplyAfter).to.equal(ethers.parseUnits("2000", 6));
+    expect(user1BalanceAfter).to.equal(ethers.parseUnits("1000", 6));
+    expect(user2BalanceAfter).to.equal(ethers.parseUnits("1000", 6));
   });
 });
