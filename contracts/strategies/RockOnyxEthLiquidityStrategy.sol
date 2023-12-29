@@ -12,11 +12,18 @@ import "../interfaces/IGetPriceProxy.sol";
 import "../extensions/RockOnyxAccessControl.sol";
 
 struct EthLiquidityAssets {
-    uint256 totalUSDT;
-    uint256 totalEth;
-    uint256 totalWstETH;
-    uint256 totalVenderEth;
-    uint256 totalVenderWstETH;
+    uint256 unAllocatedUSDT;
+    uint256 unAllocatedEth;
+    uint256 unAllocatedWstETH;
+    uint256 allocatedEth;
+    uint256 allocatedWstETH;
+}
+
+struct DepositState {
+    uint256 tokenId;
+    uint128 liquidity;
+    uint256 token0Amount;
+    uint256 token1Amount;
 }
 
 contract RockOnyxEthLiquidityStrategy is
@@ -31,6 +38,8 @@ contract RockOnyxEthLiquidityStrategy is
     address usd;
     address weth;
     address wstEth;
+
+    DepositState depositState;
 
     /************************************************
      *  EVENTS
@@ -51,40 +60,49 @@ contract RockOnyxEthLiquidityStrategy is
         weth = _weth;
         wstEth = _wstEth;
         ethLiquidityAssets = EthLiquidityAssets(0, 0, 0 , 0, 0);
+        depositState = DepositState(0, 0, 0, 0);
     }
 
     function depositToEthLiquidityStrategy(uint256 _amount) internal {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        ethLiquidityAssets.totalUSDT += _amount;
+        ethLiquidityAssets.unAllocatedUSDT += _amount;
     }
 
     function rebalanceAssets() external nonReentrant{
-        uint256 ethUsdAmount = ethLiquidityAssets.totalUSDT * _getEthWstEthPrice();
-        uint256 wstEthUsdAmount = ethLiquidityAssets.totalUSDT - ethUsdAmount;
+        uint256 ethUsdAmount = ethLiquidityAssets.unAllocatedUSDT * _getEthWstEthPrice();
+        uint256 wstEthUsdAmount = ethLiquidityAssets.unAllocatedUSDT - ethUsdAmount;
 
-        ethLiquidityAssets.totalEth += swapTo(usd, ethUsdAmount, weth);
-        ethLiquidityAssets.totalWstETH += swapTo(usd, wstEthUsdAmount, wstEth);
-        ethLiquidityAssets.totalUSDT = 0;
+        ethLiquidityAssets.unAllocatedEth += swapTo(usd, ethUsdAmount, weth);
+        ethLiquidityAssets.unAllocatedWstETH += swapTo(usd, wstEthUsdAmount, wstEth);
+        ethLiquidityAssets.unAllocatedUSDT = 0;
     }
 
-    function mintPosition() public nonReentrant returns (uint tokenId, uint128 liquidity, uint amount0, uint amount1) {
+    function mintPosition() external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        (tokenId, liquidity, amount0, amount1) = venderLiquidity.mintPosition(weth, ethLiquidityAssets.totalEth, wstEth, ethLiquidityAssets.totalWstETH);
-        ethLiquidityAssets.totalEth -= amount0;
-        ethLiquidityAssets.totalWstETH -= amount1;
+        IERC20(weth).approve(address(venderLiquidity), ethLiquidityAssets.unAllocatedEth);
+        IERC20(wstEth).approve(address(venderLiquidity), ethLiquidityAssets.unAllocatedWstETH);
+        
+        (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) = venderLiquidity.mintPosition(weth, ethLiquidityAssets.unAllocatedEth, wstEth, ethLiquidityAssets.unAllocatedWstETH);
+        ethLiquidityAssets.unAllocatedEth -= amount0;
+        ethLiquidityAssets.unAllocatedWstETH -= amount1;
 
-        ethLiquidityAssets.totalVenderEth += amount0;
-        ethLiquidityAssets.totalVenderWstETH += amount1;
+        ethLiquidityAssets.allocatedEth += amount0;
+        ethLiquidityAssets.allocatedWstETH += amount1;
 
-        return (tokenId, liquidity, amount0, amount1);
+        depositState.tokenId = tokenId;
+        depositState.liquidity = liquidity;
+        depositState.token0Amount = amount0;
+        depositState.token1Amount = amount1;
     }
 
-    function rePosition() external nonReentrant returns (uint tokenId, uint128 liquidity, uint amount0, uint amount1) {
+    function collectAllFees(uint tokenId) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        return mintPosition();
+        (uint256 amount0, uint256 amount1) = venderLiquidity.collectAllFees(address(this), tokenId);
+        ethLiquidityAssets.unAllocatedEth += amount0;
+        ethLiquidityAssets.unAllocatedWstETH += amount1;
     }
 
     function swapTo(address tokenIn, uint256 amountIn, address tokenOut) private nonReentrant returns (uint256 amountOut) {
@@ -104,8 +122,8 @@ contract RockOnyxEthLiquidityStrategy is
     }
 
     function getTotalAssets() internal view returns (uint256){
-        return ethLiquidityAssets.totalUSDT + 
-                (ethLiquidityAssets.totalEth + ethLiquidityAssets.totalVenderEth) * _getEthPrice() + 
-                (ethLiquidityAssets.totalWstETH + ethLiquidityAssets.totalVenderWstETH) * _getWstEthPrice();
+        return ethLiquidityAssets.unAllocatedUSDT + 
+                (ethLiquidityAssets.unAllocatedEth + ethLiquidityAssets.allocatedEth) * _getEthPrice() + 
+                (ethLiquidityAssets.unAllocatedWstETH + ethLiquidityAssets.allocatedWstETH) * _getWstEthPrice();
     }
 }
