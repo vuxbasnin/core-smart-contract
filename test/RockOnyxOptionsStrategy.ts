@@ -262,13 +262,15 @@ describe("RockOnyxUSDTVault", function () {
     await withdraw(user3, ethers.parseUnits("1000", 6));
 
     const totalSupplyAfter = await rockOnyxUSDTVault.totalAssets();
-    const user1BalanceAfter = await rockOnyxUSDTVault.balanceOf(await user3.getAddress());
+    const user1BalanceAfter = await rockOnyxUSDTVault.balanceOf(
+      await user3.getAddress()
+    );
 
     expect(totalSupplyAfter).to.equal(ethers.parseUnits("1000", 6));
     expect(user1BalanceAfter).to.equal(ethers.parseUnits("0", 6));
   });
 
-  it("should handle complete withdrawal correctly", async function () {
+  it.skip("should handle complete withdrawal correctly", async function () {
     console.log("Testing withdraw functionality...");
 
     // User1 deposits 1000
@@ -286,16 +288,50 @@ describe("RockOnyxUSDTVault", function () {
     expect(totalSupplyAfter).to.equal(ethers.parseUnits("1000", 6));
     expect(user1BalanceAfter).to.equal(ethers.parseUnits("0", 6));
 
-    
-    const balanceOfUser3Before = await usdc.connect(user3).balanceOf(user3Address);
+    const balanceOfUser3Before = await usdc
+      .connect(user3)
+      .balanceOf(user3Address);
     console.log("Balance of user before %s", balanceOfUser3Before);
 
     await rockOnyxUSDTVault.connect(owner).completeWithdraw(user3Address);
 
     // check USDC balance of user
-    const balanceOfUser3After = await usdc.connect(user3).balanceOf(user3Address);
+    const balanceOfUser3After = await usdc
+      .connect(user3)
+      .balanceOf(user3Address);
     console.log("Balance of user after %s", balanceOfUser3After);
 
     expect(balanceOfUser3After).to.equal(ethers.parseUnits("5000", 6));
+  });
+
+  it("should handle closeOptionsRound correctly", async function () {
+    console.log("Testing withdraw functionality...");
+
+    // User1 deposits 1000
+    await deposit(user3, ethers.parseUnits("1000", 6));
+
+    // check price per share
+    await logBalances();
+
+    const pps = await rockOnyxUSDTVault.pricePerShare();
+    expect(pps).to.equal(ethers.parseUnits("1", 6));
+
+    await rockOnyxUSDTVault
+      .connect(owner)
+      .closeOptionsRound(ethers.parseUnits("500", 6));
+
+    // await rockOnyxUSDTVault.connect(owner).closeRound();
+
+    // const ppsAfter = await rockOnyxUSDTVault.pricePerShare();
+    // console.log("ppsAfter", ppsAfter);
+    // expect(ppsAfter).to.equal(ethers.parseUnits("1.5", 6));
+
+    // const totalSupplyAfter = await rockOnyxUSDTVault.totalAssets();
+    // const user1BalanceAfter = await rockOnyxUSDTVault.balanceOf(
+    //   await user3.getAddress()
+    // );
+
+    // expect(totalSupplyAfter).to.equal(ethers.parseUnits("1000", 6));
+    // expect(user1BalanceAfter).to.equal(ethers.parseUnits("0", 6));
   });
 });

@@ -171,7 +171,7 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         );
     }
 
-    function totalAllocatedAmount() private view returns (uint256) {
+    function totalAllocatedAmount() internal view returns (uint256) {
         return allocatedBalance + unAllocatedBalance;
     }
 }

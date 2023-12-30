@@ -32,6 +32,7 @@ contract RockOnyxUSDTVault is
         uint256 shares
     );
     event Withdraw(address indexed account, uint256 amount, uint256 shares);
+    event RoundClosed(int256 pnl);
 
     constructor(
         address _asset,
@@ -190,7 +191,10 @@ contract RockOnyxUSDTVault is
 
         console.log("vaultState.totalAssets = %s", vaultState.totalAssets);
         console.log("vaultState.totalShares = %s", vaultState.totalShares);
-        console.log("pps = %s", vaultState.totalAssets / vaultState.totalShares);
+        console.log(
+            "pps = %s",
+            vaultState.totalAssets / vaultState.totalShares
+        );
 
         uint256 withdrawAmount = ShareMath.sharesToAsset(
             withdrawal.shares,
@@ -206,6 +210,20 @@ contract RockOnyxUSDTVault is
         emit Withdraw(withdrawaler, withdrawAmount, withdrawal.shares);
 
         IERC20(vaultParams.asset).safeTransfer(withdrawaler, withdrawAmount);
+    }
+
+    function closeRound() external nonReentrant {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        // Calculate the PnL (profit or loss)
+        uint256 newTotalAssets = totalAllocatedAmount() + getTotalAssets();
+        int256 pnl = int256(newTotalAssets) - int256(vaultState.totalAssets);
+        
+        // Update the vaultState.totalAssets
+        vaultState.totalAssets = newTotalAssets;
+
+        // Emit an event to log the PnL
+        emit RoundClosed(pnl);
     }
 
     function balanceOf(address account) public view returns (uint256) {
