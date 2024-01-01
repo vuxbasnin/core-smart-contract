@@ -36,6 +36,7 @@ contract RockOnyxUSDTVault is
     constructor(
         address _asset,
         address _venderLiquidityProxy,
+        address _venderNftPositionddress,
         address _swapProxy,
         address _optionsVendorProxy,
         address _optionsReceiver,
@@ -46,6 +47,7 @@ contract RockOnyxUSDTVault is
     )
         RockOnyxEthLiquidityStrategy(
             _venderLiquidityProxy,
+            _venderNftPositionddress,
             _swapProxy,
             _getPriceAddress,
             _usd,
