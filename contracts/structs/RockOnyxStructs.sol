@@ -4,8 +4,8 @@ pragma solidity ^0.8.19;
 struct VaultParams {
     uint8 decimals;
     address asset;
-    uint56 minimumSupply;
-    uint104 cap;
+    uint256 minimumSupply;
+    uint256 cap;
 }
 
 struct VaultState {

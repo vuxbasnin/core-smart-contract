@@ -32,6 +32,7 @@ contract RockOnyxUSDTVault is
         uint256 shares
     );
     event Withdraw(address indexed account, uint256 amount, uint256 shares);
+    event RoundClosed(int256 pnl);
 
     constructor(
         address _asset,
@@ -39,6 +40,7 @@ contract RockOnyxUSDTVault is
         address _swapProxy,
         address _optionsVendorProxy,
         address _optionsReceiver,
+        address _optionsAssetAddress,
         address _getPriceAddress,
         address _usd,
         address _weth,
@@ -52,9 +54,15 @@ contract RockOnyxUSDTVault is
             _weth,
             _wstEth
         )
-        RockOnyxOptionStrategy(_optionsVendorProxy, _optionsReceiver)
+        RockOnyxOptionStrategy(
+            _optionsVendorProxy,
+            _optionsReceiver,
+            _optionsAssetAddress,
+            _asset,
+            _swapProxy
+        )
     {
-        vaultParams = VaultParams(18, _asset, 1000, 1_000_000);
+        vaultParams = VaultParams(6, _asset, 1000, 1_000_000);
         vaultState = VaultState(0, 0);
 
         _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
@@ -76,11 +84,16 @@ contract RockOnyxUSDTVault is
         require(amount >= vaultParams.minimumSupply, "INVALID_DEPOSIT_AMOUNT");
 
         uint256 shares = _issueShares(amount);
-        DepositReceipt memory depositReceipt = depositReceipts[creditor];
+        DepositReceipt storage depositReceipt = depositReceipts[creditor];
         depositReceipt.shares += shares;
 
         vaultState.totalAssets += amount;
         vaultState.totalShares += shares;
+        console.log(
+            "Vault Deposit vaultState.totalShares %s, shares %s",
+            vaultState.totalShares,
+            shares
+        );
 
         return shares;
     }
@@ -95,7 +108,7 @@ contract RockOnyxUSDTVault is
         return
             ShareMath.assetToShares(
                 amount,
-                (vaultState.totalAssets / vaultState.totalShares),
+                pricePerShare(),
                 vaultParams.decimals
             );
     }
@@ -116,12 +129,12 @@ contract RockOnyxUSDTVault is
     }
 
     /**
-     * @notice Rebalance amount
+     * @notice AllocateAssets amount
      * 60% stake ETH and WSTETH to staking vender
      * 20% stake USDT to staking vender
      * 20% to option vender
      */
-    function rebalance() external nonReentrant {
+    function allocateAssets() external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         uint256 depositToEthLiquidityStrategyAmount = (vaultState.totalAssets *
@@ -130,7 +143,11 @@ contract RockOnyxUSDTVault is
             100;
         uint256 depositToCashAmount = (vaultState.totalAssets * 20) / 100;
 
-        console.log("Handle rebalance, depositToOptionStrategyAmount = %s", depositToOptionStrategyAmount);
+        console.log(
+            "Handle allocateAssets, depositToOptionStrategyAmount = %s, vaultState.totalAssets= %s",
+            depositToOptionStrategyAmount,
+            vaultState.totalAssets
+        );
 
         depositToEthLiquidityStrategy(depositToEthLiquidityStrategyAmount);
         depositToOptionsStrategy(depositToOptionStrategyAmount);
@@ -144,44 +161,84 @@ contract RockOnyxUSDTVault is
      * @notice Initiates a withdrawal that can be processed once the round completes
      * @param numShares is the number of shares to withdraw
      */
-    function _initiateWithdraw(uint256 numShares) internal nonReentrant {
-        DepositReceipt memory depositReceipt = depositReceipts[msg.sender];
+    function initiateWithdraw(uint256 numShares) external nonReentrant {
+        DepositReceipt storage depositReceipt = depositReceipts[msg.sender];
+        console.log(
+            "Withdraw amount = %d, user shares = %d",
+            numShares,
+            depositReceipt.shares
+        );
 
         require(depositReceipt.shares >= numShares, "INVALID_SHARES");
 
         Withdrawal storage withdrawal = withdrawals[msg.sender];
         withdrawal.shares += numShares;
+        depositReceipt.shares -= numShares;
     }
 
     /**
      * @notice Completes a scheduled withdrawal from a past round. Uses finalized pps for the round
      */
-    function completeWithdraw(address withdrawaler) internal nonReentrant {
+    function completeWithdraw(address withdrawaler) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
+        console.log("Start completeWithdraw");
         Withdrawal storage withdrawal = withdrawals[withdrawaler];
 
         // This checks if there is a withdrawal
         require(withdrawal.shares > 0, "NOT_INITIATED");
 
-        // We leave the round number as non-zero to save on gas for subsequent writes
-        withdrawal.shares = 0;
+        console.log("vaultState.totalAssets = %s", vaultState.totalAssets);
+        console.log("vaultState.totalShares = %s", vaultState.totalShares);
+        console.log(
+            "pps = %s",
+            vaultState.totalAssets / vaultState.totalShares
+        );
 
         uint256 withdrawAmount = ShareMath.sharesToAsset(
             withdrawal.shares,
-            vaultState.totalAssets / vaultState.totalShares,
+            pricePerShare(),
             vaultParams.decimals
         );
 
-        emit Withdraw(msg.sender, withdrawAmount, withdrawal.shares);
+        // We leave the round number as non-zero to save on gas for subsequent writes
+        withdrawal.shares = 0;
 
-        DepositReceipt memory depositReceipt = depositReceipts[withdrawaler];
-        depositReceipt.shares -= withdrawal.shares;
+        console.log("withdrawAmount = %s", withdrawAmount);
 
-        IERC20(vaultParams.asset).safeTransfer(msg.sender, withdrawAmount);
+        emit Withdraw(withdrawaler, withdrawAmount, withdrawal.shares);
+
+        IERC20(vaultParams.asset).safeTransfer(withdrawaler, withdrawAmount);
+    }
+
+    function closeRound() external nonReentrant {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        // Calculate the PnL (profit or loss)
+        uint256 newTotalAssets = totalAllocatedAmount() + getTotalAssets();
+        int256 pnl = int256(newTotalAssets) - int256(vaultState.totalAssets);
+        
+        // Update the vaultState.totalAssets
+        vaultState.totalAssets = newTotalAssets;
+
+        // Emit an event to log the PnL
+        emit RoundClosed(pnl);
     }
 
     function balanceOf(address account) public view returns (uint256) {
         return depositReceipts[account].shares;
+    }
+
+    function pricePerShare() public view returns (uint256) {
+        return
+            ShareMath.pricePerShare(
+                vaultState.totalShares,
+                vaultState.totalAssets,
+                vaultParams.decimals
+            );
+    }
+
+    function totalAssets() public view returns (uint256) {
+        return totalAllocatedAmount() + getTotalAssets();
     }
 }
