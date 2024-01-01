@@ -23,7 +23,11 @@ const config: HardhatUserConfig = {
     },
     arbitrum: {
       url: "https://arbitrum-mainnet.infura.io/v3/85cde589ce754dafa0a57001c326104d",
-      accounts: ['0xea7aab9140a5b271551c74b1a12933c793eeef19cdbf466409a9e46e30b4d7ba']
+      accounts: [`${PRIVATE_KEY}`]
+    },
+    sepolia: {
+      url: "https://sepolia.infura.io/v3/85cde589ce754dafa0a57001c326104d",
+      accounts: [`${PRIVATE_KEY}`]
     },
     localhost: {
       url: "http://127.0.0.1:8545"

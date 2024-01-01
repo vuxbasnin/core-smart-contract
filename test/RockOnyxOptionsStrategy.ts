@@ -12,6 +12,8 @@ describe("RockOnyxUSDTVault", function () {
   let rockOnyxUSDTVault: Contracts.RockOnyxUSDTVault;
   const usdcAddress = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
   const usdceAddress = "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8";
+  const wstethAddress = "0x5979D7b546E38E414F7E9822514be443A4800529";
+  const wethAddress = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1";
   let usdc: Contracts.IERC20;
   let usdce: Contracts.IERC20;
 
@@ -160,9 +162,9 @@ describe("RockOnyxUSDTVault", function () {
       await user1.getAddress(),
       usdceAddress,
       "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // mock data to test options strategy
-      "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // mock data to test options strategy
-      "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // mock data to test options strategy
-      "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0" // mock data to test options strategy
+      usdcAddress,
+      wethAddress,
+      wstethAddress
     );
 
     // transfer fund for user

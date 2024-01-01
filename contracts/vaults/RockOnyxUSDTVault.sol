@@ -59,8 +59,7 @@ contract RockOnyxUSDTVault is
             _optionsReceiver,
             _optionsAssetAddress,
             _asset,
-            _swapProxy,
-            _getPriceAddress
+            _swapProxy
         )
     {
         vaultParams = VaultParams(6, _asset, 1000, 1_000_000);

@@ -10,8 +10,9 @@ import "../../interfaces/INonfungiblePositionManager.sol";
 import "../../interfaces/IERC721Receiver.sol";
 import "../../interfaces/IVenderLiquidityProxy.sol";
 import "../../interfaces/IVenderPoolState.sol";
+import "../../lib/BaseProxy.sol";
 
-contract CamelotLiquidity is IVenderLiquidityProxy, IERC721Receiver, RockOnyxAccessControl, ReentrancyGuard {
+contract CamelotLiquidity is IVenderLiquidityProxy, IERC721Receiver, BaseProxy {
     int24 private LOW_TICK_RANGE;
     int24 private UP_TICK_RANGE;
     int24 private TICK_SPACING;

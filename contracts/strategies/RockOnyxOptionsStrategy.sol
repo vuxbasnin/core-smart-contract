@@ -7,7 +7,6 @@ import "hardhat/console.sol";
 import "../extensions/RockOnyxAccessControl.sol";
 import "../interfaces/IOptionsVendorProxy.sol";
 import "../interfaces/ISwapProxy.sol";
-import "../interfaces/IGetPriceProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
@@ -19,7 +18,6 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     uint256 internal allocatedBalance;
     uint256 internal unAllocatedBalance;
     ISwapProxy private swapProxy;
-    IGetPriceProxy private getPriceProxy;
 
     /************************************************
      *  EVENTS
@@ -43,8 +41,7 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         address _optionsReceiver,
         address _optionsAssetAddress,
         address _vaultAssetAddress,
-        address _swapAddress,
-        address _getPriceAddress
+        address _swapAddress
     ) {
         vendorAddress = _vendorAddress;
         optionsVendor = IOptionsVendorProxy(vendorAddress);
@@ -54,7 +51,6 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         optionsAssetAddress = _optionsAssetAddress;
         vaultAssetAddress = _vaultAssetAddress;
         swapProxy = ISwapProxy(_swapAddress);
-        getPriceProxy = IGetPriceProxy(_getPriceAddress);
     }
 
     function depositToOptionsStrategy(uint256 amountIn) internal {

@@ -7,11 +7,11 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "../RockOnyxAccessControl.sol";
 import "hardhat/console.sol";
+import "../../lib/BaseProxy.sol";
 
 contract AevoOptions is
     IOptionsVendorProxy,
-    ReentrancyGuard,
-    RockOnyxAccessControl
+    BaseProxy
 {
     IAevo internal AEVO;
     uint256 internal gasLimit;
