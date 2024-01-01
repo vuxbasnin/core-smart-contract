@@ -1,128 +1,143 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.19;
+// // SPDX-License-Identifier: UNLICENSED
+// pragma solidity ^0.8.19;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../strategies/RockOnyxOptionsStrategy.sol";
+// import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+// import "../strategies/RockOnyxOptionsStrategy.sol";
 
-contract OptionsTestVault is RockOnyxOptionStrategy {
-    uint256 constant singleShare = 10 ** 18;
-    uint256 internal constant PLACEHOLDER_UINT = 1;
+// contract OptionsTestVault is RockOnyxOptionStrategy {
+//     uint256 constant singleShare = 10 ** 18;
+//     uint256 internal constant PLACEHOLDER_UINT = 1;
 
-    address public immutable asset;
-    uint256 public totalSupply;
-    uint256 public totalBalance;
-    uint256 private _cap;
-    address private _stakingVendor;
+//     address public immutable asset;
+//     uint256 public totalSupply;
+//     uint256 public totalBalance;
+//     uint256 private _cap;
+//     address private _stakingVendor;
 
-    mapping(address => uint256) private balances;
+//     mapping(address => uint256) private balances;
 
-    event Deposit(address indexed account, uint256 amount, uint256 shares);
-    event Withdraw(address indexed account, uint256 amount);
+//     event Deposit(address indexed account, uint256 amount, uint256 shares);
+//     event Withdraw(address indexed account, uint256 amount);
 
-    constructor(
-        address _asset,
-        address _optionsVendorProxy,
-        address _optionsReceiver,
-        uint256 cap
-    ) RockOnyxOptionStrategy(_optionsVendorProxy, _optionsReceiver) {
-        require(_asset != address(0), "Invalid asset address");
-        asset = _asset;
-        _cap = cap;
+//     constructor(
+//         address _asset,
+//         address _optionsVendorProxy,
+//         address _optionsReceiver,
+//         address _optionsAssetAddress,
+//         uint256 cap,
+//         address _swapProxy,
+//         address _getPriceAddress
+//     )
+//         RockOnyxOptionStrategy(
+//             _optionsVendorProxy,
+//             _optionsReceiver,
+//             _optionsAssetAddress,
+//             _optionsAssetAddress,
+//             _swapProxy,
+//             _getPriceAddress
+//         )
+//     {
+//         require(_asset != address(0), "Invalid asset address");
+//         asset = _asset;
+//         _cap = cap;
 
-        _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
-    }
+//         _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
+//     }
 
-    function deposit(uint256 amount) external nonReentrant {
-        require(amount > 0, "Deposit amount must be greater than zero");
+//     function topUpGasFees() public payable {
+//         console.log("sender %s, amount %s", msg.sender, msg.value);
+//     }
 
-        IERC20(asset).transferFrom(msg.sender, address(this), amount);
+//     function deposit(uint256 amount) external nonReentrant {
+//         require(amount > 0, "Deposit amount must be greater than zero");
 
-        uint256 shares = assetToShares(amount, pricePerShare());
+//         IERC20(asset).transferFrom(msg.sender, address(this), amount);
 
-        totalSupply += shares;
-        totalBalance += amount;
-        balances[msg.sender] += shares;
+//         uint256 shares = assetToShares(amount, pricePerShare());
 
-        depositToOptionsStrategy(amount);
+//         totalSupply += shares;
+//         totalBalance += amount;
+//         balances[msg.sender] += shares;
 
-        emit Deposit(msg.sender, amount, shares);
-    }
+//         depositToOptionsStrategy(amount);
 
-    function withdraw(uint256 amount) external nonReentrant {
-        require(amount > 0, "Withdrawal amount must be greater than zero");
-        uint256 currentPricePerShare = pricePerShare();
-        uint256 shares = assetToShares(amount, currentPricePerShare);
-        require(balances[msg.sender] >= shares, "Insufficient balance");
+//         emit Deposit(msg.sender, amount, shares);
+//     }
 
-        totalSupply -= shares;
-        totalBalance -= amount;
-        balances[msg.sender] -= shares;
+//     function withdraw(uint256 amount) external nonReentrant {
+//         require(amount > 0, "Withdrawal amount must be greater than zero");
+//         uint256 currentPricePerShare = pricePerShare();
+//         uint256 shares = assetToShares(amount, currentPricePerShare);
+//         require(balances[msg.sender] >= shares, "Insufficient balance");
 
-        IERC20(asset).transfer(msg.sender, amount);
+//         totalSupply -= shares;
+//         totalBalance -= amount;
+//         balances[msg.sender] -= shares;
 
-        emit Withdraw(msg.sender, amount);
-    }
+//         IERC20(asset).transfer(msg.sender, amount);
 
-    function pricePerShare() public view returns (uint256) {
-        if (totalSupply == 0) return singleShare;
-        return (totalBalance * singleShare) / totalSupply;
-    }
+//         emit Withdraw(msg.sender, amount);
+//     }
 
-    function sharesToAsset(
-        uint256 shares,
-        uint256 assetPerShare
-    ) internal pure returns (uint256) {
-        require(assetPerShare > PLACEHOLDER_UINT, "Invalid assetPerShare");
+//     function pricePerShare() public view returns (uint256) {
+//         if (totalSupply == 0) return singleShare;
+//         return (totalBalance * singleShare) / totalSupply;
+//     }
 
-        return (shares * assetPerShare) / singleShare;
-    }
+//     function sharesToAsset(
+//         uint256 shares,
+//         uint256 assetPerShare
+//     ) internal pure returns (uint256) {
+//         require(assetPerShare > PLACEHOLDER_UINT, "Invalid assetPerShare");
 
-    function assetToShares(
-        uint256 assetAmount,
-        uint256 assetPerShare
-    ) internal pure returns (uint256) {
-        require(assetPerShare > PLACEHOLDER_UINT, "Invalid assetPerShare");
-        return (assetAmount * singleShare) / assetPerShare;
-    }
+//         return (shares * assetPerShare) / singleShare;
+//     }
 
-    function rebalance(uint256 amount) external nonReentrant {
-        // split 60% Staking, 20% cash, 20% options aevo
-        // stake lido
-        // if yield reward for 8 days based on totalBalance and lido APR > gas fee:
-        // stake all ETH to lido
-        // otherwise keep options position size for coverred call
-        // wrap stETH -> wstETH
-        // deposit wstETH to Radiant
-        // deposit aevo
-        // bridge usdt/usdc arbitrum
-        // swap usdt/usdc -> usdc.e
-        // transfer USDC.E to Aave
-    }
+//     function assetToShares(
+//         uint256 assetAmount,
+//         uint256 assetPerShare
+//     ) internal pure returns (uint256) {
+//         require(assetPerShare > PLACEHOLDER_UINT, "Invalid assetPerShare");
+//         return (assetAmount * singleShare) / assetPerShare;
+//     }
 
-    function withdrawFromStaking(uint152 amount) external nonReentrant {
-        // if Call options possible to hit the strike
-        //
-    }
+//     function rebalance(uint256 amount) external nonReentrant {
+//         // split 60% Staking, 20% cash, 20% options aevo
+//         // stake lido
+//         // if yield reward for 8 days based on totalBalance and lido APR > gas fee:
+//         // stake all ETH to lido
+//         // otherwise keep options position size for coverred call
+//         // wrap stETH -> wstETH
+//         // deposit wstETH to Radiant
+//         // deposit aevo
+//         // bridge usdt/usdc arbitrum
+//         // swap usdt/usdc -> usdc.e
+//         // transfer USDC.E to Aave
+//     }
 
-    function closeRound(int256 profitOrLoss) external nonReentrant {
+//     function withdrawFromStaking(uint152 amount) external nonReentrant {
+//         // if Call options possible to hit the strike
+//         //
+//     }
 
-        if (profitOrLoss > 0) {
-            totalBalance += uint256(profitOrLoss);
-        } else {
-            totalBalance -= uint256(-profitOrLoss);
-        }
+//     function closeRound(int256 profitOrLoss) external nonReentrant {
+//         if (profitOrLoss > 0) {
+//             totalBalance += uint256(profitOrLoss);
+//         } else {
+//             totalBalance -= uint256(-profitOrLoss);
+//         }
 
-        // update _totalBalance update from Staking, Options
+//         // update _totalBalance update from Staking, Options
 
-        // check options positions
-        // if price > strike:  Call Options
-        // wrap ETH -> USDC
+//         // check options positions
+//         // if price > strike:  Call Options
+//         // wrap ETH -> USDC
 
-        // Put Options
-        //
-    }
+//         // Put Options
+//         //
+//     }
 
-    function balanceOf(address account) public view returns (uint256) {
-        return balances[account];
-    }
-}
+//     function balanceOf(address account) public view returns (uint256) {
+//         return balances[account];
+//     }
+// }

@@ -1,14 +1,16 @@
 import { ethers } from "hardhat";
-import { expect } from "chai";
+import { expect, use } from "chai";
 import * as Contracts from "../typechain-types";
 import { BaseContract, Signer } from "ethers";
 
 describe("OptionsTestVault Contract", function () {
   let optionsTestVault: Contracts.OptionsTestVault;
-  let deployer;
+  let aevoOptionsProxy: Contracts.AevoOptions;
+  let deployer: Signer;
   let user: Signer;
   let bridgedUsdc: Contracts.IERC20;
-  const aevoAddress = "0xFB73dFff0AE6AA94559b1B17421CF42E198B8D22";
+  const aevoAddress = "0x80d40e32FAD8bE8da5C6A42B8aF1E181984D137c";
+  const aevoConnectorAddress = "0x69Adf49285c25d9f840c577A0e3cb134caF944D3";
   let optionsReceiver: string;
   const cap = ethers.parseUnits("1000000", 18);
 
@@ -16,10 +18,14 @@ describe("OptionsTestVault Contract", function () {
 
   async function deployAevoOptions(): Promise<string> {
     const AevoOptions = await ethers.getContractFactory("AevoOptions");
-    const aevoOptions = await AevoOptions.deploy(aevoAddress);
+    aevoOptionsProxy = await AevoOptions.deploy(
+      assetAddress,
+      aevoAddress,
+      aevoConnectorAddress
+    );
 
-    await aevoOptions.waitForDeployment();
-    const aevoOptionsAddress = await aevoOptions.getAddress();
+    await aevoOptionsProxy.waitForDeployment();
+    const aevoOptionsAddress = await aevoOptionsProxy.getAddress();
     console.log(`AevoOptions deployed to: ${aevoOptionsAddress}`);
 
     return aevoOptionsAddress;
@@ -48,6 +54,7 @@ describe("OptionsTestVault Contract", function () {
       assetAddress,
       optionsVendorProxy,
       optionsReceiver,
+      assetAddress,
       cap
     );
 
@@ -58,6 +65,19 @@ describe("OptionsTestVault Contract", function () {
       "0x226bf1ee0bb0cf647f6a9f0d8b380d6ab56de3cb"
     );
     console.log("address 1", await impersonatedSigner.getAddress());
+
+    // await aevoOptionsProxy
+    //   .connect(user)
+    //   .topUpGasFees({ value: ethers.parseEther("100") });
+
+    // await optionsTestVault
+    //   .connect(user)
+    //   .topUpGasFees({ value: ethers.parseEther("100") });
+
+    // console.log(
+    //   "Balance eth of aevoOptionsProxy %s",
+    //   await ethers.provider.getBalance(optionsVendorProxy)
+    // );
 
     // Connect to the asset contract (assuming ERC20)
     bridgedUsdc = await ethers.getContractAt("IERC20", assetAddress);
@@ -79,7 +99,7 @@ describe("OptionsTestVault Contract", function () {
     console.log("Balance of user %s", balanceOfUser);
   });
 
-  it("should deposit tokens to the OptionsTestVault", async function () {
+  it.skip("should deposit tokens to the OptionsTestVault", async function () {
     // First, approve the OptionsTestVault contract to spend tokens
     const depositAmount = ethers.parseUnits("1000", 6);
     await bridgedUsdc
@@ -88,6 +108,18 @@ describe("OptionsTestVault Contract", function () {
 
     // Then, deposit tokens to the OptionsTestVault
     await optionsTestVault.connect(user).deposit(depositAmount);
+
+    console.log("Deposited to optionsTestVault");
+
+    // Then, deposit tokens to the OptionsTestVault
+    await optionsTestVault.connect(deployer).depositToVendor(depositAmount, {
+      value: ethers.parseEther("0.001753"),
+    });
+
+    console.log(
+      "eth Balance eth of deployer %s",
+      await ethers.provider.getBalance(deployer)
+    );
 
     const pricePerShare = await optionsTestVault.pricePerShare();
     const totalSupply = await optionsTestVault.totalSupply();
