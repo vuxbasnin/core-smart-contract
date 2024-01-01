@@ -9,10 +9,7 @@ import "../RockOnyxAccessControl.sol";
 import "hardhat/console.sol";
 import "../../lib/BaseProxy.sol";
 
-contract AevoOptions is
-    IOptionsVendorProxy,
-    BaseProxy
-{
+contract AevoOptions is IOptionsVendorProxy, BaseProxy {
     IAevo internal AEVO;
     uint256 internal gasLimit;
     address public immutable asset;

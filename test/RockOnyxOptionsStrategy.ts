@@ -1,11 +1,7 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
-import * as Contracts from "../typechain-types"; // Adjust the path as necessary
+import * as Contracts from "../typechain-types";
 import { BigNumberish, ContractTransaction, Signer } from "ethers";
-
-interface MockERC20 extends Contracts.IERC20 {
-  mint: (account: string, amount: BigNumberish) => Promise<ContractTransaction>;
-}
 
 describe("RockOnyxUSDTVault", function () {
   let RockOnyxUSDTVault;

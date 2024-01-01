@@ -239,6 +239,6 @@ contract RockOnyxUSDTVault is
     }
 
     function totalAssets() public view returns (uint256) {
-        return vaultState.totalAssets;
+        return totalAllocatedAmount() + getTotalAssets();
     }
 }
