@@ -3,49 +3,48 @@ pragma solidity ^0.8.19;
 
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "../../extensions/RockOnyxAccessControl.sol";
 import "../../extensions/TransferHelper.sol";
 import "../../interfaces/INonfungiblePositionManager.sol";
-import "../../interfaces/IERC721Receiver.sol";
 import "../../interfaces/IVenderLiquidityProxy.sol";
 import "../../interfaces/IVenderPoolState.sol";
 import "../../lib/BaseProxy.sol";
 
-contract CamelotLiquidity is IVenderLiquidityProxy, IERC721Receiver, BaseProxy {
-    int24 private LOW_TICK_RANGE;
-    int24 private UP_TICK_RANGE;
-    int24 private TICK_SPACING;
+contract CamelotLiquidity is IVenderLiquidityProxy, RockOnyxAccessControl, ReentrancyGuard {
     INonfungiblePositionManager private nonfungiblePositionManager;
     address ethWstEthPoolAddress;
-    
-    constructor(address _nonfungiblePositionManager, address _ethWstEthPoolAddress) {
-        nonfungiblePositionManager = INonfungiblePositionManager(_nonfungiblePositionManager);
-        ethWstEthPoolAddress = _ethWstEthPoolAddress;
-        TICK_SPACING = 1;
-        LOW_TICK_RANGE = 10;
-        LOW_TICK_RANGE = 10;
-    }
 
-    function onERC721Received(
-        address operator,
-        address from,
-        uint tokenId,
-        bytes calldata
-    ) external returns (bytes4) {
+    /************************************************
+    *  EVENTS
+    ***********************************************/
+    event VendorPositionMintted(
+        uint256 owner,
+        uint128 liquidity,
+        uint256 token0,
+        uint256 token1
+    );
+
+    event VendorPositionIncreased(
+        uint256 owner,
+        uint128 liquidity,
+        uint256 token0,
+        uint256 token1
+    );
+
+    constructor(address _nonfungiblePositionManager) {
+        nonfungiblePositionManager = INonfungiblePositionManager(_nonfungiblePositionManager);
     }
 
     function mintPosition(
+        int24 lowerTick,
+        int24 upperTick,
         address token0,
         uint256 amount0ToAdd,
         address token1,
         uint256 amount1ToAdd
-    ) external nonReentrant payable returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) {
-        //(,int24 curTick,,,,,,) = IVenderPoolState(ethWstEthPoolAddress).globalState();
-
-        // int24 lowerTick = curTick - LOW_TICK_RANGE * TICK_SPACING;
-        // int24 upperTick = curTick + UP_TICK_RANGE * TICK_SPACING;
-
+    ) external nonReentrant returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) {
         IERC20(token0).transferFrom(msg.sender, address(this), amount0ToAdd);
         IERC20(token1).transferFrom(msg.sender, address(this), amount1ToAdd);
 
@@ -56,20 +55,18 @@ contract CamelotLiquidity is IVenderLiquidityProxy, IERC721Receiver, BaseProxy {
             memory params = INonfungiblePositionManager.MintParams({
                 token0: token0,
                 token1: token1,
-                tickLower: -88727,
-                tickUpper: 887272,
+                tickLower: lowerTick,
+                tickUpper: upperTick,
                 amount0Desired: amount0ToAdd,
                 amount1Desired: amount1ToAdd,
                 amount0Min: 0,
                 amount1Min: 0,
-                recipient: address(this),
+                recipient: msg.sender,
                 deadline: block.timestamp
             });
 
         (tokenId, liquidity, amount0, amount1) = nonfungiblePositionManager.mint(params);
 
-        console.log("amount0 "); console.log(amount0);
-        console.log("amount1 "); console.log(amount1);
         if (amount0 < amount0ToAdd) {
             IERC20(token0).approve(address(nonfungiblePositionManager), 0);
             IERC20(token0).transfer(msg.sender, amount0ToAdd - amount0);
@@ -80,22 +77,9 @@ contract CamelotLiquidity is IVenderLiquidityProxy, IERC721Receiver, BaseProxy {
             IERC20(token1).transfer(msg.sender, amount1ToAdd - amount1);
         }
 
+        emit VendorPositionMintted(tokenId, liquidity, amount0, amount1);
+
         return (tokenId, liquidity, amount0, amount1);
-    }
-
-    function collectAllFees(
-        address recipient,
-        uint tokenId
-    ) external nonReentrant returns (uint256 amount0, uint256 amount1) {
-        INonfungiblePositionManager.CollectParams
-            memory params = INonfungiblePositionManager.CollectParams({
-                tokenId: tokenId,
-                recipient: recipient,
-                amount0Max: type(uint128).max,
-                amount1Max: type(uint128).max
-            });
-
-        (amount0, amount1) = nonfungiblePositionManager.collect(params);
     }
 
     function increaseLiquidityCurrentRange(
@@ -105,6 +89,10 @@ contract CamelotLiquidity is IVenderLiquidityProxy, IERC721Receiver, BaseProxy {
         address token1,
         uint amount1ToAdd
     ) external nonReentrant returns (uint128 liquidity, uint amount0, uint amount1) {
+        
+        IERC20(token0).transferFrom(msg.sender, address(this), amount0ToAdd);
+        IERC20(token1).transferFrom(msg.sender, address(this), amount1ToAdd);
+        
         IERC20(token0).approve(address(nonfungiblePositionManager), amount0ToAdd);
         IERC20(token1).approve(address(nonfungiblePositionManager), amount1ToAdd);
 
@@ -119,12 +107,46 @@ contract CamelotLiquidity is IVenderLiquidityProxy, IERC721Receiver, BaseProxy {
             });
 
         (liquidity, amount0, amount1) = nonfungiblePositionManager.increaseLiquidity(params);
+
+        if (amount0 < amount0ToAdd) {
+            IERC20(token0).approve(address(nonfungiblePositionManager), 0);
+            IERC20(token0).transfer(msg.sender, amount0ToAdd - amount0);
+        }
+
+        if (amount1 < amount1ToAdd) {
+            IERC20(token1).approve(address(nonfungiblePositionManager), 0);
+            IERC20(token1).transfer(msg.sender, amount1ToAdd - amount1);
+        }
+
+        emit VendorPositionIncreased(tokenId, liquidity, amount0, amount1);
+
+        return (liquidity, amount0, amount1);
     }
 
-    function setTickRange(int24 lowTickRange, int24 upTickRange) external {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
+    function decreaseLiquidityCurrentRange(uint256 tokenId, uint128 liquidity) external returns (uint256 amount0, uint256 amount1) {
+        INonfungiblePositionManager.DecreaseLiquidityParams memory params =
+            INonfungiblePositionManager.DecreaseLiquidityParams({
+                tokenId: tokenId,
+                liquidity: liquidity,
+                amount0Min: 0,
+                amount1Min: 0,
+                deadline: block.timestamp
+            });
 
-        LOW_TICK_RANGE = lowTickRange;
-        UP_TICK_RANGE = upTickRange;
+        (amount0, amount1) = nonfungiblePositionManager.decreaseLiquidity(params);
+    }
+
+    function collectAllFees(
+        uint tokenId
+    ) external nonReentrant returns (uint256 amount0, uint256 amount1) {
+        INonfungiblePositionManager.CollectParams 
+            memory params = INonfungiblePositionManager.CollectParams({
+                tokenId: tokenId,
+                recipient: msg.sender,
+                amount0Max: type(uint128).max,
+                amount1Max: type(uint128).max
+            });
+
+        (amount0, amount1) = nonfungiblePositionManager.collect(params);
     }
 }

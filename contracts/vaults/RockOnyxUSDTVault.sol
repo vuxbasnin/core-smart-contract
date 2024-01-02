@@ -37,20 +37,19 @@ contract RockOnyxUSDTVault is
     constructor(
         address _asset,
         address _venderLiquidityProxy,
+        address _venderNftPositionddress,
         address _swapProxy,
         address _optionsVendorProxy,
         address _optionsReceiver,
         address _optionsAssetAddress,
-        address _getPriceAddress,
-        address _usd,
         address _weth,
         address _wstEth
     )
         RockOnyxEthLiquidityStrategy(
             _venderLiquidityProxy,
+            _venderNftPositionddress,
             _swapProxy,
-            _getPriceAddress,
-            _usd,
+            _asset,
             _weth,
             _wstEth
         )
@@ -62,7 +61,7 @@ contract RockOnyxUSDTVault is
             _swapProxy
         )
     {
-        vaultParams = VaultParams(6, _asset, 1000, 1_000_000);
+        vaultParams = VaultParams(6, _asset, 1_00, 1_000_000 * 10 **6);
         vaultState = VaultState(0, 0);
 
         _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
@@ -77,10 +76,7 @@ contract RockOnyxUSDTVault is
         uint256 amount,
         address creditor
     ) private returns (uint256) {
-        require(
-            vaultState.totalAssets + amount >= vaultParams.cap,
-            "EXCEED_CAP"
-        );
+        require(vaultState.totalAssets + amount <= vaultParams.cap, "EXCEED_CAP");
         require(amount >= vaultParams.minimumSupply, "INVALID_DEPOSIT_AMOUNT");
 
         uint256 shares = _issueShares(amount);
@@ -134,13 +130,11 @@ contract RockOnyxUSDTVault is
      * 20% stake USDT to staking vender
      * 20% to option vender
      */
-    function allocateAssets() external nonReentrant {
+    function allocateAssets() external nonReentrant{
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        uint256 depositToEthLiquidityStrategyAmount = (vaultState.totalAssets *
-            60) / 100;
-        uint256 depositToOptionStrategyAmount = (vaultState.totalAssets * 20) /
-            100;
+        uint256 depositToEthLiquidityStrategyAmount = (vaultState.totalAssets * 60) / 100;
+        uint256 depositToOptionStrategyAmount = (vaultState.totalAssets * 20) / 100;
         uint256 depositToCashAmount = (vaultState.totalAssets * 20) / 100;
 
         console.log(
@@ -150,7 +144,7 @@ contract RockOnyxUSDTVault is
         );
 
         depositToEthLiquidityStrategy(depositToEthLiquidityStrategyAmount);
-        depositToOptionsStrategy(depositToOptionStrategyAmount);
+        // depositToOptionsStrategy(depositToOptionStrategyAmount);
 
         vaultState.totalAssets -= (depositToEthLiquidityStrategyAmount +
             depositToOptionStrategyAmount +
