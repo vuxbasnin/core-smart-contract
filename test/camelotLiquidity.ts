@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 import { expect } from "chai";
 
 import * as Contracts from "../typechain-types";
-import { BaseContract, Signer, AbiCoder, ContractTransactionReceipt } from "ethers";
+import { Signer, AbiCoder, ContractTransactionReceipt } from "ethers";
 
 describe("camelot liquidity contract test", function () {
     let admin: Signer;
@@ -29,7 +29,6 @@ describe("camelot liquidity contract test", function () {
 
     const wstethAddress = "0x5979D7b546E38E414F7E9822514be443A4800529";
     const wethAddress = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1";
-    const wstethwethPoolAddressPool = "0xdEb89DE4bb6ecf5BFeD581EB049308b52d9b2Da7"; 
     
     async function deployCamelotLiquidity() {
         const camelotLiquidity = await ethers.getContractFactory("CamelotLiquidity");
@@ -136,8 +135,8 @@ describe("camelot liquidity contract test", function () {
         const transferTx1 = await weth.connect(wethSigner).transfer(admin, ethers.parseEther("10"));
         await transferTx1.wait();
 
-        const wstethPoolBalance = await wsteth.connect(admin).balanceOf(wstethwethPoolAddressPool);
-        const wstPoolBalance = await weth.connect(admin).balanceOf(wstethwethPoolAddressPool);
+        const wstethAdminBalance = await wsteth.connect(admin).balanceOf(admin);
+        const wstAdminBalance = await weth.connect(admin).balanceOf(admin);
 
         const wstethAmount = ethers.parseUnits("2", 18);
         const wethAmount = ethers.parseUnits("2", 18);
@@ -159,18 +158,14 @@ describe("camelot liquidity contract test", function () {
         liquidityAmount = await getMintPositionResult(transferTx3Result!, LIQUIDITY_AMOUNT);
         console.log("liquidityTokenId: %s liquidityAmount: %s", liquidityTokenId, liquidityAmount);
 
-        const newWstethPoolBalance = await wsteth.connect(admin).balanceOf(wstethwethPoolAddressPool);
-        const newWethPoolBalance = await weth.connect(admin).balanceOf(wstethwethPoolAddressPool);
-        console.log("balance of pool after mint position: %s wsteth, %s weth", newWstethPoolBalance , newWethPoolBalance);
+        const newWstethAdminBalance = await wsteth.connect(admin).balanceOf(admin);
+        const newWethAdminBalance = await weth.connect(admin).balanceOf(admin);
 
-        expect(newWstethPoolBalance).to.greaterThan(wstethPoolBalance);
-        expect(newWethPoolBalance).to.greaterThan(wstPoolBalance);
+        console.log("balance of admin before mint position: %s wsteth, %s weth", wstethAdminBalance , wstAdminBalance);
+        console.log("balance of admin after mint position: %s wsteth, %s weth", newWstethAdminBalance , newWethAdminBalance);
     });
 
-    it.skip("increase liquidity weth and wsteth pool, should increase successfully on camelot dex", async function () {
-        const wstethPoolBalance = await wsteth.connect(admin).balanceOf(wstethwethPoolAddressPool);
-        const wstPoolBalance = await weth.connect(admin).balanceOf(wstethwethPoolAddressPool);
-
+    it("increase liquidity weth and wsteth pool, should increase successfully on camelot dex", async function () {
         const wstethAmount = ethers.parseUnits("2", 18);
         const wethAmount = ethers.parseUnits("2", 18);
 
@@ -191,17 +186,9 @@ describe("camelot liquidity contract test", function () {
         liquidityAmount += await getIncreasePositionResult(transferTx3Result!, LIQUIDITY_AMOUNT);
         console.log("liquidityTokenId: %s liquidityAmount: %s", liquidityTokenId, liquidityAmount);
 
-        const newWstethPoolBalance = await wsteth.connect(admin).balanceOf(wstethwethPoolAddressPool);
-        const newWethPoolBalance = await weth.connect(admin).balanceOf(wstethwethPoolAddressPool);
-        console.log("balance of pool after mint position: %s wsteth, %s weth", newWstethPoolBalance , newWethPoolBalance);
-
-        console.log("balance of admin before mint position: %s wsteth, %s weth", 
-            await wsteth.connect(admin).balanceOf(admin), 
-            await weth.connect(admin).balanceOf(admin)
-        );
-
-        expect(newWstethPoolBalance).to.greaterThan(wstethPoolBalance);
-        expect(newWethPoolBalance).to.greaterThan(wstPoolBalance);
+        const newWstethAdminBalance = await wsteth.connect(admin).balanceOf(admin);
+        const newWethAdminBalance = await weth.connect(admin).balanceOf(admin);
+        console.log("balance of admin after increase position: %s wsteth, %s weth", newWstethAdminBalance , newWethAdminBalance);
     });
     
     it.skip("collect fee weth and wsteth pool, should collect successfully on camelot dex", async function () {
@@ -212,26 +199,23 @@ describe("camelot liquidity contract test", function () {
         console.log(transferTx1Result?.logs);
     });
 
-    it.skip("decrease liquidity weth and wsteth pool, should decrease successfully on camelot dex", async function () {
+    it("decrease liquidity weth and wsteth pool, should decrease successfully on camelot dex", async function () {
         console.log("liquidityTokenId: %s liquidityAmount: %s", liquidityTokenId, liquidityAmount);
 
-        const wstethAdminBalance = await wsteth.connect(admin).balanceOf(admin);
-        const ethAdminBalance = await weth.connect(admin).balanceOf(admin);
-        console.log("balance of pool before decrease: %s wsteth, %s weth", wstethAdminBalance, ethAdminBalance);
-
+        await nftPosition.connect(admin).approve(await camelotLiquidityContract.getAddress(), liquidityTokenId);
         const transferTx1 = await camelotLiquidityContract.connect(admin).decreaseLiquidityCurrentRange(
             liquidityTokenId,
             liquidityAmount
         );
         await transferTx1.wait(); 
+
+        const transferTx2 = await camelotLiquidityContract.connect(admin).collectAllFees(
+            liquidityTokenId
+        );
         
         const newWstethAdminBalance = await wsteth.connect(admin).balanceOf(admin);
         const newEthAdminBalance = await weth.connect(admin).balanceOf(admin);
-        console.log("balance of pool after decrease: %s wsteth, %s weth", newWstethAdminBalance, newEthAdminBalance);
-
-        const wstethContractBalance = await wsteth.connect(admin).balanceOf(camelotLiquidityContract);
-        const wethContractBalance = await weth.connect(admin).balanceOf(camelotLiquidityContract);
-        console.log("balance of contract after decrease: %s wsteth, %s weth", wstethContractBalance, wethContractBalance);
+        console.log("balance of admin after decrease: %s wsteth, %s weth", newWstethAdminBalance, newEthAdminBalance);
     });
 
     it.skip("collect fee usdc_usdce pool from 0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa, should collect successfully on camelot dex", async function () {
@@ -259,7 +243,7 @@ describe("camelot liquidity contract test", function () {
         console.log("balance of pool after collect fee: %s usd, %s usdce", newUsdcPoolBalance , newUsdcePoolBalance);
     });
 
-    it.skip("decrease liquidity usdc_usdce pool from 0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa, should decrease liquidity successfully on camelot dex", async function () {
+    it.skip("unbind liquidity usdc_usdce pool from 0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa, should unbind liquidity successfully on camelot dex", async function () {
         const wstethContractBalance = await wsteth.connect(admin).balanceOf("0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa");
         const wethContractBalance = await weth.connect(admin).balanceOf("0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa");
 

@@ -24,4 +24,8 @@ contract MockSwapRouter is ISwapRouter {
 
         return amountOut;
     }
+
+    function getPool(address tokenA, address tokenB) external view returns (IVenderPoolState){
+        
+    }
 }

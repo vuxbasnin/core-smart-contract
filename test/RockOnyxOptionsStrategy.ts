@@ -61,8 +61,7 @@ describe("RockOnyxUSDTVault", function () {
 
     const factory = await ethers.getContractFactory("CamelotSwap");
     camelotSwapContract = (await factory.deploy(
-      swapRouter,
-      100
+      swapRouter
     )) as Contracts.CamelotSwap;
     camelotSwapAddress = await camelotSwapContract.getAddress();
     console.log(
