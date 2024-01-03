@@ -119,8 +119,7 @@ contract RockOnyxEthLiquidityStrategy is
         depositState.liquidity += liquidity;
     }
 
-    function decreaseLiquidity(
-    ) external nonReentrant {
+    function decreaseLiquidity() external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
         
         IERC20(venderNftPositionAddress).approve(address(venderLiquidity), depositState.tokenId);

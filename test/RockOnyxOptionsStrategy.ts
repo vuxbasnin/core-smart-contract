@@ -156,7 +156,7 @@ describe("RockOnyxUSDTVault", function () {
       aevoProxyAddress,
       await user1.getAddress(),
       usdceAddress,
-      "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // mock data to test options strategy
+      "0x1F721E2E82F6676FCE4eA07A5958cF098D339e18", // mock data to test options strategy
       usdcAddress,
       wethAddress,
       wstethAddress

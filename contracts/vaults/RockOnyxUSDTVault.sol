@@ -121,6 +121,8 @@ contract RockOnyxUSDTVault is
             amount
         );
 
+        allocateAssets();
+
         emit Deposit(msg.sender, amount, shares);
     }
 
@@ -130,7 +132,7 @@ contract RockOnyxUSDTVault is
      * 20% stake USDT to staking vender
      * 20% to option vender
      */
-    function allocateAssets() external nonReentrant{
+    function allocateAssets() private {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         uint256 depositToEthLiquidityStrategyAmount = (vaultState.totalAssets * 60) / 100;
@@ -144,7 +146,7 @@ contract RockOnyxUSDTVault is
         );
 
         depositToEthLiquidityStrategy(depositToEthLiquidityStrategyAmount);
-        // depositToOptionsStrategy(depositToOptionStrategyAmount);
+        depositToOptionsStrategy(depositToOptionStrategyAmount);
 
         vaultState.totalAssets -= (depositToEthLiquidityStrategyAmount +
             depositToOptionStrategyAmount +
@@ -173,9 +175,9 @@ contract RockOnyxUSDTVault is
     /**
      * @notice Completes a scheduled withdrawal from a past round. Uses finalized pps for the round
      */
-    function completeWithdraw(address withdrawaler) external nonReentrant {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
-
+    function completeWithdraw() external nonReentrant {
+        address withdrawaler = msg.sender;
+        
         console.log("Start completeWithdraw");
         Withdrawal storage withdrawal = withdrawals[withdrawaler];
 
@@ -205,20 +207,6 @@ contract RockOnyxUSDTVault is
         IERC20(vaultParams.asset).safeTransfer(withdrawaler, withdrawAmount);
     }
 
-    function closeRound() external nonReentrant {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
-
-        // Calculate the PnL (profit or loss)
-        uint256 newTotalAssets = totalAllocatedAmount() + getTotalAssets();
-        int256 pnl = int256(newTotalAssets) - int256(vaultState.totalAssets);
-        
-        // Update the vaultState.totalAssets
-        vaultState.totalAssets = newTotalAssets;
-
-        // Emit an event to log the PnL
-        emit RoundClosed(pnl);
-    }
-
     function balanceOf(address account) public view returns (uint256) {
         return depositReceipts[account].shares;
     }
@@ -227,12 +215,12 @@ contract RockOnyxUSDTVault is
         return
             ShareMath.pricePerShare(
                 vaultState.totalShares,
-                vaultState.totalAssets,
+                totalAssets(),
                 vaultParams.decimals
             );
     }
 
-    function totalAssets() public view returns (uint256) {
+    function totalValueLocked() public view returns (uint256) {
         return totalAllocatedAmount() + getTotalAssets();
     }
 }
