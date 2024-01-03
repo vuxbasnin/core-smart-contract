@@ -1,7 +1,27 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-import "../interfaces/IVenderPoolState.sol";
+interface ISwapPool {
+  function globalState()
+    external
+    view
+    returns (
+      uint160 price,
+      int24 tick,
+      uint16 feeZto,
+      uint16 feeOtz,
+      uint16 timepointIndex,
+      uint8 communityFeeToken0,
+      uint8 communityFeeToken1,
+      bool unlocked
+    );
+
+    function token0() external view returns (address);
+}
+
+interface ISwapFactory {
+  function poolByPair(address tokenA, address tokenB) external view returns (address pool);
+}
 
 interface ISwapRouter {
     struct ExactInputSingleParams {
@@ -11,7 +31,7 @@ interface ISwapRouter {
         uint deadline;
         uint amountIn;
         uint amountOutMinimum;
-        uint160 sqrtPriceLimitX96;
+        uint160 limitSqrtPrice;
     }
     
     /// @notice Swaps amountIn of one token for as much as possible of another token
@@ -21,5 +41,5 @@ interface ISwapRouter {
         ExactInputSingleParams calldata params
     ) external payable returns (uint amountOut);
 
-    function getPool(address tokenA, address tokenB) external view returns (IVenderPoolState);
+    function factory() external view returns (address);
 }

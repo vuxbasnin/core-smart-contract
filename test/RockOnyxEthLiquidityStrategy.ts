@@ -94,6 +94,13 @@ describe("RockOnyxEthLiquidityStrategy", function () {
     await deployRockOnyxUSDTVault();
   });
 
+  it.skip("seed data", async function(){
+    const usdcSigner = await ethers.getImpersonatedSigner("0x463f5d63e5a5edb8615b0e485a090a18aba08578");
+    const transferTx0 = await usdc.connect(usdcSigner).transfer(admin, ethers.parseUnits("1000", 6));
+    await transferTx0.wait();
+    console.log("balance of admin %s : %s usdc", admin, await usdc.connect(admin).balanceOf(admin));
+  });
+
   it.skip("deposit to rockOnyxUSDTVault, should deposit successfully", async function () {
     const usdcSigner = await ethers.getImpersonatedSigner("0x463f5d63e5a5edb8615b0e485a090a18aba08578");
     const transferTx0 = await usdc.connect(usdcSigner).transfer(admin, ethers.parseUnits("10000", 6));
@@ -110,9 +117,21 @@ describe("RockOnyxEthLiquidityStrategy", function () {
   });
 
   it("allocate assets to strategies, should allocate successfully", async function () {
-    console.log("balance of rockOnyxUSDTVaultContract : %s usdc", await usdc.connect(admin).balanceOf(admin));
+    const usdcSigner = await ethers.getImpersonatedSigner("0x463f5d63e5a5edb8615b0e485a090a18aba08578");
+    const transferTx0 = await usdc.connect(usdcSigner).transfer(admin, ethers.parseUnits("10000", 6));
+    await transferTx0.wait();
+
+    await usdc
+      .connect(admin)
+      .approve(await rockOnyxUSDTVaultContract.getAddress(), 10000000);
+
+    await rockOnyxUSDTVaultContract.connect(admin).deposit(10000000);
+
+    console.log("balance of rockOnyxUSDTVaultContract : %s usdc", await usdc.connect(admin).balanceOf(rockOnyxUSDTVaultContract));
+
     await rockOnyxUSDTVaultContract.connect(admin).allocateAssets();
 
-    console.log("balance of rockOnyxUSDTVaultContract : %s usdc", await usdc.connect(admin).balanceOf(admin));
+    console.log("balance usdc of rockOnyxUSDTVaultContract : %s usdc", await usdc.connect(admin).balanceOf(rockOnyxUSDTVaultContract));
+    console.log("balance weth of rockOnyxUSDTVaultContract : %s weth", await weth.connect(admin).balanceOf(rockOnyxUSDTVaultContract));
   });
 });
