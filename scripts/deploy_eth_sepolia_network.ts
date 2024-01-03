@@ -10,9 +10,17 @@ let usdceAddress = "";
 let wstethAddress = "";
 let wethAddress = "";
 
-async function deployMockAsset(tokenName: string, reciver: Signer) {
+async function deployMockAsset(
+  tokenName: string,
+  reciver: Signer,
+  decimals: number
+) {
+  let MockERC20Factory;
   // Deploy a mock USDC contract and mint tokens
-  const MockERC20Factory = await ethers.getContractFactory("MockERC20");
+  if (tokenName.startsWith("USD"))
+    MockERC20Factory = await ethers.getContractFactory("MockStableCoin");
+  else MockERC20Factory = await ethers.getContractFactory("MockETH");
+
   const mockUSDC = (await MockERC20Factory.deploy(
     tokenName,
     tokenName
@@ -20,7 +28,6 @@ async function deployMockAsset(tokenName: string, reciver: Signer) {
   const assetAddress = await mockUSDC.getAddress();
 
   console.log("Deployed %s at address %s", tokenName, assetAddress);
-  await mockUSDC.mint(await reciver.getAddress(), ethers.parseEther("10000"));
   return assetAddress;
 }
 
@@ -47,16 +54,17 @@ async function deployCamelotSwapContract() {
   const swapRouter = await MockSwapRouter.deploy();
 
   const factory = await ethers.getContractFactory("CamelotSwap");
-  const camelotSwapContract = (await factory.deploy(
-    swapRouter
-  )) as Contracts.CamelotSwap;
-  const camelotSwapAddress = await camelotSwapContract.getAddress();
+  const camelotSwapContract = await factory.deploy(
+    await swapRouter.getAddress()
+  );
+  await camelotSwapContract.waitForDeployment();
+
   console.log(
     "Deployed Camelot Swap contract at address %s",
-    camelotSwapAddress
+    await camelotSwapContract.getAddress()
   );
 
-  return camelotSwapAddress;
+  return await camelotSwapContract.getAddress();
 }
 
 async function deployAevoContract() {
@@ -81,16 +89,18 @@ async function main() {
   console.log("Deploying contracts with the account:", deployer.address);
 
   // deploy all assets
-  usdcAddress = await deployMockAsset("USDC", deployer);
-  usdceAddress = await deployMockAsset("USDC.e", deployer);
-  wethAddress = await deployMockAsset("WETH", deployer);
-  wstethAddress = await deployMockAsset("wstETH", deployer);
+  usdcAddress = await deployMockAsset("USDC", deployer, 6);
+  usdceAddress = await deployMockAsset("USDC.e", deployer, 6);
+  wethAddress = await deployMockAsset("WETH", deployer, 18);
+  wstethAddress = await deployMockAsset("wstETH", deployer, 18);
 
   const camelotLiquidityAddress = await deployLiquidityContract();
-  const camelotSwapAddress= await deployCamelotSwapContract();
-  const aevoProxyAddress =  await deployAevoContract();
+  const camelotSwapAddress = await deployCamelotSwapContract();
+  const aevoProxyAddress = await deployAevoContract();
 
-  const RockOnyxUSDTVaultFactory = await ethers.getContractFactory("RockOnyxUSDTVault");
+  const RockOnyxUSDTVaultFactory = await ethers.getContractFactory(
+    "RockOnyxUSDTVault"
+  );
   const rockOnyxUSDTVault = await RockOnyxUSDTVaultFactory.deploy(
     usdcAddress,
     camelotLiquidityAddress,
@@ -102,8 +112,23 @@ async function main() {
     wethAddress,
     wstethAddress
   );
-  
-  console.log("Deployed rockOnyxUSDTVault at address %s", await rockOnyxUSDTVault.getAddress());
+
+  // const rockOnyxUSDTVault = await RockOnyxUSDTVaultFactory.deploy(
+  //   "0x7EcC4336139478846119367d925Ff2Ae84FB7570",
+  //   "0xdcEC81AB071CE37686E0d37306081c3a935F3a3d",
+  //   nonfungiblePositionManager,
+  //   "0xF7AEE7e9bc25143C9EAAF1a768dA052F0AaB94b7",
+  //   "0x81b1BF4864C57EFd5ABC3972A958C7318652E49f",
+  //   await deployer.getAddress(),
+  //   "0x411bbe0c596df21bd7Cd89dc86B22e4a08F9974F",
+  //   "0x58DBa498a48Fe97074fa01c8de86F6D6aed534c9",
+  //   "0xe4D5818BE503A858C070356bACa2e4839Cf541df"
+  // );
+
+  console.log(
+    "Deployed rockOnyxUSDTVault at address %s",
+    await rockOnyxUSDTVault.getAddress()
+  );
 }
 
 // We recommend this pattern to be able to use async/await everywhere
