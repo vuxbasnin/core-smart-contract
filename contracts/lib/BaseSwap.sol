@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
+import "hardhat/console.sol";
 import "../extensions/TransferHelper.sol";
 import "../interfaces/ISwapProxy.sol";
 import "../interfaces/ISwapRouter.sol";
-import "../interfaces/IVenderPoolState.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract BaseSwap is ISwapProxy {
-    ISwapRouter public immutable swapRouter;
+    ISwapRouter private swapRouter;
+    ISwapFactory private factory;
 
     constructor(address _swapRouterAddress) {
         swapRouter = ISwapRouter(_swapRouterAddress);
+        factory = ISwapFactory(swapRouter.factory());
     }
 
     function swapTo(
@@ -19,10 +21,12 @@ contract BaseSwap is ISwapProxy {
         address tokenIn,
         uint256 amountIn,
         address tokenOut
-    ) external returns (uint256 amountOut) {
-        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
+    ) external returns (uint256) {
+        TransferHelper.safeTransferFrom(tokenIn, msg.sender, address(this), amountIn);
         TransferHelper.safeApprove(tokenIn, address(swapRouter), amountIn);
-
+        console.log("swapTo %s", swapRouter.factory());
+        console.log("tokenIn %s", tokenIn);
+        console.log("tokenOut %s", tokenOut);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
                 tokenIn: tokenIn,
@@ -31,14 +35,19 @@ contract BaseSwap is ISwapProxy {
                 deadline: block.timestamp,
                 amountIn: amountIn,
                 amountOutMinimum: 0,
-                sqrtPriceLimitX96: 0
+                limitSqrtPrice: 0
             });
-
         return swapRouter.exactInputSingle(params);
     }
 
     function getPriceOf(address token0, address token1, uint8 token0Decimals, uint8 token1Decimals) external view returns (uint256 price) {
-        (uint160 sqrtPriceX96,,,,,,,) = swapRouter.getPool(token0, token1).globalState();
+        ISwapPool pool =ISwapPool(factory.poolByPair(token0, token1));
+        address poolToken0 = pool.token0();
+        (uint160 sqrtPriceX96,,,,,,,) = pool.globalState();
+        
+        if(poolToken0 != token0)
+            return sqrtPriceX96ToPrice(sqrtPriceX96, token1Decimals, token0Decimals);  
+        
         return sqrtPriceX96ToPrice(sqrtPriceX96, token0Decimals, token1Decimals);
     }
 

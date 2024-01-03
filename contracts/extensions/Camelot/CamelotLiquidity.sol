@@ -9,7 +9,6 @@ import "../../extensions/RockOnyxAccessControl.sol";
 import "../../extensions/TransferHelper.sol";
 import "../../interfaces/INonfungiblePositionManager.sol";
 import "../../interfaces/IVenderLiquidityProxy.sol";
-import "../../interfaces/IVenderPoolState.sol";
 import "../../lib/BaseProxy.sol";
 
 contract CamelotLiquidity is IVenderLiquidityProxy, RockOnyxAccessControl, ReentrancyGuard {

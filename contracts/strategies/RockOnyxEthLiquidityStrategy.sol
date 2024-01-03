@@ -181,7 +181,7 @@ contract RockOnyxEthLiquidityStrategy is
         console.log("wstEthUsdAmount %s", wstEthUsdAmount);
 
         ethLiquidityAssets.unAllocatedEth += swapTo(usd, ethUsdAmount, weth);
-        ethLiquidityAssets.unAllocatedWstETH += swapTo(usd, wstEthUsdAmount, wstEth);
+        // ethLiquidityAssets.unAllocatedWstETH += swapTo(usd, wstEthUsdAmount, wstEth);
         ethLiquidityAssets.unAllocatedUSD = 0;
 
         console.log("unAllocatedEth %s", ethLiquidityAssets.unAllocatedEth);
