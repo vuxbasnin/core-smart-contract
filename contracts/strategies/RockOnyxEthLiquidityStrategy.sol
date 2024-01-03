@@ -73,8 +73,6 @@ contract RockOnyxEthLiquidityStrategy is
     }
 
     function depositToEthLiquidityStrategy(uint256 _amount) internal {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
-
         ethLiquidityAssets.unAllocatedUSD += _amount;
 
         _rebalanceAssets(50);

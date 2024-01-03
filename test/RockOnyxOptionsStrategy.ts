@@ -22,7 +22,7 @@ describe("RockOnyxUSDTVault", function () {
 
   // swap router
   const swapRouterAddress: string =
-    "0xE592427A0AEce92De3Edee1F18E0157C05861564";
+    "0x1F721E2E82F6676FCE4eA07A5958cF098D339e18";
   let camelotSwapContract: Contracts.CamelotSwap;
   let camelotSwapAddress: string;
 
@@ -42,8 +42,7 @@ describe("RockOnyxUSDTVault", function () {
   async function deployLiquidityContract() {
     const factory = await ethers.getContractFactory("CamelotLiquidity");
     camelotLiquidityContract = (await factory.deploy(
-      nonfungiblePositionManager,
-      usdcusdcePoolAddressPool
+      nonfungiblePositionManager
     )) as Contracts.CamelotLiquidity;
     camelotLiquidityAddress = await camelotLiquidityContract.getAddress();
 
@@ -54,14 +53,9 @@ describe("RockOnyxUSDTVault", function () {
   }
 
   async function deployCamelotSwapContract() {
-    const swapRouter = await ethers.getContractAt(
-      "ISwapRouter",
-      swapRouterAddress
-    );
-
     const factory = await ethers.getContractFactory("CamelotSwap");
     camelotSwapContract = (await factory.deploy(
-      swapRouter
+      swapRouterAddress
     )) as Contracts.CamelotSwap;
     camelotSwapAddress = await camelotSwapContract.getAddress();
     console.log(
@@ -130,7 +124,7 @@ describe("RockOnyxUSDTVault", function () {
 
   async function logBalances() {
     const pricePerShare = await rockOnyxUSDTVault.pricePerShare();
-    const totalSupply = await rockOnyxUSDTVault.totalAssets();
+    const totalSupply = await rockOnyxUSDTVault.totalValueLocked();
     console.log(
       "Price/Share %s, totalAssets= %s",
       ethers.formatUnits(pricePerShare.toString(), 6),
@@ -152,12 +146,11 @@ describe("RockOnyxUSDTVault", function () {
     rockOnyxUSDTVault = await RockOnyxUSDTVault.deploy(
       usdcAddress,
       camelotLiquidityAddress,
+      nonfungiblePositionManager,
       camelotSwapAddress,
       aevoProxyAddress,
       await user1.getAddress(),
       usdceAddress,
-      "0x1F721E2E82F6676FCE4eA07A5958cF098D339e18", // mock data to test options strategy
-      usdcAddress,
       wethAddress,
       wstethAddress
     );
@@ -212,7 +205,6 @@ describe("RockOnyxUSDTVault", function () {
 
     // rebalance portfolio
     const depositAmount = ethers.parseUnits("100", 6);
-    await rockOnyxUSDTVault.connect(owner).allocateAssets();
 
     console.log(`Depositing ${depositAmount} USDC options`);
     await rockOnyxUSDTVault.connect(owner).depositToVendor(depositAmount, {
@@ -238,7 +230,7 @@ describe("RockOnyxUSDTVault", function () {
     // Assertions
     const user1Address = user1.getAddress();
     const user2Address = user2.getAddress();
-    const totalSupplyAfter = await rockOnyxUSDTVault.totalAssets();
+    const totalSupplyAfter = await rockOnyxUSDTVault.totalValueLocked();
     const user1BalanceAfter = await rockOnyxUSDTVault.balanceOf(user1Address);
     const user2BalanceAfter = await rockOnyxUSDTVault.balanceOf(user2Address);
 
@@ -258,7 +250,7 @@ describe("RockOnyxUSDTVault", function () {
 
     await withdraw(user3, ethers.parseUnits("1000", 6));
 
-    const totalSupplyAfter = await rockOnyxUSDTVault.totalAssets();
+    const totalSupplyAfter = await rockOnyxUSDTVault.totalValueLocked();
     const user1BalanceAfter = await rockOnyxUSDTVault.balanceOf(
       await user3.getAddress()
     );
@@ -279,7 +271,7 @@ describe("RockOnyxUSDTVault", function () {
     await withdraw(user3, ethers.parseUnits("1000", 6));
 
     const user3Address = await user3.getAddress();
-    const totalSupplyAfter = await rockOnyxUSDTVault.totalAssets();
+    const totalSupplyAfter = await rockOnyxUSDTVault.totalValueLocked();
     const user1BalanceAfter = await rockOnyxUSDTVault.balanceOf(user3Address);
 
     expect(totalSupplyAfter).to.equal(ethers.parseUnits("1000", 6));
@@ -290,7 +282,7 @@ describe("RockOnyxUSDTVault", function () {
       .balanceOf(user3Address);
     console.log("Balance of user before %s", balanceOfUser3Before);
 
-    await rockOnyxUSDTVault.connect(owner).completeWithdraw(user3Address);
+    await rockOnyxUSDTVault.connect(user3).completeWithdraw();
 
     // check USDC balance of user
     const balanceOfUser3After = await usdc

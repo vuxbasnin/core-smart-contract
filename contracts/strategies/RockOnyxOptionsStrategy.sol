@@ -31,7 +31,6 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     event OptionsVendorWithdrawed(uint256 amount);
 
     event OptionsBalanceChanged(
-        uint256 changedAmount,
         uint256 oldBalance,
         uint256 newBalance
     );
@@ -139,29 +138,18 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         unAllocatedBalance += amount;
         allocatedBalance -= amount;
 
-        emit OptionsBalanceChanged(amount, oldBalance, unAllocatedBalance);
+        emit OptionsBalanceChanged(oldBalance, unAllocatedBalance);
     }
 
-    function closeOptionsRound(int256 pnl) external nonReentrant {
+    function closeOptionsRound(uint256 balance) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         uint256 oldAllocatedBalance = allocatedBalance;
-        uint256 pnlAbs = pnl >= 0 ? uint256(pnl) : uint256(-pnl);
 
-        if (pnl > 0) {
-            allocatedBalance += pnlAbs;
-        } else if (pnl < 0) {
-            // Check for underflow
-            require(
-                allocatedBalance >= pnlAbs,
-                "PnL exceeds allocated balance"
-            );
-            allocatedBalance -= pnlAbs;
-        }
+        allocatedBalance = balance;
 
         // Emitting an event to log the change in allocated balance
         emit OptionsBalanceChanged(
-            pnlAbs,
             oldAllocatedBalance,
             allocatedBalance
         );

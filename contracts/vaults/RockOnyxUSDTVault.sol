@@ -36,8 +36,8 @@ contract RockOnyxUSDTVault is
 
     constructor(
         address _asset,
-        address _venderLiquidityProxy,
-        address _venderNftPositionddress,
+        address _vendorLiquidityProxy,
+        address _vendorNftPositionddress,
         address _swapProxy,
         address _optionsVendorProxy,
         address _optionsReceiver,
@@ -46,8 +46,8 @@ contract RockOnyxUSDTVault is
         address _wstEth
     )
         RockOnyxEthLiquidityStrategy(
-            _venderLiquidityProxy,
-            _venderNftPositionddress,
+            _vendorLiquidityProxy,
+            _vendorNftPositionddress,
             _swapProxy,
             _asset,
             _weth,
@@ -133,8 +133,6 @@ contract RockOnyxUSDTVault is
      * 20% to option vender
      */
     function allocateAssets() private {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
-
         uint256 depositToEthLiquidityStrategyAmount = (vaultState.totalAssets * 60) / 100;
         uint256 depositToOptionStrategyAmount = (vaultState.totalAssets * 20) / 100;
         uint256 depositToCashAmount = (vaultState.totalAssets * 20) / 100;
@@ -145,7 +143,7 @@ contract RockOnyxUSDTVault is
             vaultState.totalAssets
         );
 
-        depositToEthLiquidityStrategy(depositToEthLiquidityStrategyAmount);
+        // depositToEthLiquidityStrategy(depositToEthLiquidityStrategyAmount);
         depositToOptionsStrategy(depositToOptionStrategyAmount);
 
         vaultState.totalAssets -= (depositToEthLiquidityStrategyAmount +
@@ -215,7 +213,7 @@ contract RockOnyxUSDTVault is
         return
             ShareMath.pricePerShare(
                 vaultState.totalShares,
-                totalAssets(),
+                totalValueLocked(),
                 vaultParams.decimals
             );
     }

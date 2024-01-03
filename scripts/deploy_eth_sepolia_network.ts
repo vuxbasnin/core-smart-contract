@@ -3,7 +3,6 @@ import * as Contracts from "../typechain-types";
 import { Signer } from "ethers";
 
 const nonfungiblePositionManager = "0x00c7f3082833e796A5b3e4Bd59f6642FF44DCD15";
-const usdcusdcePoolAddressPool = "0xc86Eb7B85807020b4548EE05B54bfC956eEbbfCD";
 
 // assets
 let usdcAddress = "";
@@ -28,8 +27,7 @@ async function deployMockAsset(tokenName: string, reciver: Signer) {
 async function deployLiquidityContract() {
   const factory = await ethers.getContractFactory("CamelotLiquidity");
   const camelotLiquidityContract = (await factory.deploy(
-    nonfungiblePositionManager,
-    usdcusdcePoolAddressPool
+    nonfungiblePositionManager
   )) as Contracts.CamelotLiquidity;
   const camelotLiquidityAddress = await camelotLiquidityContract.getAddress();
 
@@ -50,8 +48,7 @@ async function deployCamelotSwapContract() {
 
   const factory = await ethers.getContractFactory("CamelotSwap");
   const camelotSwapContract = (await factory.deploy(
-    swapRouter,
-    100
+    swapRouter
   )) as Contracts.CamelotSwap;
   const camelotSwapAddress = await camelotSwapContract.getAddress();
   console.log(
@@ -97,12 +94,11 @@ async function main() {
   const rockOnyxUSDTVault = await RockOnyxUSDTVaultFactory.deploy(
     usdcAddress,
     camelotLiquidityAddress,
+    nonfungiblePositionManager,
     camelotSwapAddress,
     aevoProxyAddress,
     await deployer.getAddress(),
     usdceAddress,
-    "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // mock data to test options strategy
-    usdcAddress,
     wethAddress,
     wstethAddress
   );
