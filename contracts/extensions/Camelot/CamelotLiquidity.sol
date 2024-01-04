@@ -123,6 +123,10 @@ contract CamelotLiquidity is IVenderLiquidityProxy, RockOnyxAccessControl, Reent
     }
 
     function decreaseLiquidityCurrentRange(uint256 tokenId, uint128 liquidity) external returns (uint256 amount0, uint256 amount1) {
+        console.log(nonfungiblePositionManager.ownerOf(tokenId));
+        console.log(msg.sender);
+        require(nonfungiblePositionManager.ownerOf(tokenId) == msg.sender, "INVALID_TOKENID_OWNER");
+
         INonfungiblePositionManager.DecreaseLiquidityParams memory params =
             INonfungiblePositionManager.DecreaseLiquidityParams({
                 tokenId: tokenId,

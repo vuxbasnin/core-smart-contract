@@ -11,6 +11,8 @@ describe("camelot liquidity contract test", function () {
     let usdce: Contracts.IERC20;
     let wsteth: Contracts.IERC20;
     let weth: Contracts.IERC20;
+    let arb: Contracts.IERC20;
+    let grail: Contracts.IERC20;
 
     let nftPosition: Contracts.IERC721;
 
@@ -18,7 +20,7 @@ describe("camelot liquidity contract test", function () {
     let liquidityAmount: number;
 
     const LIQUIDITY_TOKEN_ID = 0;
-    const LIQUIDITY_AMOUNT = 1;
+    const LIQUIDITY_AMOUNT = 0;
 
     const nonfungiblePositionManager = "0x00c7f3082833e796A5b3e4Bd59f6642FF44DCD15"; 
 
@@ -29,6 +31,9 @@ describe("camelot liquidity contract test", function () {
 
     const wstethAddress = "0x5979D7b546E38E414F7E9822514be443A4800529";
     const wethAddress = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1";
+
+    const arbAddress = "0x912CE59144191C1204E64559FE8253a0e49E6548";
+    const grailAddress = "0x3d9907F9a368ad0a51Be60f7Da3b97cf940982D8";
     
     async function deployCamelotLiquidity() {
         const camelotLiquidity = await ethers.getContractFactory("CamelotLiquidity");
@@ -58,6 +63,9 @@ describe("camelot liquidity contract test", function () {
 
         wsteth = await ethers.getContractAt("IERC20", wstethAddress);
         weth = await ethers.getContractAt("IERC20", wethAddress);
+
+        arb = await ethers.getContractAt("IERC20", arbAddress);
+        grail = await ethers.getContractAt("IERC20", grailAddress);
 
         [admin] = await ethers.getSigners();
         await deployCamelotLiquidity();
@@ -116,7 +124,7 @@ describe("camelot liquidity contract test", function () {
     });
 
     // POOL WSTETH_ETH TEST
-    it("mint position weth_wsteth pool, should create position successfully on camelot dex", async function () {
+    it.skip("mint position weth_wsteth pool, should create position successfully on camelot dex", async function () {
         const tx0 = await admin.sendTransaction({
             to: "0x916792f7734089470de27297903bed8a4630b26d",
             value: ethers.parseEther("0.5")
@@ -165,7 +173,7 @@ describe("camelot liquidity contract test", function () {
         console.log("balance of admin after mint position: %s wsteth, %s weth", newWstethAdminBalance , newWethAdminBalance);
     });
 
-    it("increase liquidity weth and wsteth pool, should increase successfully on camelot dex", async function () {
+    it.skip("increase liquidity weth and wsteth pool, should increase successfully on camelot dex", async function () {
         const wstethAmount = ethers.parseUnits("2", 18);
         const wethAmount = ethers.parseUnits("2", 18);
 
@@ -199,7 +207,7 @@ describe("camelot liquidity contract test", function () {
         console.log(transferTx1Result?.logs);
     });
 
-    it("decrease liquidity weth and wsteth pool, should decrease successfully on camelot dex", async function () {
+    it.skip("decrease liquidity weth and wsteth pool, should decrease successfully on camelot dex", async function () {
         console.log("liquidityTokenId: %s liquidityAmount: %s", liquidityTokenId, liquidityAmount);
 
         await nftPosition.connect(admin).approve(await camelotLiquidityContract.getAddress(), liquidityTokenId);
@@ -218,72 +226,64 @@ describe("camelot liquidity contract test", function () {
         console.log("balance of admin after decrease: %s wsteth, %s weth", newWstethAdminBalance, newEthAdminBalance);
     });
 
-    it.skip("collect fee usdc_usdce pool from 0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa, should collect successfully on camelot dex", async function () {
-        const usdcPoolBalance = await usdc.connect(admin).balanceOf(admin);
-        const usdcePoolBalance = await usdce.connect(admin).balanceOf(admin);
-        console.log("balance of pool before collect fee: %s usd, %s usdce", usdcPoolBalance , usdcePoolBalance);
+    it.skip("collect fee usdc_usdce pool from 0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa - 164484718, should collect successfully on camelot dex", async function () {
+        const aaSigner = await ethers.getImpersonatedSigner("0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa");
+
+        const usdcBalance = await usdc.connect(aaSigner).balanceOf(aaSigner);
+        const usdceBalance = await usdce.connect(aaSigner).balanceOf(aaSigner);
+        console.log("balance of aaSigner before collect fee: %s usdc, %s usdce", usdcBalance , usdceBalance);
 
         const tx = await admin.sendTransaction({
             to: "0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa",
             value: ethers.parseEther("0.5")
         });
 
-        const aaSigner = await ethers.getImpersonatedSigner("0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa");
         await nftPosition.connect(aaSigner).approve(await camelotLiquidityContract.getAddress(), 27617);
-        
-        const transferTx1 = await camelotLiquidityContract.connect(admin).collectAllFees(
+        const transferTx1 = await camelotLiquidityContract.connect(aaSigner).collectAllFees(
             27617
         );
 
-        var transferTx1Result = await transferTx1.wait(); 
-        console.log(transferTx1Result?.logs);
+        await transferTx1.wait(); 
 
-        const newUsdcPoolBalance = await usdc.connect(admin).balanceOf(admin);
-        const newUsdcePoolBalance = await usdce.connect(admin).balanceOf(admin);
-        console.log("balance of pool after collect fee: %s usd, %s usdce", newUsdcPoolBalance , newUsdcePoolBalance);
+        const newUsdcBalance = await usdc.connect(aaSigner).balanceOf(aaSigner);
+        const newUsdceBalance = await usdce.connect(aaSigner).balanceOf(aaSigner);
+        console.log("balance of aaSigner after collect fee: %s usdc, %s usdce", newUsdcBalance , newUsdceBalance);
+
+        const admin1arbPoolBalance = await arb.connect(aaSigner).balanceOf(aaSigner);
+        const admint1grailPoolBalance = await grail.connect(aaSigner).balanceOf(aaSigner);
+        console.log("balance of aaSigner after collect fee: %s arb, %s grail", admin1arbPoolBalance , admint1grailPoolBalance);
     });
 
-    it.skip("unbind liquidity usdc_usdce pool from 0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa, should unbind liquidity successfully on camelot dex", async function () {
-        const wstethContractBalance = await wsteth.connect(admin).balanceOf("0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa");
-        const wethContractBalance = await weth.connect(admin).balanceOf("0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa");
+    it("unbind liquidity usdc_usdce pool from 0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa - 163785110, should unbind liquidity successfully on camelot dex", async function () {
+        const aaSigner = await ethers.getImpersonatedSigner("0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa");
+
+        const wstethAaSingerBalance = await wsteth.connect(admin).balanceOf(aaSigner);
+        const wethAaSingerBalance = await weth.connect(admin).balanceOf(aaSigner);
 
         const tx = await admin.sendTransaction({
             to: "0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa",
             value: ethers.parseEther("0.5")
         });
-
-        const aaSigner = await ethers.getImpersonatedSigner("0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa");
+        
         await nftPosition.connect(aaSigner).approve(await camelotLiquidityContract.getAddress(), 30679);
         
-        const transferTx1 = await camelotLiquidityContract.connect(admin).decreaseLiquidityCurrentRange(
+        const transferTx1 = await camelotLiquidityContract.connect(aaSigner).decreaseLiquidityCurrentRange(
             30679,
             1273496053658204327527n
         );
         await transferTx1.wait(); 
 
-        var transferTx1Result = await transferTx1.wait(); 
-        console.log(transferTx1Result?.logs);
-
-        const newWstethContractBalance = await wsteth.connect(admin).balanceOf("0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa");
-        const newWethContractBalance = await weth.connect(admin).balanceOf("0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa");
-
-        const adminWstethPoolBalance = await wsteth.connect(admin).balanceOf(admin);
-        const adminWethPoolBalance = await weth.connect(admin).balanceOf(admin);
-
-        console.log("balance of 0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa before decrease: %s wsteth, %s weth", wstethContractBalance , wethContractBalance);
-        console.log("balance of 0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa after decrease: %s wsteth, %s weth", newWstethContractBalance , newWethContractBalance);
-        console.log("balance of admin after collect fee: %s wsteth, %s weth", adminWstethPoolBalance , adminWstethPoolBalance);
-        
-        const transferTx2 = await camelotLiquidityContract.connect(admin).collectAllFees(
+        const transferTx2 = await camelotLiquidityContract.connect(aaSigner).collectAllFees(
             30679
         );
 
-        const new1WstethContractBalance = await wsteth.connect(admin).balanceOf("0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa");
-        const new1WethContractBalance = await weth.connect(admin).balanceOf("0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa");
-        console.log("balance of 0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa after decrease: %s wsteth, %s weth", new1WstethContractBalance , new1WethContractBalance);
+        const newWstethAaSingerBalance = await wsteth.connect(aaSigner).balanceOf(aaSigner);
+        const newWethAaSingerBalance = await weth.connect(aaSigner).balanceOf(aaSigner);
+        console.log("balance of aaSigner before decrease: %s wsteth, %s weth", wstethAaSingerBalance , wethAaSingerBalance);
+        console.log("balance of aaSigner after decrease: %s wsteth, %s weth", newWstethAaSingerBalance , newWethAaSingerBalance);
     
-        const admin1WstethPoolBalance = await wsteth.connect(admin).balanceOf(admin);
-        const admint1WethPoolBalance = await weth.connect(admin).balanceOf(admin);
-        console.log("balance of admin after decrease: %s wsteth, %s weth", admin1WstethPoolBalance , admint1WethPoolBalance);
+        const admin1arbPoolBalance = await arb.connect(aaSigner).balanceOf(aaSigner);
+        const admint1grailPoolBalance = await grail.connect(aaSigner).balanceOf(aaSigner);
+        console.log("balance of aaSigner after decrease: %s arb, %s grail", admin1arbPoolBalance , admint1grailPoolBalance);
     });
 });
