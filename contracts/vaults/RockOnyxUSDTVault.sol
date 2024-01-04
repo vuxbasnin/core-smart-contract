@@ -137,13 +137,7 @@ contract RockOnyxUSDTVault is
         uint256 depositToOptionStrategyAmount = (vaultState.totalAssets * 20) / 100;
         uint256 depositToCashAmount = (vaultState.totalAssets * 20) / 100;
 
-        console.log(
-            "Handle allocateAssets, depositToOptionStrategyAmount = %s, vaultState.totalAssets= %s",
-            depositToOptionStrategyAmount,
-            vaultState.totalAssets
-        );
-
-        // depositToEthLiquidityStrategy(depositToEthLiquidityStrategyAmount);
+        depositToEthLiquidityStrategy(depositToEthLiquidityStrategyAmount);
         depositToOptionsStrategy(depositToOptionStrategyAmount);
 
         vaultState.totalAssets -= (depositToEthLiquidityStrategyAmount +
@@ -219,6 +213,6 @@ contract RockOnyxUSDTVault is
     }
 
     function totalValueLocked() public view returns (uint256) {
-        return totalAllocatedAmount() + getTotalAssets();
+        return totalAllocatedAmount() + getTotalEthLiquidityAssets();
     }
 }

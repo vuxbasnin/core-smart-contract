@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 import { expect } from "chai";
 
 import * as Contracts from "../typechain-types";
-import { BigNumberish, ContractTransaction, Signer } from "ethers";
+import { Signer, BigNumberish, ContractTransaction, AbiCoder, ContractTransactionReceipt } from "ethers";
 
 describe("RockOnyxEthLiquidityStrategy", function () {
   let admin: Signer;
@@ -17,6 +17,9 @@ describe("RockOnyxEthLiquidityStrategy", function () {
   let nftPosition: Contracts.IERC721;
   let liquidityTokenId: number;
   let liquidityAmount: number;
+
+  const LIQUIDITY_TOKEN_ID_INDEX = 0;
+  const LIQUIDITY_AMOUNT_INDEX = 1;
 
   const aevoAddress = "0x80d40e32FAD8bE8da5C6A42B8aF1E181984D137c";
   const aevoConnectorAddress = "0x69Adf49285c25d9f840c577A0e3cb134caF944D3";
@@ -78,6 +81,18 @@ describe("RockOnyxEthLiquidityStrategy", function () {
     console.log("deploy rockOnyxEthLiquidityStrategyContract successfully: %s", await rockOnyxUSDTVaultContract.getAddress());
   }
 
+  async function getMintPositionResult(tx : ContractTransactionReceipt, index: number) {
+    // var camelotLiquidityContractAddressHex = AbiCoder.defaultAbiCoder().encode(["address"], [await camelotLiquidityContract.getAddress()]);
+    // var zeroAddressHex = AbiCoder.defaultAbiCoder().encode(["address"], ["0x0000000000000000000000000000000000000000"]);
+    var log = tx?.logs.find(l=> l.topics.includes("0x38296fd5286ebdb66bc9ab8003152f9666c9e808b447df47c94f7d2387fb3a54"));
+    return AbiCoder.defaultAbiCoder().decode(["uint256", "uint128", "uint256", "uint256"], log!.data)[index];
+}
+
+async function getIncreasePositionResult(tx : ContractTransactionReceipt, index: number) {
+    var log = tx?.logs.find(l=> l.topics.includes("0x0a65cc63f481035bddeace027bb12726628d84152598e98e29635cbcbb0bfa76"));
+    return AbiCoder.defaultAbiCoder().decode(["uint256", "uint128", "uint256", "uint256"], log!.data)[index];
+}
+
   beforeEach(async function () {
     nftPosition = await ethers.getContractAt("IERC721", nftPositionAddress);
     usdc = await ethers.getContractAt("IERC20", usdcAddress);
@@ -116,7 +131,7 @@ describe("RockOnyxEthLiquidityStrategy", function () {
     console.log("balance of rockOnyxUSDTVaultContract : %s usdc", await usdc.connect(admin).balanceOf(admin));
   });
 
-  it("allocate assets to strategies, should allocate successfully", async function () {
+  it("fullflow deposit and stake to camelot liquidity, should successfully", async function () {
     const usdcSigner = await ethers.getImpersonatedSigner("0x463f5d63e5a5edb8615b0e485a090a18aba08578");
     const transferTx0 = await usdc.connect(usdcSigner).transfer(admin, ethers.parseUnits("10000", 6));
     await transferTx0.wait();
@@ -127,9 +142,22 @@ describe("RockOnyxEthLiquidityStrategy", function () {
 
     await rockOnyxUSDTVaultContract.connect(admin).deposit(10000000);
 
-    console.log("balance of rockOnyxUSDTVaultContract : %s usdc", await usdc.connect(admin).balanceOf(rockOnyxUSDTVaultContract));
+    console.log("balance usdc of rockOnyxUSDTVaultContract : %s usdc", await usdc.connect(admin).balanceOf(rockOnyxUSDTVaultContract));
+    console.log("balance weth of rockOnyxUSDTVaultContract : %s weth", await weth.connect(admin).balanceOf(rockOnyxUSDTVaultContract));
 
-    await rockOnyxUSDTVaultContract.connect(admin).allocateAssets();
+    const transferTx1 = await rockOnyxUSDTVaultContract.connect(admin).mintPosition(
+        -887272n,
+        887272n,
+        50
+    );
+    var transferTx1Result = await transferTx1.wait(); 
+
+    liquidityTokenId = await getMintPositionResult(transferTx1Result!, LIQUIDITY_TOKEN_ID_INDEX);
+    liquidityAmount = await getMintPositionResult(transferTx1Result!, LIQUIDITY_AMOUNT_INDEX);
+    console.log("liquidityTokenId: %s liquidityAmount: %s", liquidityTokenId, liquidityAmount);
+
+    const transferTx2 = await rockOnyxUSDTVaultContract.connect(admin).decreaseLiquidity();
+    await transferTx2.wait(); 
 
     console.log("balance usdc of rockOnyxUSDTVaultContract : %s usdc", await usdc.connect(admin).balanceOf(rockOnyxUSDTVaultContract));
     console.log("balance weth of rockOnyxUSDTVaultContract : %s weth", await weth.connect(admin).balanceOf(rockOnyxUSDTVaultContract));
