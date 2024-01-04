@@ -3,6 +3,7 @@ pragma solidity ^0.8.19;
 
 import "hardhat/console.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -14,7 +15,6 @@ import "../interfaces/IERC721Receiver.sol";
 import "../extensions/RockOnyxAccessControl.sol";
 
 struct EthLiquidityAssets {
-    uint256 unAllocatedUSD;
     uint256 unAllocatedEth;
     uint256 unAllocatedWstETH;
     uint256 allocatedEth;
@@ -60,7 +60,7 @@ contract RockOnyxEthLiquidityStrategy is
         usd = _usd;
         weth = _weth;
         wstEth = _wstEth;
-        ethLiquidityAssets = EthLiquidityAssets(0, 0, 0 , 0, 0);
+        ethLiquidityAssets = EthLiquidityAssets(0, 0, 0 , 0);
         depositState = DepositState(0, 0);
     }
 
@@ -73,15 +73,14 @@ contract RockOnyxEthLiquidityStrategy is
     }
 
     function depositToEthLiquidityStrategy(uint256 _amount) internal {
-        ethLiquidityAssets.unAllocatedUSD += _amount;
-
-        _rebalanceAssets(50);
+        ethLiquidityAssets.unAllocatedEth += swapTo(usd, _amount, weth);
     }
 
-    function mintPosition(int24 lowerTick, int24 upperTick) external nonReentrant {
+    function mintPosition(int24 lowerTick, int24 upperTick, uint256 ratio) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-
         require(depositState.tokenId == 0, "POSITION_ALREADY_OPEN");
+
+        _rebalanceAssets(ratio);
 
         IERC20(wstEth).approve(address(venderLiquidity), ethLiquidityAssets.unAllocatedWstETH);
         IERC20(weth).approve(address(venderLiquidity), ethLiquidityAssets.unAllocatedEth);
@@ -100,10 +99,13 @@ contract RockOnyxEthLiquidityStrategy is
     }
     
     function increaseLiquidity(
+        uint256 ratio
     ) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
         require(depositState.tokenId > 0, "POSITION_HAS_NOT_OPEN");
 
+        _rebalanceAssets(ratio);
+        
         IERC20(wstEth).approve(address(venderLiquidity), ethLiquidityAssets.unAllocatedWstETH);
         IERC20(weth).approve(address(venderLiquidity), ethLiquidityAssets.unAllocatedEth);
         
@@ -119,12 +121,13 @@ contract RockOnyxEthLiquidityStrategy is
 
     function decreaseLiquidity() external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        
-        IERC20(venderNftPositionAddress).approve(address(venderLiquidity), depositState.tokenId);
+
+        IERC721(venderNftPositionAddress).approve(address(venderLiquidity), depositState.tokenId);
 
         (uint256 amount0Fee, uint256 amount1Fee) = venderLiquidity.collectAllFees(depositState.tokenId);
         ethLiquidityAssets.unAllocatedWstETH += amount0Fee;
         ethLiquidityAssets.unAllocatedEth += amount1Fee;
+        console.log("%s unAllocatedWstETH, %s unAllocatedEth", ethLiquidityAssets.unAllocatedWstETH, ethLiquidityAssets.unAllocatedEth);
 
        venderLiquidity.decreaseLiquidityCurrentRange(depositState.tokenId, depositState.liquidity);
 
@@ -134,7 +137,8 @@ contract RockOnyxEthLiquidityStrategy is
 
         ethLiquidityAssets.allocatedWstETH -= amount0;
         ethLiquidityAssets.allocatedEth -= amount1;
-
+        console.log("%s unAllocatedWstETH, %s unAllocatedEth", ethLiquidityAssets.unAllocatedWstETH, ethLiquidityAssets.unAllocatedEth);
+        
         depositState.tokenId = 0;
         depositState.liquidity = 0;
     }
@@ -157,9 +161,8 @@ contract RockOnyxEthLiquidityStrategy is
         return swapProxy.swapTo(address(this), tokenIn, amountIn, tokenOut);
     }
 
-    function getTotalAssets() internal view returns (uint256){
-        return ethLiquidityAssets.unAllocatedUSD + 
-                (ethLiquidityAssets.unAllocatedEth + ethLiquidityAssets.allocatedEth) * _getEthPrice() + 
+    function getTotalEthLiquidityAssets() internal view returns (uint256){
+        return (ethLiquidityAssets.unAllocatedEth + ethLiquidityAssets.allocatedEth) * _getEthPrice() + 
                 (ethLiquidityAssets.unAllocatedWstETH + ethLiquidityAssets.allocatedWstETH) * _getWstEthPrice();
     }
 
@@ -173,16 +176,8 @@ contract RockOnyxEthLiquidityStrategy is
     }
 
     function _rebalanceAssets(uint256 ratio) private {
-        uint256 ethUsdAmount = ethLiquidityAssets.unAllocatedUSD * ratio / 100;
-        uint256 wstEthUsdAmount = ethLiquidityAssets.unAllocatedUSD - ethUsdAmount;
-        console.log("ethUsdAmount %s", ethUsdAmount);
-        console.log("wstEthUsdAmount %s", wstEthUsdAmount);
-
-        ethLiquidityAssets.unAllocatedEth += swapTo(usd, ethUsdAmount, weth);
-        // ethLiquidityAssets.unAllocatedWstETH += swapTo(usd, wstEthUsdAmount, wstEth);
-        ethLiquidityAssets.unAllocatedUSD = 0;
-
-        console.log("unAllocatedEth %s", ethLiquidityAssets.unAllocatedEth);
-        console.log("unAllocatedWstETH %s", ethLiquidityAssets.unAllocatedWstETH);
+        uint256 unAllocatedEthToSwap = ethLiquidityAssets.unAllocatedEth * ratio / 100;
+        ethLiquidityAssets.unAllocatedWstETH += swapTo(weth, unAllocatedEthToSwap, wstEth);
+        ethLiquidityAssets.unAllocatedEth -= unAllocatedEthToSwap;
     }
 }

@@ -24,9 +24,7 @@ contract BaseSwap is ISwapProxy {
     ) external returns (uint256) {
         TransferHelper.safeTransferFrom(tokenIn, msg.sender, address(this), amountIn);
         TransferHelper.safeApprove(tokenIn, address(swapRouter), amountIn);
-        console.log("swapTo %s", swapRouter.factory());
-        console.log("tokenIn %s", tokenIn);
-        console.log("tokenOut %s", tokenOut);
+
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
                 tokenIn: tokenIn,
@@ -37,6 +35,7 @@ contract BaseSwap is ISwapProxy {
                 amountOutMinimum: 0,
                 limitSqrtPrice: 0
             });
+            
         return swapRouter.exactInputSingle(params);
     }
 
