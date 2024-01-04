@@ -9,6 +9,11 @@ let usdcAddress = "";
 let usdceAddress = "";
 let wstethAddress = "";
 let wethAddress = "";
+let usdc: Contracts.IERC20;
+let usdce: Contracts.IERC20;
+let weth: Contracts.IERC20;
+let wsteth: Contracts.IERC20;
+let deployer: Signer;
 
 async function deployMockAsset(
   tokenName: string,
@@ -46,20 +51,45 @@ async function deployLiquidityContract() {
   return camelotLiquidityAddress;
 }
 
+async function addLiquidityToPool(swapRouterAddress: string) {
+  const transferTx = await usdce
+    .connect(deployer)
+    .transfer(swapRouterAddress, ethers.parseUnits("100000", 6));
+  await transferTx.wait();
+
+  const transferTx2 = await usdc
+    .connect(deployer)
+    .transfer(swapRouterAddress, ethers.parseUnits("100000", 6));
+  await transferTx2.wait();
+
+  const transferTx3 = await weth
+    .connect(deployer)
+    .transfer(swapRouterAddress, ethers.parseUnits("100000", 6));
+  await transferTx3.wait();
+
+  const transferTx4 = await wsteth
+    .connect(deployer)
+    .transfer(swapRouterAddress, ethers.parseUnits("100000", 6));
+  await transferTx4.wait();
+}
+
 async function deployCamelotSwapContract() {
   // Get the Contract Factory
   const MockSwapRouter = await ethers.getContractFactory("MockSwapRouter");
 
   // Deploy the Contract
   const swapRouter = await MockSwapRouter.deploy();
-  console.log("Deployed SwapRouter %s", await swapRouter.getAddress())
+  console.log("Deployed SwapRouter %s", await swapRouter.getAddress());
 
-  const factory = await ethers.getContractFactory("CamelotSwap");
+
+  const factory = await ethers.getContractFactory("RockOnyxSwap");
   const camelotSwapContract = await factory.deploy(
     await swapRouter.getAddress()
   );
   await camelotSwapContract.waitForDeployment();
 
+  await addLiquidityToPool(await camelotSwapContract.getAddress());
+  
   console.log(
     "Deployed Camelot Swap contract at address %s",
     await camelotSwapContract.getAddress()
@@ -88,8 +118,8 @@ async function deployAevoContract() {
 }
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
-  console.log("Deploying contracts with the account:", deployer.address);
+  [deployer] = await ethers.getSigners();
+  console.log("Deploying contracts with the account:", await deployer.getAddress());
 
   // deploy all assets
   // usdcAddress = await deployMockAsset("USDC", deployer, 6);
@@ -100,6 +130,11 @@ async function main() {
   usdceAddress = "0xd654B1bA9FfC696285FA8deF26eEbAdD7D875033";
   wethAddress = "0x5551d35dE07BebC4e6a5FAdc1c9073ce02a02b5F";
   wstethAddress = "0x2C5E28dEaa0E10241Ba38d136EBed75037732c15";
+
+  usdc = await ethers.getContractAt("IERC20", usdcAddress);
+  usdce = await ethers.getContractAt("IERC20", usdceAddress);
+  weth = await ethers.getContractAt("IERC20", wethAddress);
+  wsteth = await ethers.getContractAt("IERC20", wstethAddress);
 
   const camelotLiquidityAddress = await deployLiquidityContract();
   const camelotSwapAddress = await deployCamelotSwapContract();

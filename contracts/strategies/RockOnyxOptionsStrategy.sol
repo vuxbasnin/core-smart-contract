@@ -67,6 +67,11 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
 
         console.log("Swap to USDC.e %s", swappedAmount);
 
+        uint256 swappedAmount2 = IERC20(vaultAssetAddress).balanceOf(
+            address(this)
+        );
+        console.log("vaultAssetAddress %s", swappedAmount2);
+
         // After the swap, the contract should hold the swapped tokens in optionsAssetAddress
         // Update the unAllocatedBalance with the swapped amount
         uint256 swappedAmount1 = IERC20(optionsAssetAddress).balanceOf(

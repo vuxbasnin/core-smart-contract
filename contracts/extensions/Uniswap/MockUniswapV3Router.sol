@@ -2,30 +2,43 @@
 pragma solidity ^0.8.19;
 
 import "../../interfaces/ISwapRouter.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "hardhat/console.sol";
 
 contract MockSwapRouter is ISwapRouter {
-
     // Mock function to mimic swapping tokens at a 1:1 rate
     function exactInputSingle(
         ExactInputSingleParams calldata params
     ) external payable override returns (uint amountOut) {
-        // Validate that the deadline has not passed
-        require(params.deadline >= block.timestamp, "Transaction expired");
-
+        require(
+            IERC20(params.tokenIn).transferFrom(
+                msg.sender,
+                address(this),
+                params.amountIn
+            ),
+            "Transfer failed"
+        );
         // Simulate a 1:1 swap rate
         amountOut = params.amountIn;
 
         // Ensure that the output is greater than or equal to the minimum amount out specified
-        require(amountOut >= params.amountOutMinimum, "Insufficient output amount");
+        require(
+            amountOut >= params.amountOutMinimum,
+            "Insufficient output amount"
+        );
 
-        // Mock transfer of the output token to the recipient
-        // Note: In a real scenario, you would interact with the actual token contracts.
-        // This is a simple mock, so we're skipping token transfer logic.
-
+        console.log(
+            "[MockSwapRouter] balanceOf %s",
+            IERC20(params.tokenIn).balanceOf(address(this))
+        );
+        // Assuming tokenOut is already approved to this contract
+        require(
+            IERC20(params.tokenOut).transfer(params.recipient, amountOut),
+            "Transfer failed"
+        );
+        console.log("[MockSwapRouter] exactInputSingle transfered");
         return amountOut;
     }
 
-    function factory() external view returns (address){
-        
-    }
+    function factory() external view returns (address) {}
 }

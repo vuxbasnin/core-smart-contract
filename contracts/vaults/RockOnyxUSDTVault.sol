@@ -143,7 +143,7 @@ contract RockOnyxUSDTVault is
             vaultState.totalAssets
         );
 
-        // depositToEthLiquidityStrategy(depositToEthLiquidityStrategyAmount);
+        depositToEthLiquidityStrategy(depositToEthLiquidityStrategyAmount);
         depositToOptionsStrategy(depositToOptionStrategyAmount);
 
         vaultState.totalAssets -= (depositToEthLiquidityStrategyAmount +
@@ -219,6 +219,6 @@ contract RockOnyxUSDTVault is
     }
 
     function totalValueLocked() public view returns (uint256) {
-        return totalAllocatedAmount() + getTotalAssets();
+        return vaultState.totalAssets + totalAllocatedAmount() + getTotalAssets();
     }
 }

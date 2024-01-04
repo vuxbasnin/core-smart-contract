@@ -13,6 +13,7 @@ import {
   AEVO_ADDRESS,
   AEVO_CONNECTOR_ADDRESS,
   USDC_IMPERSONATED_SIGNER_ADDRESS,
+  USDCE_IMPERSONATED_SIGNER_ADDRESS,
 } from "../constants";
 
 const chainId: CHAINID = network.config.chainId;
@@ -64,11 +65,23 @@ describe("RockOnyxUSDTVault", function () {
   }
 
   async function deployCamelotSwapContract() {
-    const factory = await ethers.getContractFactory("CamelotSwap");
+    const factory = await ethers.getContractFactory("RockOnyxSwap");
     camelotSwapContract = (await factory.deploy(
-      swapRouterAddress
+      SWAP_ROUTER_ADDRESS[chainId]
     )) as Contracts.CamelotSwap;
     camelotSwapAddress = await camelotSwapContract.getAddress();
+
+    // add liquidity for swap
+    const amount = 50000;
+    const impersonatedSigner = await ethers.getImpersonatedSigner(
+      USDCE_IMPERSONATED_SIGNER_ADDRESS[chainId] ?? ""
+    );
+
+    const transferTx = await usdce
+      .connect(impersonatedSigner)
+      .transfer(camelotSwapAddress, ethers.parseUnits(amount.toString(), 6));
+    await transferTx.wait();
+
     console.log(
       "Deployed Camelot Swap contract at address %s",
       camelotSwapAddress
@@ -216,12 +229,12 @@ describe("RockOnyxUSDTVault", function () {
     );
 
     // rebalance portfolio
-    const depositAmount = ethers.parseUnits("100", 6);
+    // const depositAmount = ethers.parseUnits("100", 6);
 
-    console.log(`Depositing ${depositAmount} USDC options`);
-    await rockOnyxUSDTVault.connect(owner).depositToVendor(depositAmount, {
-      value: ethers.parseEther("0.001753"),
-    });
+    // console.log(`Depositing ${depositAmount} USDC options`);
+    // await rockOnyxUSDTVault.connect(owner).depositToVendor(depositAmount, {
+    //   value: ethers.parseEther("0.001753"),
+    // });
   });
 
   it.skip("should handle deposits correctly", async function () {
