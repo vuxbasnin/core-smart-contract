@@ -52,6 +52,7 @@ async function deployCamelotSwapContract() {
 
   // Deploy the Contract
   const swapRouter = await MockSwapRouter.deploy();
+  console.log("Deployed SwapRouter %s", await swapRouter.getAddress())
 
   const factory = await ethers.getContractFactory("CamelotSwap");
   const camelotSwapContract = await factory.deploy(
@@ -72,6 +73,8 @@ async function deployAevoContract() {
   const aevoMockContract =
     (await mockAevoFactory.deploy()) as Contracts.MockAEVO;
 
+  console.log("Mock Aevo address %s", await aevoMockContract.getAddress());
+
   const factory = await ethers.getContractFactory("AevoOptions");
   const aevoOptionsContract = (await factory.deploy(
     usdceAddress,
@@ -89,10 +92,14 @@ async function main() {
   console.log("Deploying contracts with the account:", deployer.address);
 
   // deploy all assets
-  usdcAddress = await deployMockAsset("USDC", deployer, 6);
-  usdceAddress = await deployMockAsset("USDC.e", deployer, 6);
-  wethAddress = await deployMockAsset("WETH", deployer, 18);
-  wstethAddress = await deployMockAsset("wstETH", deployer, 18);
+  // usdcAddress = await deployMockAsset("USDC", deployer, 6);
+  // usdceAddress = await deployMockAsset("USDC.e", deployer, 6);
+  // wethAddress = await deployMockAsset("WETH", deployer, 18);
+  // wstethAddress = await deployMockAsset("wstETH", deployer, 18);
+  usdcAddress = "0xA33a482E2e470E2d1286d0e791923657F59428f2";
+  usdceAddress = "0xd654B1bA9FfC696285FA8deF26eEbAdD7D875033";
+  wethAddress = "0x5551d35dE07BebC4e6a5FAdc1c9073ce02a02b5F";
+  wstethAddress = "0x2C5E28dEaa0E10241Ba38d136EBed75037732c15";
 
   const camelotLiquidityAddress = await deployLiquidityContract();
   const camelotSwapAddress = await deployCamelotSwapContract();

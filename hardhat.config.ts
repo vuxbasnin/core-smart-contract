@@ -15,19 +15,26 @@ const config: HardhatUserConfig = {
     },
   },
   networks: {
+    // hardhat: {
+    //   forking: {
+    //     url: "https://arbitrum-mainnet.infura.io/v3/85cde589ce754dafa0a57001c326104d",
+    //     blockNumber: 163785000
+    //   },
+    // },
     hardhat: {
       forking: {
-        url: "https://arbitrum-mainnet.infura.io/v3/85cde589ce754dafa0a57001c326104d",
-        blockNumber: 163785000
+        url: "https://sepolia.infura.io/v3/85cde589ce754dafa0a57001c326104d",
+        blockNumber: 5020140,
       },
+      chainId: 11155111
     },
     arbitrum: {
       url: "https://arbitrum-mainnet.infura.io/v3/85cde589ce754dafa0a57001c326104d",
-      accounts: [`${PRIVATE_KEY}`]
+      accounts: [`0xea7aab9140a5b271551c74b1a12933c793eeef19cdbf466409a9e46e30b4d7ba`]
     },
     sepolia: {
       url: "https://sepolia.infura.io/v3/85cde589ce754dafa0a57001c326104d",
-      accounts: [`${PRIVATE_KEY}`]
+      accounts: [`0xea7aab9140a5b271551c74b1a12933c793eeef19cdbf466409a9e46e30b4d7ba`]
     },
     localhost: {
       url: "http://127.0.0.1:8545"

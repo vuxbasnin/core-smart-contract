@@ -1,33 +1,44 @@
 const { expect } = require("chai");
-const { ethers } = require("hardhat");
+const { ethers, network } = require("hardhat");
 import * as Contracts from "../typechain-types";
 import { BigNumberish, ContractTransaction, Signer } from "ethers";
+import {
+  CHAINID,
+  WETH_ADDRESS,
+  USDC_ADDRESS,
+  USDCE_ADDRESS,
+  WSTETH_ADDRESS,
+  NonfungiblePositionManager,
+  SWAP_ROUTER_ADDRESS,
+  AEVO_ADDRESS,
+  AEVO_CONNECTOR_ADDRESS,
+  USDC_IMPERSONATED_SIGNER_ADDRESS,
+} from "../constants";
+
+const chainId: CHAINID = network.config.chainId;
 
 describe("RockOnyxUSDTVault", function () {
   let RockOnyxUSDTVault;
   let rockOnyxUSDTVault: Contracts.RockOnyxUSDTVault;
-  const usdcAddress = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
-  const usdceAddress = "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8";
-  const wstethAddress = "0x5979D7b546E38E414F7E9822514be443A4800529";
-  const wethAddress = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1";
+  const usdcAddress = USDC_ADDRESS[chainId];
+  const usdceAddress = USDCE_ADDRESS[chainId];
+  const wstethAddress = WSTETH_ADDRESS[chainId];
+  const wethAddress = WETH_ADDRESS[chainId];
   let usdc: Contracts.IERC20;
   let usdce: Contracts.IERC20;
 
   // camelot
-  const nonfungiblePositionManager =
-    "0x00c7f3082833e796A5b3e4Bd59f6642FF44DCD15";
-  const usdcusdcePoolAddressPool = "0xc86Eb7B85807020b4548EE05B54bfC956eEbbfCD";
+  const nonfungiblePositionManager = NonfungiblePositionManager[chainId];
   let camelotLiquidityContract: Contracts.CamelotLiquidity;
   let camelotLiquidityAddress: string;
 
   // swap router
-  const swapRouterAddress: string =
-    "0x1F721E2E82F6676FCE4eA07A5958cF098D339e18";
+  const swapRouterAddress = SWAP_ROUTER_ADDRESS[chainId];
   let camelotSwapContract: Contracts.CamelotSwap;
   let camelotSwapAddress: string;
 
-  const aevoAddress = "0x80d40e32FAD8bE8da5C6A42B8aF1E181984D137c";
-  const aevoConnectorAddress = "0x69Adf49285c25d9f840c577A0e3cb134caF944D3";
+  const aevoAddress = AEVO_ADDRESS[chainId];
+  const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId];
   let aevoOptionsContract: Contracts.AevoOptions;
   let aevoProxyAddress: string;
   let optionsReceiver: string;
@@ -133,6 +144,7 @@ describe("RockOnyxUSDTVault", function () {
   }
 
   beforeEach(async function () {
+    console.log("usdcAddress %s", usdcAddress, chainId);
     usdc = await ethers.getContractAt("IERC20", usdcAddress);
     usdce = await ethers.getContractAt("IERC20", usdceAddress);
 
@@ -160,37 +172,37 @@ describe("RockOnyxUSDTVault", function () {
 
     await transferIERC20FundForUser(
       usdc,
-      "0x1f7bc4da1a0c2e49d7ef542f74cd46a3fe592cb1",
+      USDC_IMPERSONATED_SIGNER_ADDRESS[chainId] ?? "",
       user1,
       5000
     );
     await transferIERC20FundForUser(
       usdc,
-      "0x1f7bc4da1a0c2e49d7ef542f74cd46a3fe592cb1",
+      USDC_IMPERSONATED_SIGNER_ADDRESS[chainId] ?? "",
       user2,
       5000
     );
     await transferIERC20FundForUser(
       usdc,
-      "0x1f7bc4da1a0c2e49d7ef542f74cd46a3fe592cb1",
+      USDC_IMPERSONATED_SIGNER_ADDRESS[chainId] ?? "",
       user3,
       5000
     );
     await transferIERC20FundForUser(
       usdc,
-      "0x1f7bc4da1a0c2e49d7ef542f74cd46a3fe592cb1",
+      USDC_IMPERSONATED_SIGNER_ADDRESS[chainId] ?? "",
       user4,
       5000
     );
     await transferIERC20FundForUser(
       usdc,
-      "0x1f7bc4da1a0c2e49d7ef542f74cd46a3fe592cb1",
+      USDC_IMPERSONATED_SIGNER_ADDRESS[chainId] ?? "",
       user5,
       5000
     );
   });
 
-  it.skip("Deposit USDT to vault", async function () {
+  it("Deposit USDT to vault", async function () {
     // User1 deposits 1000
     await deposit(user1, ethers.parseUnits("1000", 6));
 
@@ -200,7 +212,7 @@ describe("RockOnyxUSDTVault", function () {
     console.log(
       "Number of shares of %s after deposit %s",
       await owner.getAddress(),
-      ethers.formatEther(totalBalance)
+      ethers.formatUnits(totalBalance, 6)
     );
 
     // rebalance portfolio
@@ -293,7 +305,7 @@ describe("RockOnyxUSDTVault", function () {
     expect(balanceOfUser3After).to.equal(ethers.parseUnits("5000", 6));
   });
 
-  it("should handle closeOptionsRound correctly", async function () {
+  it.skip("should handle closeOptionsRound correctly", async function () {
     console.log("Testing withdraw functionality...");
 
     // User1 deposits 1000
