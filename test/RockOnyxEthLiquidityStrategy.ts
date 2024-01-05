@@ -225,7 +225,7 @@ describe("RockOnyxEthLiquidityStrategy", function () {
 
     const transferTx1 = await rockOnyxUSDTVaultContract
       .connect(admin)
-      .mintPosition(-887272n, 887272n, 50);
+      .mintEthLPPosition(-887272n, 887272n, 50);
     var transferTx1Result = await transferTx1.wait();
 
     liquidityTokenId = await getMintPositionResult(
@@ -244,7 +244,7 @@ describe("RockOnyxEthLiquidityStrategy", function () {
 
     const transferTx2 = await rockOnyxUSDTVaultContract
       .connect(admin)
-      .decreaseLiquidity();
+      .decreaseEthLPLiquidity();
     await transferTx2.wait();
 
     console.log(
