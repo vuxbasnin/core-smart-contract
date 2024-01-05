@@ -22,7 +22,12 @@ contract BaseSwap is ISwapProxy {
         uint256 amountIn,
         address tokenOut
     ) external returns (uint256) {
-        TransferHelper.safeTransferFrom(tokenIn, msg.sender, address(this), amountIn);
+        TransferHelper.safeTransferFrom(
+            tokenIn,
+            msg.sender,
+            address(this),
+            amountIn
+        );
         TransferHelper.safeApprove(tokenIn, address(swapRouter), amountIn);
 
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
@@ -35,22 +40,36 @@ contract BaseSwap is ISwapProxy {
                 amountOutMinimum: 0,
                 limitSqrtPrice: 0
             });
-            
+
         return swapRouter.exactInputSingle(params);
     }
 
-    function getPriceOf(address token0, address token1, uint8 token0Decimals, uint8 token1Decimals) external view returns (uint256 price) {
-        ISwapPool pool =ISwapPool(factory.poolByPair(token0, token1));
+    function getPriceOf(
+        address token0,
+        address token1,
+        uint8 token0Decimals,
+        uint8 token1Decimals
+    ) external view returns (uint256 price) {
+        ISwapPool pool = ISwapPool(factory.poolByPair(token0, token1));
         address poolToken0 = pool.token0();
-        (uint160 sqrtPriceX96,,,,,,,) = pool.globalState();
-        
-        if(poolToken0 != token0)
-            return sqrtPriceX96ToPrice(sqrtPriceX96, token1Decimals, token0Decimals);  
-        
-        return sqrtPriceX96ToPrice(sqrtPriceX96, token0Decimals, token1Decimals);
+        (uint160 sqrtPriceX96, , , , , , , ) = pool.globalState();
+
+        if (poolToken0 != token0)
+            return sqrtPriceX96ToPrice(sqrtPriceX96, token1Decimals);
+
+        // console.log(
+        //     "token1 = %s; token2 = %s; sqrtPriceX96ToPrice = %s",
+        //     token0,
+        //     token1,
+        //     sqrtPriceX96
+        // );
+        return sqrtPriceX96ToPrice(sqrtPriceX96, token0Decimals);
     }
 
-    function sqrtPriceX96ToPrice(uint160 sqrtPriceX96, uint8 token1Decimals, uint8 token2Decimals) private pure returns(uint256){
-        return uint256(sqrtPriceX96) ** 2 * 10 ** (token1Decimals - token2Decimals) /  2 ** 192;
+    function sqrtPriceX96ToPrice(
+        uint160 sqrtPriceX96,
+        uint8 token1Decimals
+    ) private pure returns (uint256) {
+        return ((uint256(sqrtPriceX96) ** 2 * 10 ** token1Decimals) / 2 ** 192);
     }
 }

@@ -9,8 +9,13 @@ struct VaultParams {
 }
 
 struct VaultState {
-    uint256 totalAssets;
+    uint256 pendingDepositAmount;
     uint256 totalShares;
+}
+
+struct OptionsStrategyState {
+    uint256 allocatedBalance;
+    uint256 unAllocatedBalance;
 }
 
 struct DepositReceipt {

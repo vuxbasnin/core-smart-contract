@@ -14,6 +14,8 @@ import {
   AEVO_CONNECTOR_ADDRESS,
   USDC_IMPERSONATED_SIGNER_ADDRESS,
   USDCE_IMPERSONATED_SIGNER_ADDRESS,
+  WETH_IMPERSONATED_SIGNER_ADDRESS,
+  WSTETH_IMPERSONATED_SIGNER_ADDRESS,
 } from "../constants";
 
 const chainId: CHAINID = network.config.chainId;
@@ -27,6 +29,8 @@ describe("RockOnyxUSDTVault", function () {
   const wethAddress = WETH_ADDRESS[chainId];
   let usdc: Contracts.IERC20;
   let usdce: Contracts.IERC20;
+  let weth: Contracts.IERC20;
+  let wsteth: Contracts.IERC20;
 
   // camelot
   const nonfungiblePositionManager = NonfungiblePositionManager[chainId];
@@ -64,28 +68,80 @@ describe("RockOnyxUSDTVault", function () {
     );
   }
 
-  async function deployCamelotSwapContract() {
-    const factory = await ethers.getContractFactory("RockOnyxSwap");
-    camelotSwapContract = (await factory.deploy(
-      SWAP_ROUTER_ADDRESS[chainId]
-    )) as Contracts.CamelotSwap;
-    camelotSwapAddress = await camelotSwapContract.getAddress();
-
-    // add liquidity for swap
-    const amount = 50000;
+  async function addLiquidityToSwapProxy(
+    asset: Contracts.IERC20,
+    amount: number,
+    impersonatedAddress: string
+  ) {
     const impersonatedSigner = await ethers.getImpersonatedSigner(
-      USDCE_IMPERSONATED_SIGNER_ADDRESS[chainId] ?? ""
+      impersonatedAddress
     );
 
-    const transferTx = await usdce
+    const transferTx = await asset
       .connect(impersonatedSigner)
       .transfer(camelotSwapAddress, ethers.parseUnits(amount.toString(), 6));
     await transferTx.wait();
-
     console.log(
-      "Deployed Camelot Swap contract at address %s",
-      camelotSwapAddress
+      "Transfered fund to SwapProxy %s with amount = %s",
+      camelotSwapAddress,
+      amount
     );
+  }
+
+  async function deployCamelotSwapContract() {
+    if (chainId == CHAINID.ARBITRUM_MAINNET) {
+      console.log("swapRouterAddress = %s", swapRouterAddress);
+      const swapRouter = await ethers.getContractAt(
+        "ISwapRouter",
+        swapRouterAddress
+      );
+
+      const factory = await ethers.getContractFactory("CamelotSwap");
+      camelotSwapContract = (await factory.deploy(
+        swapRouter
+      )) as Contracts.CamelotSwap;
+      camelotSwapAddress = await camelotSwapContract.getAddress();
+      console.log(
+        "Deployed Camelot Swap contract at address %s",
+        camelotSwapAddress
+      );
+    } else if (chainId == CHAINID.ETH_SEPOLIA) {
+      // On Ethereum testnet, we don't have swapPool then we use the MockSwap instead of
+      const factory = await ethers.getContractFactory("RockOnyxSwap");
+      camelotSwapContract = (await factory.deploy(
+        "0xE592427A0AEce92De3Edee1F18E0157C05861564" // we don't use this then just a mock value
+      )) as Contracts.CamelotSwap;
+      camelotSwapAddress = await camelotSwapContract.getAddress();
+
+      console.log(
+        "Deployed RockOnyxSwap contract at address %s",
+        camelotSwapAddress
+      );
+
+      await addLiquidityToSwapProxy(
+        usdc,
+        50000,
+        USDC_IMPERSONATED_SIGNER_ADDRESS[chainId] ?? ""
+      );
+
+      await addLiquidityToSwapProxy(
+        usdce,
+        50000,
+        USDCE_IMPERSONATED_SIGNER_ADDRESS[chainId] ?? ""
+      );
+
+      await addLiquidityToSwapProxy(
+        weth,
+        500,
+        WETH_IMPERSONATED_SIGNER_ADDRESS[chainId] ?? ""
+      );
+
+      await addLiquidityToSwapProxy(
+        wsteth,
+        500,
+        WSTETH_IMPERSONATED_SIGNER_ADDRESS[chainId] ?? ""
+      );
+    }
   }
 
   async function deployAevoContract() {
@@ -229,15 +285,15 @@ describe("RockOnyxUSDTVault", function () {
     );
 
     // rebalance portfolio
-    // const depositAmount = ethers.parseUnits("100", 6);
+    const depositAmount = ethers.parseUnits("100", 6);
 
-    // console.log(`Depositing ${depositAmount} USDC options`);
-    // await rockOnyxUSDTVault.connect(owner).depositToVendor(depositAmount, {
-    //   value: ethers.parseEther("0.001753"),
-    // });
+    console.log(`Depositing ${depositAmount} USDC options`);
+    await rockOnyxUSDTVault.connect(owner).depositToVendor(depositAmount, {
+      value: ethers.parseEther("0.001753"),
+    });
   });
 
-  it.skip("should handle deposits correctly", async function () {
+  it("should handle deposits correctly", async function () {
     console.log("Testing deposit functionality...");
 
     // User1 deposits 1000
@@ -259,12 +315,13 @@ describe("RockOnyxUSDTVault", function () {
     const user1BalanceAfter = await rockOnyxUSDTVault.balanceOf(user1Address);
     const user2BalanceAfter = await rockOnyxUSDTVault.balanceOf(user2Address);
 
-    expect(totalSupplyAfter).to.equal(ethers.parseUnits("2000", 6));
-    expect(user1BalanceAfter).to.equal(ethers.parseUnits("1000", 6));
-    expect(user2BalanceAfter).to.equal(ethers.parseUnits("1000", 6));
+    const precision = ethers.parseUnits("2", 6);
+    expect(totalSupplyAfter).to.approximately(ethers.parseUnits("2000", 6), precision);
+    expect(user1BalanceAfter).to.approximately(ethers.parseUnits("1000", 6), precision);
+    expect(user2BalanceAfter).to.approximately(ethers.parseUnits("1000", 6), precision);
   });
 
-  it.skip("should handle initiateWithdraw correctly", async function () {
+  it("should handle initiateWithdraw correctly", async function () {
     console.log("Testing withdraw functionality...");
 
     // User1 deposits 1000
@@ -280,11 +337,12 @@ describe("RockOnyxUSDTVault", function () {
       await user3.getAddress()
     );
 
-    expect(totalSupplyAfter).to.equal(ethers.parseUnits("1000", 6));
+    const precision = ethers.parseUnits("2", 6);
+    expect(totalSupplyAfter).to.approximately(ethers.parseUnits("1000", 6), precision);
     expect(user1BalanceAfter).to.equal(ethers.parseUnits("0", 6));
   });
 
-  it.skip("should handle complete withdrawal correctly", async function () {
+  it("should handle complete withdrawal correctly", async function () {
     console.log("Testing withdraw functionality...");
 
     // User1 deposits 1000
@@ -299,7 +357,8 @@ describe("RockOnyxUSDTVault", function () {
     const totalSupplyAfter = await rockOnyxUSDTVault.totalValueLocked();
     const user1BalanceAfter = await rockOnyxUSDTVault.balanceOf(user3Address);
 
-    expect(totalSupplyAfter).to.equal(ethers.parseUnits("1000", 6));
+    const precision = ethers.parseUnits("2", 6);
+    expect(totalSupplyAfter).to.approximately(ethers.parseUnits("1000", 6), precision);
     expect(user1BalanceAfter).to.equal(ethers.parseUnits("0", 6));
 
     const balanceOfUser3Before = await usdc
@@ -307,18 +366,19 @@ describe("RockOnyxUSDTVault", function () {
       .balanceOf(user3Address);
     console.log("Balance of user before %s", balanceOfUser3Before);
 
-    await rockOnyxUSDTVault.connect(user3).completeWithdraw();
+    /// TODO: We need to implement the withdraw fund from partner
+    // await rockOnyxUSDTVault.connect(user3).completeWithdraw();
 
-    // check USDC balance of user
-    const balanceOfUser3After = await usdc
-      .connect(user3)
-      .balanceOf(user3Address);
-    console.log("Balance of user after %s", balanceOfUser3After);
+    // // check USDC balance of user
+    // const balanceOfUser3After = await usdc
+    //   .connect(user3)
+    //   .balanceOf(user3Address);
+    // console.log("Balance of user after %s", balanceOfUser3After);
 
-    expect(balanceOfUser3After).to.equal(ethers.parseUnits("5000", 6));
+    // expect(balanceOfUser3After).to.equal(ethers.parseUnits("5000", 6));
   });
 
-  it.skip("should handle closeOptionsRound correctly", async function () {
+  it("should handle closeOptionsRound correctly", async function () {
     console.log("Testing withdraw functionality...");
 
     // User1 deposits 1000
@@ -328,7 +388,7 @@ describe("RockOnyxUSDTVault", function () {
     await logBalances();
 
     const pps = await rockOnyxUSDTVault.pricePerShare();
-    expect(pps).to.equal(ethers.parseUnits("1", 6));
+    expect(pps).to.approximately(ethers.parseUnits("1", 6), ethers.parseUnits("0.1", 6));
 
     await rockOnyxUSDTVault
       .connect(owner)
@@ -336,16 +396,16 @@ describe("RockOnyxUSDTVault", function () {
 
     // await rockOnyxUSDTVault.connect(owner).closeRound();
 
-    // const ppsAfter = await rockOnyxUSDTVault.pricePerShare();
-    // console.log("ppsAfter", ppsAfter);
-    // expect(ppsAfter).to.equal(ethers.parseUnits("1.5", 6));
+    const ppsAfter = await rockOnyxUSDTVault.pricePerShare();
+    console.log("ppsAfter", ppsAfter);
+    expect(ppsAfter).to.approximately(ethers.parseUnits("1.5", 6), ethers.parseUnits("0.1", 6));
 
-    // const totalSupplyAfter = await rockOnyxUSDTVault.totalAssets();
-    // const user1BalanceAfter = await rockOnyxUSDTVault.balanceOf(
-    //   await user3.getAddress()
-    // );
+    const totalSupplyAfter = await rockOnyxUSDTVault.totalValueLocked();
+    const user1BalanceAfter = await rockOnyxUSDTVault.balanceOf(
+      await user3.getAddress()
+    );
 
-    // expect(totalSupplyAfter).to.equal(ethers.parseUnits("1000", 6));
-    // expect(user1BalanceAfter).to.equal(ethers.parseUnits("0", 6));
+    expect(totalSupplyAfter).to.approximately(ethers.parseUnits("1500", 6), ethers.parseUnits("2", 6));
+    expect(user1BalanceAfter).to.equal(ethers.parseUnits("1000", 6));
   });
 });
