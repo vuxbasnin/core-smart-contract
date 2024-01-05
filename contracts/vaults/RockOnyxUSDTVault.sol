@@ -49,13 +49,7 @@ contract RockOnyxUSDTVault is
         address _wstEth
     )
         RockOnyxEthLiquidityStrategy()
-        RockOnyxOptionStrategy(
-            _optionsVendorProxy,
-            _optionsReceiver,
-            _usdce,
-            _usdc,
-            _swapProxy
-        )
+        RockOnyxOptionStrategy()
         RockOynxUsdLiquidityStrategy()
     {
         _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
@@ -63,6 +57,7 @@ contract RockOnyxUSDTVault is
         vaultParams = VaultParams(6, _usdc, 1_00, 1_000_000 * 10 ** 6);
         vaultState = VaultState(0, 0);
 
+        options_Initialize(_optionsVendorProxy, _optionsReceiver, _usdce, _usdc, _swapProxy);
         ethLP_Initialize( _vendorLiquidityProxy, _vendorNftPositionddress, _swapProxy, _usdc, _weth, _wstEth);
         usdLP_Initialize(_vendorLiquidityProxy, _vendorNftPositionddress, _swapProxy, _usdc, _usdce);
     }

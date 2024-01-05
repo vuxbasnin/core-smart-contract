@@ -11,7 +11,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../structs/RockOnyxStructs.sol";
 
 contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
-    address internal vendorAddress;
     address internal optionsAssetAddress;
     address internal vaultAssetAddress;
     address internal optionsReceiver;
@@ -32,20 +31,24 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
 
     event OptionsBalanceChanged(uint256 oldBalance, uint256 newBalance);
 
-    constructor(
+    constructor() {
+        optionsState = OptionsStrategyState(0, 0);
+    }
+
+    function options_Initialize(
         address _vendorAddress,
         address _optionsReceiver,
         address _optionsAssetAddress,
         address _vaultAssetAddress,
         address _swapAddress
-    ) {
-        vendorAddress = _vendorAddress;
-        optionsVendor = IOptionsVendorProxy(vendorAddress);
-        optionsState = OptionsStrategyState(0, 0);
+    ) internal {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        optionsVendor = IOptionsVendorProxy(_vendorAddress);
+        swapProxy = ISwapProxy(_swapAddress);
         optionsReceiver = _optionsReceiver;
         optionsAssetAddress = _optionsAssetAddress;
         vaultAssetAddress = _vaultAssetAddress;
-        swapProxy = ISwapProxy(_swapAddress);
     }
 
     function depositToOptionsStrategy(uint256 amountIn) internal {
@@ -121,7 +124,7 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         optionsState.unAllocatedBalance -= amount;
         optionsState.allocatedBalance += amount;
 
-        emit OptionsVendorDeposited(vendorAddress, optionsReceiver, amount);
+        emit OptionsVendorDeposited(address(optionsVendor), optionsReceiver, amount);
     }
 
     function withdrawFromVendor(uint256 amount) external nonReentrant {
