@@ -40,9 +40,8 @@ contract RockOynxUsdLiquidityStrategy is
      *  EVENTS
      ***********************************************/
 
-    constructor(
-    ) {
-        usdLiquidityAssets = UsdLiquidityAssets(0, 0, 0 , 0);
+    constructor() {
+        usdLiquidityAssets = UsdLiquidityAssets(0, 0, 0, 0);
         usdLPDepositState = DepositState(0, 0);
     }
 
@@ -59,7 +58,7 @@ contract RockOynxUsdLiquidityStrategy is
         usdNftPositionAddress = _usdNftPositionAddress;
         usdSwapProxy = ISwapProxy(_swapAddress);
         usdc = _usdc;
-        usdc = _usdce;
+        usdce = _usdce;
     }
 
     function depositToUsdLiquidityStrategy(uint256 _amount) internal {
@@ -68,15 +67,35 @@ contract RockOynxUsdLiquidityStrategy is
         _rebalanceUsdLPAssets();
     }
 
-    function mintUsdLPPosition(int24 lowerTick, int24 upperTick) external nonReentrant {
+    function mintUsdLPPosition(
+        int24 lowerTick,
+        int24 upperTick
+    ) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
         require(usdLPDepositState.tokenId == 0, "POSITION_ALREADY_OPEN");
 
-        IERC20(usdc).approve(address(usdLPProvider), usdLiquidityAssets.unAllocatedUsdc);
-        IERC20(usdce).approve(address(usdLPProvider), usdLiquidityAssets.unAllocatedUsdce);
+        IERC20(usdc).approve(
+            address(usdLPProvider),
+            usdLiquidityAssets.unAllocatedUsdc
+        );
+        IERC20(usdce).approve(
+            address(usdLPProvider),
+            usdLiquidityAssets.unAllocatedUsdce
+        );
 
-        (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) =
-             usdLPProvider.mintPosition(lowerTick, upperTick, usdc, usdLiquidityAssets.unAllocatedUsdc, usdce, usdLiquidityAssets.unAllocatedUsdce);
+        (
+            uint256 tokenId,
+            uint128 liquidity,
+            uint256 amount0,
+            uint256 amount1
+        ) = usdLPProvider.mintPosition(
+                lowerTick,
+                upperTick,
+                usdc,
+                usdLiquidityAssets.unAllocatedUsdc,
+                usdce,
+                usdLiquidityAssets.unAllocatedUsdce
+            );
 
         usdLiquidityAssets.unAllocatedUsdc -= amount0;
         usdLiquidityAssets.unAllocatedUsdce -= amount1;
@@ -87,17 +106,29 @@ contract RockOynxUsdLiquidityStrategy is
         usdLPDepositState.tokenId = tokenId;
         usdLPDepositState.liquidity = liquidity;
     }
-    
-    function increaseUsdLPLiquidity(
-    ) external nonReentrant {
+
+    function increaseUsdLPLiquidity() external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
         require(usdLPDepositState.tokenId > 0, "POSITION_HAS_NOT_OPEN");
 
-        IERC20(usdc).approve(address(usdLPProvider), usdLiquidityAssets.unAllocatedUsdc);
-        IERC20(usdce).approve(address(usdLPProvider), usdLiquidityAssets.unAllocatedUsdce);
-        
-       (uint128 liquidity, uint amount0, uint amount1) = usdLPProvider.increaseLiquidityCurrentRange(usdLPDepositState.tokenId, usdc, usdLiquidityAssets.unAllocatedUsdc, usdce, usdLiquidityAssets.unAllocatedUsdce);
-        
+        IERC20(usdc).approve(
+            address(usdLPProvider),
+            usdLiquidityAssets.unAllocatedUsdc
+        );
+        IERC20(usdce).approve(
+            address(usdLPProvider),
+            usdLiquidityAssets.unAllocatedUsdce
+        );
+
+        (uint128 liquidity, uint amount0, uint amount1) = usdLPProvider
+            .increaseLiquidityCurrentRange(
+                usdLPDepositState.tokenId,
+                usdc,
+                usdLiquidityAssets.unAllocatedUsdc,
+                usdce,
+                usdLiquidityAssets.unAllocatedUsdce
+            );
+
         usdLiquidityAssets.unAllocatedUsdc -= amount0;
         usdLiquidityAssets.unAllocatedUsdce -= amount1;
 
@@ -109,22 +140,40 @@ contract RockOynxUsdLiquidityStrategy is
     function decreaseUsdLPLiquidity() external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        IERC721(usdNftPositionAddress).approve(address(usdLPProvider), usdLPDepositState.tokenId);
+        IERC721(usdNftPositionAddress).approve(
+            address(usdLPProvider),
+            usdLPDepositState.tokenId
+        );
 
-        (uint256 amount0Fee, uint256 amount1Fee) = usdLPProvider.collectAllFees(usdLPDepositState.tokenId);
+        (uint256 amount0Fee, uint256 amount1Fee) = usdLPProvider.collectAllFees(
+            usdLPDepositState.tokenId
+        );
         usdLiquidityAssets.unAllocatedUsdc += amount0Fee;
         usdLiquidityAssets.unAllocatedUsdce += amount1Fee;
-        console.log("%s unAllocatedUsdc, %s unAllocatedUsdce", usdLiquidityAssets.unAllocatedUsdc, usdLiquidityAssets.unAllocatedUsdce);
+        console.log(
+            "%s unAllocatedUsdc, %s unAllocatedUsdce",
+            usdLiquidityAssets.unAllocatedUsdc,
+            usdLiquidityAssets.unAllocatedUsdce
+        );
 
-       usdLPProvider.decreaseLiquidityCurrentRange(usdLPDepositState.tokenId, usdLPDepositState.liquidity);
+        usdLPProvider.decreaseLiquidityCurrentRange(
+            usdLPDepositState.tokenId,
+            usdLPDepositState.liquidity
+        );
 
-       (uint256 amount0, uint256 amount1) = usdLPProvider.collectAllFees(usdLPDepositState.tokenId);
+        (uint256 amount0, uint256 amount1) = usdLPProvider.collectAllFees(
+            usdLPDepositState.tokenId
+        );
         usdLiquidityAssets.unAllocatedUsdc += amount0;
         usdLiquidityAssets.unAllocatedUsdce += amount1;
 
         usdLiquidityAssets.allocatedUsdc -= amount0;
         usdLiquidityAssets.allocatedUsdce -= amount1;
-        console.log("%s unAllocatedUsdc, %s unAllocatedUsdce", usdLiquidityAssets.unAllocatedUsdc, usdLiquidityAssets.unAllocatedUsdce);
+        console.log(
+            "%s unAllocatedUsdc, %s unAllocatedUsdce",
+            usdLiquidityAssets.unAllocatedUsdc,
+            usdLiquidityAssets.unAllocatedUsdce
+        );
 
         usdLPDepositState.tokenId = 0;
         usdLPDepositState.liquidity = 0;
@@ -133,28 +182,47 @@ contract RockOynxUsdLiquidityStrategy is
     function closeUsdLPRound() external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        IERC721(usdNftPositionAddress).approve(address(usdLPProvider), usdLPDepositState.tokenId);
-        
-        (uint256 amount0, uint256 amount1) = usdLPProvider.collectAllFees(usdLPDepositState.tokenId);
+        IERC721(usdNftPositionAddress).approve(
+            address(usdLPProvider),
+            usdLPDepositState.tokenId
+        );
+
+        (uint256 amount0, uint256 amount1) = usdLPProvider.collectAllFees(
+            usdLPDepositState.tokenId
+        );
         usdLiquidityAssets.unAllocatedUsdc += amount0;
         usdLiquidityAssets.unAllocatedUsdce += amount1;
 
-        IERC721(usdNftPositionAddress).setApprovalForAll(address(usdLPProvider), false);
+        IERC721(usdNftPositionAddress).setApprovalForAll(
+            address(usdLPProvider),
+            false
+        );
     }
 
-    function getTotalUsdLPAssets() internal view returns (uint256){
-        return (usdLiquidityAssets.unAllocatedUsdce + usdLiquidityAssets.allocatedUsdce) * _getUsdcePrice() + 
-                (usdLiquidityAssets.unAllocatedUsdc + usdLiquidityAssets.allocatedUsdc);
+    function getTotalUsdLPAssets() internal view returns (uint256) {
+        return
+            ((usdLiquidityAssets.unAllocatedUsdce +
+                usdLiquidityAssets.allocatedUsdce) * _getUsdcePrice()) /
+            1e6 +
+            (usdLiquidityAssets.unAllocatedUsdc +
+                usdLiquidityAssets.allocatedUsdc);
     }
 
     function _getUsdcePrice() private view returns (uint256) {
-        return usdSwapProxy.getPriceOf(usdce, usdc, 18 , 6);
+        uint256 usdc2Usdce = usdSwapProxy.getPriceOf(usdc, usdce, 6, 6);
+        return 1e12 / usdc2Usdce;
     }
 
     function _rebalanceUsdLPAssets() private {
-        uint256 unAllocatedUsdceToSwap = usdLiquidityAssets.unAllocatedUsdce * 50 / 100;
-        IERC20(usdc).approve(address(usdSwapProxy), unAllocatedUsdceToSwap);
-        usdLiquidityAssets.unAllocatedUsdce += usdSwapProxy.swapTo(address(this), usdc, unAllocatedUsdceToSwap, usdce);
-        usdLiquidityAssets.unAllocatedUsdc -= unAllocatedUsdceToSwap;
+        uint256 unAllocatedUsdcToSwap = (usdLiquidityAssets.unAllocatedUsdc *
+            50) / 100;
+        IERC20(usdc).approve(address(usdSwapProxy), unAllocatedUsdcToSwap);
+        usdLiquidityAssets.unAllocatedUsdce += usdSwapProxy.swapTo(
+            address(this),
+            usdc,
+            unAllocatedUsdcToSwap,
+            usdce
+        );
+        usdLiquidityAssets.unAllocatedUsdc -= unAllocatedUsdcToSwap;
     }
 }

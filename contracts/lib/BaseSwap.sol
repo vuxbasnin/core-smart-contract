@@ -29,6 +29,7 @@ contract BaseSwap is ISwapProxy {
             amountIn
         );
         TransferHelper.safeApprove(tokenIn, address(swapRouter), amountIn);
+        console.log("Test nek %s %s %s", tokenIn, tokenOut, amountIn);
 
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({

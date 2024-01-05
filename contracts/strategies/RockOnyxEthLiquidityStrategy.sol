@@ -65,6 +65,7 @@ contract RockOnyxEthLiquidityStrategy is
 
     function depositToEthLiquidityStrategy(uint256 _amount) internal {
         ethLiquidityAssets.unAllocatedEth += _swapTo(usd, _amount, weth);
+        console.log("test %s", ethLiquidityAssets.unAllocatedEth);
     }
 
     function mintEthLPPosition(
@@ -154,11 +155,11 @@ contract RockOnyxEthLiquidityStrategy is
             .collectAllFees(depositState.tokenId);
         ethLiquidityAssets.unAllocatedWstETH += amount0Fee;
         ethLiquidityAssets.unAllocatedEth += amount1Fee;
-        console.log(
-            "%s unAllocatedWstETH, %s unAllocatedEth",
-            ethLiquidityAssets.unAllocatedWstETH,
-            ethLiquidityAssets.unAllocatedEth
-        );
+        // console.log(
+        //     "%s unAllocatedWstETH, %s unAllocatedEth",
+        //     ethLiquidityAssets.unAllocatedWstETH,
+        //     ethLiquidityAssets.unAllocatedEth
+        // );
 
         ethLPProvider.decreaseLiquidityCurrentRange(
             depositState.tokenId,
@@ -173,11 +174,11 @@ contract RockOnyxEthLiquidityStrategy is
 
         ethLiquidityAssets.allocatedWstETH -= amount0;
         ethLiquidityAssets.allocatedEth -= amount1;
-        console.log(
-            "%s unAllocatedWstETH, %s unAllocatedEth",
-            ethLiquidityAssets.unAllocatedWstETH,
-            ethLiquidityAssets.unAllocatedEth
-        );
+        // console.log(
+        //     "%s unAllocatedWstETH, %s unAllocatedEth",
+        //     ethLiquidityAssets.unAllocatedWstETH,
+        //     ethLiquidityAssets.unAllocatedEth
+        // );
 
         depositState.tokenId = 0;
         depositState.liquidity = 0;
@@ -208,9 +209,9 @@ contract RockOnyxEthLiquidityStrategy is
             ((ethLiquidityAssets.unAllocatedEth +
                 ethLiquidityAssets.allocatedEth) * _getEthPrice()) /
             1e18 +
-            (ethLiquidityAssets.unAllocatedWstETH +
+            ((ethLiquidityAssets.unAllocatedWstETH +
                 ethLiquidityAssets.allocatedWstETH) *
-            _getWstEthPrice();
+            _getWstEthPrice()) / 1e18;
     }
 
     function _swapTo(address tokenIn, uint256 amountIn, address tokenOut) private returns (uint256 amountOut) {

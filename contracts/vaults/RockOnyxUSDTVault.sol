@@ -132,17 +132,17 @@ contract RockOnyxUSDTVault is
      */
     function allocateAssets() private {
         uint256 depositToEthLPAmount = (vaultState
-            .pendingDepositAmount * 80) / 100;
+            .pendingDepositAmount * 60) / 100;
         uint256 depositToOptionStrategyAmount = (vaultState
             .pendingDepositAmount * 20) / 100;
         uint256 depositToCashAmount = (vaultState.pendingDepositAmount * 20) /
              100;
-
+        
         depositToEthLiquidityStrategy(depositToEthLPAmount);
         depositToUsdLiquidityStrategy(depositToCashAmount);
         depositToOptionsStrategy(depositToOptionStrategyAmount);
 
-        vaultState.pendingDepositAmount = 0; 
+        vaultState.pendingDepositAmount = 0;
     }
 
     /**
@@ -207,8 +207,8 @@ contract RockOnyxUSDTVault is
     }
 
     function pricePerShare() public view returns (uint256) {
-        // console.log("tvl = %s", totalValueLocked());
-        // console.log("vaultState.totalShares = %s", vaultState.totalShares);
+        console.log("tvl = %s", totalValueLocked());
+        console.log("vaultState.totalShares = %s", vaultState.totalShares);
         return
             ShareMath.pricePerShare(
                 vaultState.totalShares,

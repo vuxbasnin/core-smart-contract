@@ -25,6 +25,7 @@ describe("RockOnyxUSDTVault", function () {
   let rockOnyxUSDTVault: Contracts.RockOnyxUSDTVault;
   const usdcAddress = USDC_ADDRESS[chainId];
   const usdceAddress = USDCE_ADDRESS[chainId];
+  console.log("usdceAddress", usdceAddress);
   const wstethAddress = WSTETH_ADDRESS[chainId];
   const wethAddress = WETH_ADDRESS[chainId];
   let usdc: Contracts.IERC20;
