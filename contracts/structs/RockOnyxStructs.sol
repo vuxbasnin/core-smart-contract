@@ -25,3 +25,8 @@ struct DepositReceipt {
 struct Withdrawal {
     uint256 shares;
 }
+
+struct DepositState {
+    uint256 tokenId;
+    uint128 liquidity;
+}

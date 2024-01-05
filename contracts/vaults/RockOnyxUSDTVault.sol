@@ -7,12 +7,15 @@ import "../extensions/RockOnyxAccessControl.sol";
 import "../lib/ShareMath.sol";
 import "../strategies/RockOnyxEthLiquidityStrategy.sol";
 import "../strategies/RockOnyxOptionsStrategy.sol";
+import "../strategies/RockOynxUsdLiquidityStrategy.sol";
 import "hardhat/console.sol";
 
 contract RockOnyxUSDTVault is
+    IERC721Receiver,
     RockOnyxAccessControl,
     RockOnyxEthLiquidityStrategy,
-    RockOnyxOptionStrategy
+    RockOnyxOptionStrategy,
+    RockOynxUsdLiquidityStrategy
 {
     using SafeERC20 for IERC20;
     using ShareMath for DepositReceipt;
@@ -35,37 +38,41 @@ contract RockOnyxUSDTVault is
     event RoundClosed(int256 pnl);
 
     constructor(
-        address _asset,
+        address _usdc,
         address _vendorLiquidityProxy,
         address _vendorNftPositionddress,
         address _swapProxy,
         address _optionsVendorProxy,
         address _optionsReceiver,
-        address _optionsAssetAddress,
+        address _usdce,
         address _weth,
         address _wstEth
     )
-        RockOnyxEthLiquidityStrategy(
-            _vendorLiquidityProxy,
-            _vendorNftPositionddress,
-            _swapProxy,
-            _asset,
-            _weth,
-            _wstEth
-        )
+        RockOnyxEthLiquidityStrategy()
         RockOnyxOptionStrategy(
             _optionsVendorProxy,
             _optionsReceiver,
-            _optionsAssetAddress,
-            _asset,
+            _usdce,
+            _usdc,
             _swapProxy
         )
+        RockOynxUsdLiquidityStrategy()
     {
-        vaultParams = VaultParams(6, _asset, 1_00, 1_000_000 * 10 ** 6);
+        _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
+
+        vaultParams = VaultParams(6, _usdc, 1_00, 1_000_000 * 10 ** 6);
         vaultState = VaultState(0, 0);
 
-        _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
+        ethLP_Initialize( _vendorLiquidityProxy, _vendorNftPositionddress, _swapProxy, _usdc, _weth, _wstEth);
+        usdLP_Initialize(_vendorLiquidityProxy, _vendorNftPositionddress, _swapProxy, _usdc, _usdce);
     }
+
+    function onERC721Received(
+        address operator,
+        address from,
+        uint tokenId,
+        bytes calldata
+    ) external returns (bytes4) {}
 
     /**
      * @notice Mints the vault shares to the creditor
@@ -85,15 +92,8 @@ contract RockOnyxUSDTVault is
         uint256 shares = _issueShares(amount);
         DepositReceipt storage depositReceipt = depositReceipts[creditor];
         depositReceipt.shares += shares;
-
         vaultState.pendingDepositAmount += amount;
         vaultState.totalShares += shares;
-        // console.log(
-        //     "Vault Deposit vaultState.totalShares %s, shares %s",
-        //     vaultState.totalShares,
-        //     shares
-        // );
-
         return shares;
     }
 
@@ -136,19 +136,18 @@ contract RockOnyxUSDTVault is
      * 20% to option vender
      */
     function allocateAssets() private {
-        uint256 depositToEthLiquidityStrategyAmount = (vaultState
+        uint256 depositToEthLPAmount = (vaultState
             .pendingDepositAmount * 80) / 100;
         uint256 depositToOptionStrategyAmount = (vaultState
             .pendingDepositAmount * 20) / 100;
-        // uint256 depositToCashAmount = (vaultState.pendingDepositAmount * 20) /
-        //     100;
+        uint256 depositToCashAmount = (vaultState.pendingDepositAmount * 20) /
+             100;
 
-        depositToEthLiquidityStrategy(depositToEthLiquidityStrategyAmount);
+        depositToEthLiquidityStrategy(depositToEthLPAmount);
+        depositToUsdLiquidityStrategy(depositToCashAmount);
         depositToOptionsStrategy(depositToOptionStrategyAmount);
 
-        vaultState
-            .pendingDepositAmount -= (depositToEthLiquidityStrategyAmount +
-            depositToOptionStrategyAmount);
+        vaultState.pendingDepositAmount = 0; 
     }
 
     /**
@@ -208,7 +207,7 @@ contract RockOnyxUSDTVault is
         IERC20(vaultParams.asset).safeTransfer(withdrawaler, withdrawAmount);
     }
 
-    function balanceOf(address account) public view returns (uint256) {
+    function balanceOf(address account) external view returns (uint256) {
         return depositReceipts[account].shares;
     }
 
@@ -236,7 +235,8 @@ contract RockOnyxUSDTVault is
         return
             vaultState.pendingDepositAmount +
             getTotalOptionsAmount() +
-            getTotalEthLiquidityAssets();
+            getTotalEthLPAssets() +
+            getTotalUsdLPAssets();
     }
 
     function emergencyShutdown(

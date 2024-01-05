@@ -145,7 +145,7 @@ async function getIncreasePositionResult(tx : ContractTransactionReceipt, index:
     console.log("balance usdc of rockOnyxUSDTVaultContract : %s usdc", await usdc.connect(admin).balanceOf(rockOnyxUSDTVaultContract));
     console.log("balance weth of rockOnyxUSDTVaultContract : %s weth", await weth.connect(admin).balanceOf(rockOnyxUSDTVaultContract));
 
-    const transferTx1 = await rockOnyxUSDTVaultContract.connect(admin).mintPosition(
+    const transferTx1 = await rockOnyxUSDTVaultContract.connect(admin).mintEthLPPosition(
         -887272n,
         887272n,
         50
@@ -156,7 +156,7 @@ async function getIncreasePositionResult(tx : ContractTransactionReceipt, index:
     liquidityAmount = await getMintPositionResult(transferTx1Result!, LIQUIDITY_AMOUNT_INDEX);
     console.log("liquidityTokenId: %s liquidityAmount: %s", liquidityTokenId, liquidityAmount);
 
-    const transferTx2 = await rockOnyxUSDTVaultContract.connect(admin).decreaseLiquidity();
+    const transferTx2 = await rockOnyxUSDTVaultContract.connect(admin).decreaseEthLPLiquidity();
     await transferTx2.wait(); 
 
     console.log("balance usdc of rockOnyxUSDTVaultContract : %s usdc", await usdc.connect(admin).balanceOf(rockOnyxUSDTVaultContract));
