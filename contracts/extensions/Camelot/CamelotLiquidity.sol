@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -123,8 +122,6 @@ contract CamelotLiquidity is IVenderLiquidityProxy, RockOnyxAccessControl, Reent
     }
 
     function decreaseLiquidityCurrentRange(uint256 tokenId, uint128 liquidity) external returns (uint256 amount0, uint256 amount1) {
-        console.log(nonfungiblePositionManager.ownerOf(tokenId));
-        console.log(msg.sender);
         require(nonfungiblePositionManager.ownerOf(tokenId) == msg.sender, "INVALID_TOKENID_OWNER");
 
         INonfungiblePositionManager.DecreaseLiquidityParams memory params =

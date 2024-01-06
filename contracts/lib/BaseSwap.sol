@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-import "hardhat/console.sol";
 import "../extensions/TransferHelper.sol";
 import "../interfaces/ISwapProxy.sol";
 import "../interfaces/ISwapRouter.sol";
@@ -29,7 +28,6 @@ contract BaseSwap is ISwapProxy {
             amountIn
         );
         TransferHelper.safeApprove(tokenIn, address(swapRouter), amountIn);
-        console.log("Test nek %s %s %s", tokenIn, tokenOut, amountIn);
 
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
@@ -58,12 +56,6 @@ contract BaseSwap is ISwapProxy {
         if (poolToken0 != token0)
             return sqrtPriceX96ToPrice(sqrtPriceX96, token1Decimals);
 
-        // console.log(
-        //     "token1 = %s; token2 = %s; sqrtPriceX96ToPrice = %s",
-        //     token0,
-        //     token1,
-        //     sqrtPriceX96
-        // );
         return sqrtPriceX96ToPrice(sqrtPriceX96, token0Decimals);
     }
 

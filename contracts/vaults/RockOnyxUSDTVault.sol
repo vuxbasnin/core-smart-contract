@@ -54,7 +54,7 @@ contract RockOnyxUSDTVault is
     {
         _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
 
-        vaultParams = VaultParams(6, _usdc, 1_00, 1_000_000 * 10 ** 6);
+        vaultParams = VaultParams(6, _usdc, 10_000_000, 1_000_000 * 10 ** 6);
         vaultState = VaultState(0, 0);
 
         options_Initialize(_optionsVendorProxy, _optionsReceiver, _usdce, _usdc, _swapProxy);
@@ -151,11 +151,6 @@ contract RockOnyxUSDTVault is
      */
     function initiateWithdraw(uint256 numShares) external nonReentrant {
         DepositReceipt storage depositReceipt = depositReceipts[msg.sender];
-        // console.log(
-        //     "Withdraw amount = %d, user shares = %d",
-        //     numShares,
-        //     depositReceipt.shares
-        // );
 
         require(depositReceipt.shares >= numShares, "INVALID_SHARES");
 
@@ -170,22 +165,10 @@ contract RockOnyxUSDTVault is
     function completeWithdraw() external nonReentrant {
         address withdrawaler = msg.sender;
 
-        // console.log("Start completeWithdraw");
         Withdrawal storage withdrawal = withdrawals[withdrawaler];
 
         // This checks if there is a withdrawal
         require(withdrawal.shares > 0, "NOT_INITIATED");
-
-        // console.log(
-        //     "vaultState.totalAssets = %s",
-        //     vaultState.pendingDepositAmount
-        // );
-        // console.log("vaultState.totalShares = %s", vaultState.totalShares);
-        // console.log(
-        //     "pps = %s",
-        //     vaultState.pendingDepositAmount / vaultState.totalShares
-        // );
-
         uint256 withdrawAmount = ShareMath.sharesToAsset(
             withdrawal.shares,
             pricePerShare(),
@@ -194,8 +177,6 @@ contract RockOnyxUSDTVault is
 
         // We leave the round number as non-zero to save on gas for subsequent writes
         withdrawal.shares = 0;
-
-        // console.log("withdrawAmount = %s", withdrawAmount);
 
         emit Withdraw(withdrawaler, withdrawAmount, withdrawal.shares);
 
@@ -207,8 +188,6 @@ contract RockOnyxUSDTVault is
     }
 
     function pricePerShare() public view returns (uint256) {
-        console.log("tvl = %s", totalValueLocked());
-        console.log("vaultState.totalShares = %s", vaultState.totalShares);
         return
             ShareMath.pricePerShare(
                 vaultState.totalShares,
@@ -218,14 +197,6 @@ contract RockOnyxUSDTVault is
     }
 
     function totalValueLocked() public view returns (uint256) {
-        // uint256 totalOptionsAmt = getTotalOptionsAmount();
-        // uint256 totalLPAmt = getTotalEthLiquidityAssets();
-        // console.log(
-        //     "[totalValueLocked] vaultState.pendingDepositAmount = %s",
-        //     vaultState.pendingDepositAmount
-        // );
-        // console.log("[totalValueLocked] totalOptionsAmt = %s", totalOptionsAmt);
-        // console.log("[totalValueLocked] totalLPAmt = %s", totalLPAmt);
 
         return
             vaultState.pendingDepositAmount +

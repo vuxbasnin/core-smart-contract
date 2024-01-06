@@ -54,7 +54,6 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     function depositToOptionsStrategy(uint256 amountIn) internal {
         // Ensure the contract has enough allowance to perform the swap
         IERC20(vaultAssetAddress).approve(address(swapProxy), amountIn);
-        // console.log("swapProxy %s", address(swapProxy));
 
         // Perform the swap from vaultAsset to optionsAsset
         uint256 swappedAmount = swapProxy.swapTo(
@@ -64,29 +63,11 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
             optionsAssetAddress
         );
 
-        // console.log("Swap to USDC.e %s", swappedAmount);
-
-        // After the swap, the contract should hold the swapped tokens in optionsAssetAddress
-        // Update the optionsState.unAllocatedBalance with the swapped amount
-        // uint256 swappedAmount1 = IERC20(optionsAssetAddress).balanceOf(
-        //     address(this)
-        // );
-        // console.log("swappedAmount1 %s", swappedAmount1);
-
         optionsState.unAllocatedBalance += swappedAmount;
-
-        // console.log(
-        //     "Deposited to options strategy and swapped, optionsState.unAllocatedBalance = %s",
-        //     optionsState.unAllocatedBalance
-        // );
     }
 
     function withdrawFromOptionsStrategy(uint256 amount) internal {
         optionsState.unAllocatedBalance -= amount;
-        console.log(
-            "Handle withdrawFromOptionsStrategy, optionsState.optionsState.unAllocatedBalance = %s",
-            optionsState.unAllocatedBalance
-        );
     }
 
     /**
@@ -94,28 +75,11 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
      */
     function depositToVendor(uint256 amount) external payable nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        console.log(
-            "optionsState.unAllocatedBalance %s",
-            optionsState.unAllocatedBalance
-        );
         require(
             amount <= optionsState.unAllocatedBalance,
             "INVALID_DEPOSIT_VENDOR_AMOUNT"
         );
-
-        console.log("Deposit to vendor in strategy %d", amount);
-        console.log(
-            "optionsAssetAddress %d, optionsVendor %s",
-            address(optionsAssetAddress),
-            address(optionsVendor)
-        );
-
         IERC20(optionsAssetAddress).approve(address(optionsVendor), amount);
-        uint256 allowedamt = IERC20(optionsAssetAddress).allowance(
-            address(this),
-            address(optionsVendor)
-        );
-        console.log("Allowance amount for AevoOptions %s", allowedamt);
 
         optionsVendor.depositToVendor{value: msg.value}(
             optionsReceiver,

@@ -150,11 +150,6 @@ contract RockOynxUsdLiquidityStrategy is
         );
         usdLiquidityAssets.unAllocatedUsdc += amount0Fee;
         usdLiquidityAssets.unAllocatedUsdce += amount1Fee;
-        console.log(
-            "%s unAllocatedUsdc, %s unAllocatedUsdce",
-            usdLiquidityAssets.unAllocatedUsdc,
-            usdLiquidityAssets.unAllocatedUsdce
-        );
 
         usdLPProvider.decreaseLiquidityCurrentRange(
             usdLPDepositState.tokenId,
@@ -169,11 +164,6 @@ contract RockOynxUsdLiquidityStrategy is
 
         usdLiquidityAssets.allocatedUsdc -= amount0;
         usdLiquidityAssets.allocatedUsdce -= amount1;
-        console.log(
-            "%s unAllocatedUsdc, %s unAllocatedUsdce",
-            usdLiquidityAssets.unAllocatedUsdc,
-            usdLiquidityAssets.unAllocatedUsdce
-        );
 
         usdLPDepositState.tokenId = 0;
         usdLPDepositState.liquidity = 0;
