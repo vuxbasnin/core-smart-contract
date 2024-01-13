@@ -7,12 +7,12 @@ interface INonfungiblePositionManager {
         address token1;
         int24 tickLower;
         int24 tickUpper;
-        uint amount0Desired;
-        uint amount1Desired;
-        uint amount0Min;
-        uint amount1Min;
+        uint256 amount0Desired;
+        uint256 amount1Desired;
+        uint256 amount0Min;
+        uint256 amount1Min;
         address recipient;
-        uint deadline;
+        uint256 deadline;
     }
 
     function mint(
@@ -20,20 +20,20 @@ interface INonfungiblePositionManager {
     )
         external
         payable
-        returns (uint tokenId, uint128 liquidity, uint amount0, uint amount1);
+        returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1);
 
     struct IncreaseLiquidityParams {
-        uint tokenId;
-        uint amount0Desired;
-        uint amount1Desired;
-        uint amount0Min;
-        uint amount1Min;
-        uint deadline;
+        uint256 tokenId;
+        uint256 amount0Desired;
+        uint256 amount1Desired;
+        uint256 amount0Min;
+        uint256 amount1Min;
+        uint256 deadline;
     }
 
     function increaseLiquidity(
         IncreaseLiquidityParams calldata params
-    ) external payable returns (uint128 liquidity, uint amount0, uint amount1);
+    ) external payable returns (uint128 liquidity, uint256 amount0, uint256 amount1);
 
     struct DecreaseLiquidityParams {
         uint tokenId;
@@ -45,10 +45,10 @@ interface INonfungiblePositionManager {
 
     function decreaseLiquidity(
         DecreaseLiquidityParams calldata params
-    ) external payable returns (uint amount0, uint amount1);
+    ) external payable returns (uint256 amount0, uint256 amount1);
 
     struct CollectParams {
-        uint tokenId;
+        uint256 tokenId;
         address recipient;
         uint128 amount0Max;
         uint128 amount1Max;
@@ -56,7 +56,7 @@ interface INonfungiblePositionManager {
 
     function collect(
         CollectParams calldata params
-    ) external payable returns (uint amount0, uint amount1);
+    ) external payable returns (uint256 amount0, uint256 amount1);
 
     function positions(uint256 tokenId)
         external

@@ -9,6 +9,7 @@ struct VaultParams {
 }
 
 struct VaultState {
+    uint256 withdrawPoolAmount;
     uint256 pendingDepositAmount;
     uint256 totalShares;
 }

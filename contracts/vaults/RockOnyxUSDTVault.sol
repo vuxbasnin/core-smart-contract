@@ -20,21 +20,25 @@ contract RockOnyxUSDTVault is
     using SafeERC20 for IERC20;
     using ShareMath for DepositReceipt;
 
+    uint256 currentRound;
+    uint256 currentRoundWithdrawalAmount;
     mapping(address => DepositReceipt) public depositReceipts;
-    mapping(address => Withdrawal) public withdrawals;
+    mapping(uint256 => uint256) public roundWithdrawalShares;
+    mapping(uint256 => uint256) public roundPricePerShares;
+    mapping(uint256 => mapping(address => Withdrawal)) public roundWithdrawals;
     VaultParams public vaultParams;
     VaultState public vaultState;
 
     /************************************************
      *  EVENTS
      ***********************************************/
-    event Deposit(address indexed account, uint256 amount, uint256 shares);
-    event InitiateWithdraw(
+    event Deposited(address indexed account, uint256 amount, uint256 shares);
+    event InitiateWithdrawal(
         address indexed account,
         uint256 amount,
         uint256 shares
     );
-    event Withdraw(address indexed account, uint256 amount, uint256 shares);
+    event Withdrawn(address indexed account, uint256 amount, uint256 shares);
     event RoundClosed(int256 pnl);
 
     constructor(
@@ -54,6 +58,7 @@ contract RockOnyxUSDTVault is
     {
         _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
 
+        currentRound = 0;
         vaultParams = VaultParams(6, _usdc, 10_000_000, 1_000_000 * 10 ** 6);
         vaultState = VaultState(0, 0);
 
@@ -149,38 +154,62 @@ contract RockOnyxUSDTVault is
      * @notice Initiates a withdrawal that can be processed once the round completes
      * @param numShares is the number of shares to withdraw
      */
-    function initiateWithdraw(uint256 numShares) external nonReentrant {
+    function initiateWithdrawal(uint256 numShares) external nonReentrant {
         DepositReceipt storage depositReceipt = depositReceipts[msg.sender];
-
         require(depositReceipt.shares >= numShares, "INVALID_SHARES");
 
-        Withdrawal storage withdrawal = withdrawals[msg.sender];
+        Withdrawal storage withdrawal = roundWithdrawals[currentRound][msg.sender];
         withdrawal.shares += numShares;
         depositReceipt.shares -= numShares;
+        
+        roundWithdrawalShares[currentRound] += numShares;
     }
 
     /**
      * @notice Completes a scheduled withdrawal from a past round. Uses finalized pps for the round
      */
-    function completeWithdraw() external nonReentrant {
-        address withdrawaler = msg.sender;
+    function completeWithdrawal(uint256 round, uint256 shares) external nonReentrant {
+        Withdrawal storage withdrawal = roundWithdrawals[round][msg.sender];
+        require(withdrawal.shares > shares, "INVALID_SHARES");
 
-        Withdrawal storage withdrawal = withdrawals[withdrawaler];
-
-        // This checks if there is a withdrawal
-        require(withdrawal.shares > 0, "NOT_INITIATED");
         uint256 withdrawAmount = ShareMath.sharesToAsset(
-            withdrawal.shares,
-            pricePerShare(),
+            shares,
+            roundPricePerShares[round],
             vaultParams.decimals
         );
 
-        // We leave the round number as non-zero to save on gas for subsequent writes
-        withdrawal.shares = 0;
+        require(vaultState.withdrawPoolAmount > withdrawAmount, "EXCEED_WITHDRAW_POOL_CAPACITY");
 
-        emit Withdraw(withdrawaler, withdrawAmount, withdrawal.shares);
+        withdrawal.shares -= shares;
+        vaultState.withdrawPoolAmount -= withdrawAmount;
 
-        IERC20(vaultParams.asset).safeTransfer(withdrawaler, withdrawAmount);
+        IERC20(vaultParams.asset).safeTransfer(msg.sender, withdrawAmount);
+
+        emit Withdrawn(msg.sender, withdrawAmount, withdrawal.shares);
+    }
+
+    function closeRound() external nonReentrant {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        closeEthLPRound();
+        closeUsdLPRound();
+        // closeUsdOptionsRound();
+
+        roundPricePerShares[currentRound] = pricePerShare();
+        currentRound++;
+    }
+
+    function acquireWithdrawalFunds() external nonReentrant {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        uint256 withdrawAmount = roundWithdrawalShares[currentRound] * roundPricePerShares[currentRound];
+        uint256 withdrawEthLPAmount = (withdrawAmount * 60) / 100;
+        uint256 withdrawUsdLPAmount = (withdrawAmount * 20) / 100;
+        uint256 withdrawUsdOptionsAmount = (withdrawAmount * 20) / 100;
+        
+        vaultState.withdrawPoolAmount += acquireWithdrawalFundsEthLP(withdrawEthLPAmount);
+        vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdLP(withdrawUsdLPAmount);
+        // vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdOptions(withdrawUsdOptionsAmount);
     }
 
     function balanceOf(address account) external view returns (uint256) {
@@ -220,5 +249,15 @@ contract RockOnyxUSDTVault is
 
         bool sent = token.transfer(receiver, amount);
         require(sent, "Token transfer failed");
+    }
+
+    function emergencyTransferNft(
+        address receiver,
+        address nftAddress,
+        uint256 tokenId
+    ) external nonReentrant {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        IERC721(nftAddress).safeTransferFrom(address(this), receiver, tokenId);
     }
 }

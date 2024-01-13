@@ -43,6 +43,24 @@ contract BaseSwap is ISwapProxy {
         return swapRouter.exactInputSingle(params);
     }
 
+    function getLiquidityOf(
+        address token0,
+        address token1
+    ) external view returns (uint256) {
+        ISwapPool pool = ISwapPool(factory.poolByPair(token0, token1));
+        
+        return pool.liquidity();
+    }
+
+    function getPoolAddressOf(
+        address token0,
+        address token1
+    ) external view returns (address) {
+        ISwapPool pool = ISwapPool(factory.poolByPair(token0, token1));
+        
+        return address(pool);
+    }
+
     function getPriceOf(
         address token0,
         address token1,

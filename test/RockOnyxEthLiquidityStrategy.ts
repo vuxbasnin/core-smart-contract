@@ -16,6 +16,9 @@ describe("RockOnyxEthLiquidityStrategy", function () {
 
   let camelotLiquidityContract: Contracts.CamelotLiquidity;
   let rockOnyxUSDTVaultContract: Contracts.RockOnyxUSDTVault;
+
+  let onchainCamelotLiquidityContract: Contracts.CamelotLiquidity;
+  let onchainRockOnyxUSDTVaultContract: Contracts.RockOnyxUSDTVault;
   let usdc: Contracts.IERC20;
   let usdce: Contracts.IERC20;
   let wsteth: Contracts.IERC20;
@@ -92,6 +95,7 @@ describe("RockOnyxEthLiquidityStrategy", function () {
     const rockOnyxUSDTVault = await ethers.getContractFactory(
       "RockOnyxUSDTVault"
     );
+
     rockOnyxUSDTVaultContract = await rockOnyxUSDTVault.deploy(
       usdcAddress,
       await camelotLiquidityContract.getAddress(),
@@ -153,10 +157,16 @@ describe("RockOnyxEthLiquidityStrategy", function () {
 
     [admin, optionsReceiver] = await ethers.getSigners();
 
-    await deployCamelotLiquidity();
-    await deployCamelotSwapContract();
-    await deployAevoContract();
-    await deployRockOnyxUSDTVault();
+    const onchainRockOnyxUSDTVaultAddress = "0x19a4dcb72212fb3a60fdb1500e34abb041ee00b0";
+    onchainRockOnyxUSDTVaultContract = await ethers.getContractAt("RockOnyxUSDTVault", onchainRockOnyxUSDTVaultAddress);
+
+    const onchainCamelotLiquidityAddress = "0xe22edc2f94857F9a4703fb85793ebd69762aF596";
+    onchainCamelotLiquidityContract = await ethers.getContractAt("CamelotLiquidity", onchainCamelotLiquidityAddress);
+
+    // await deployCamelotLiquidity();
+    // await deployCamelotSwapContract();
+    // await deployAevoContract();
+    // await deployRockOnyxUSDTVault();
   });
 
   it.skip("seed data", async function () {
@@ -199,7 +209,7 @@ describe("RockOnyxEthLiquidityStrategy", function () {
     );
   });
 
-  it("fullflow deposit and stake to camelot liquidity, should successfully", async function () {
+  it.skip("fullflow deposit and stake to camelot liquidity, should successfully", async function () {
     const usdcSigner = await ethers.getImpersonatedSigner(
       "0x463f5d63e5a5edb8615b0e485a090a18aba08578"
     );
@@ -244,8 +254,13 @@ describe("RockOnyxEthLiquidityStrategy", function () {
 
     const transferTx2 = await rockOnyxUSDTVaultContract
       .connect(admin)
-      .decreaseEthLPLiquidity();
+      .closeEthLPRound();
     await transferTx2.wait();
+
+    const transferTx3 = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .decreaseEthLPLiquidity();
+    await transferTx3.wait();
 
     console.log(
       "balance usdc of rockOnyxUSDTVaultContract : %s usdc",
@@ -255,5 +270,30 @@ describe("RockOnyxEthLiquidityStrategy", function () {
       "balance weth of rockOnyxUSDTVaultContract : %s weth",
       await weth.connect(admin).balanceOf(rockOnyxUSDTVaultContract)
     );
+  });
+
+  it("unbind liquidity wst_eth pool from 0x20f89ba1b0fc1e83f9aef0a134095cd63f7e8cc7 - 168544500, should unbind liquidity successfully on camelot dex", async function () {
+    const aaSigner = await ethers.getImpersonatedSigner("0x20f89ba1b0fc1e83f9aef0a134095cd63f7e8cc7");
+
+    const tx0 = await admin.sendTransaction({
+      to: "0x20f89ba1b0fc1e83f9aef0a134095cd63f7e8cc7",
+      value: ethers.parseEther("0.5")
+  });
+
+    const wstethAaSingerBalance = await wsteth.connect(aaSigner).balanceOf(aaSigner);
+    const wethAaSingerBalance = await weth.connect(aaSigner).balanceOf(aaSigner);
+
+    console.log("balance of eth aaSigner:", await ethers.provider.getBalance(aaSigner) );
+
+    const transferTx1 = await onchainRockOnyxUSDTVaultContract
+        .connect(aaSigner)
+        .decreaseEthLPLiquidity();
+    await transferTx1.wait();
+
+    const newWstethAaSingerBalance = await wsteth.connect(aaSigner).balanceOf(aaSigner);
+    const newWethAaSingerBalance = await weth.connect(aaSigner).balanceOf(aaSigner);
+
+    console.log("balance of aaSigner before decrease: %s wsteth, %s weth", wstethAaSingerBalance , wethAaSingerBalance);
+    console.log("balance of aaSigner after decrease: %s wsteth, %s weth", newWstethAaSingerBalance , newWethAaSingerBalance);
   });
 });

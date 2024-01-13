@@ -86,7 +86,7 @@ contract CamelotLiquidity is IVenderLiquidityProxy, RockOnyxAccessControl, Reent
         uint amount0ToAdd,
         address token1,
         uint amount1ToAdd
-    ) external nonReentrant returns (uint128 liquidity, uint amount0, uint amount1) {
+    ) external nonReentrant returns (uint128 liquidity, uint256 amount0, uint256 amount1) {
         
         IERC20(token0).transferFrom(msg.sender, address(this), amount0ToAdd);
         IERC20(token1).transferFrom(msg.sender, address(this), amount1ToAdd);

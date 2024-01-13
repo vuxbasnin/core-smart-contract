@@ -137,70 +137,85 @@ contract RockOynxUsdLiquidityStrategy is
         usdLPDepositState.liquidity += liquidity;
     }
 
-    function decreaseUsdLPLiquidity() external nonReentrant {
+    function decreaseUsdLPLiquidity(uint128 liquidity) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        IERC721(usdNftPositionAddress).approve(
-            address(usdLPProvider),
-            usdLPDepositState.tokenId
-        );
+        (uint256 amount0, uint256 amount1) = _decreaseUsdLPLiquidity(liquidity);
 
-        (uint256 amount0Fee, uint256 amount1Fee) = usdLPProvider.collectAllFees(
-            usdLPDepositState.tokenId
-        );
-        usdLiquidityAssets.unAllocatedUsdc += amount0Fee;
-        usdLiquidityAssets.unAllocatedUsdce += amount1Fee;
-
-        usdLPProvider.decreaseLiquidityCurrentRange(
-            usdLPDepositState.tokenId,
-            usdLPDepositState.liquidity
-        );
-
-        (uint256 amount0, uint256 amount1) = usdLPProvider.collectAllFees(
-            usdLPDepositState.tokenId
-        );
         usdLiquidityAssets.unAllocatedUsdc += amount0;
         usdLiquidityAssets.unAllocatedUsdce += amount1;
 
-        usdLiquidityAssets.allocatedUsdc -= amount0;
-        usdLiquidityAssets.allocatedUsdce -= amount1;
-
-        usdLPDepositState.tokenId = 0;
-        usdLPDepositState.liquidity = 0;
+        usdLPDepositState.liquidity -= liquidity;
     }
 
-    function closeUsdLPRound() external nonReentrant {
+    function closeUsdLPRound() internal nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-
-        IERC721(usdNftPositionAddress).approve(
-            address(usdLPProvider),
-            usdLPDepositState.tokenId
-        );
 
         (uint256 amount0, uint256 amount1) = usdLPProvider.collectAllFees(
             usdLPDepositState.tokenId
         );
         usdLiquidityAssets.unAllocatedUsdc += amount0;
         usdLiquidityAssets.unAllocatedUsdce += amount1;
+    }
 
-        IERC721(usdNftPositionAddress).setApprovalForAll(
-            address(usdLPProvider),
-            false
-        );
+    function acquireWithdrawalFundsUsdLP(uint256 amount) internal returns (uint256){
+        uint128 liquidity = _amountToPoolLiquidity(amount);
+
+        (uint256 usdcAmount, uint256 usdceAmount) = _decreaseUsdLPLiquidity(liquidity);
+
+        uint256 usdcUsdeAmount = _swapTo(usdce, usdceAmount, usdc);
+
+        return usdcAmount + usdcUsdeAmount;
     }
 
     function getTotalUsdLPAssets() internal view returns (uint256) {
-        return
-            ((usdLiquidityAssets.unAllocatedUsdce +
-                usdLiquidityAssets.allocatedUsdce) * _getUsdcePrice()) /
-            1e6 +
-            (usdLiquidityAssets.unAllocatedUsdc +
-                usdLiquidityAssets.allocatedUsdc);
+        uint256 liquidity = usdSwapProxy.getLiquidityOf(usdc, usdce);
+        address poolAddress = usdSwapProxy.getPoolAddressOf(usdc, usdce);
+        uint256 poolAmount = IERC20(usdc).balanceOf(poolAddress)  + 
+                                IERC20(usdce).balanceOf(poolAddress) * _getUsdcePrice();
+
+        return usdLiquidityAssets.unAllocatedUsdc +
+                usdLiquidityAssets.unAllocatedUsdce * _getUsdcePrice() +
+                usdLPDepositState.liquidity * poolAmount / liquidity;
+    }
+
+    function _swapTo(
+        address tokenIn,
+        uint256 amountIn,
+        address tokenOut
+    ) private returns (uint256 amountOut) {
+        IERC20(tokenIn).approve(address(usdSwapProxy), amountIn);
+        return usdSwapProxy.swapTo(address(this), tokenIn, amountIn, tokenOut);
     }
 
     function _getUsdcePrice() private view returns (uint256) {
         uint256 usdc2Usdce = usdSwapProxy.getPriceOf(usdc, usdce, 6, 6);
         return 1e12 / usdc2Usdce;
+    }
+
+    function _decreaseUsdLPLiquidity(uint128 liquidity) private  returns (uint256 amount0, uint256 amount1){
+        (amount0, amount1) = usdLPProvider.decreaseLiquidityCurrentRange(
+            usdLPDepositState.tokenId,
+            liquidity
+        );
+
+        (uint256 amount0Fee, uint256 amount1Fee) = usdLPProvider.collectAllFees(
+            usdLPDepositState.tokenId
+        );
+
+        usdLPDepositState.liquidity -= liquidity;
+
+        return (amount0 + amount0Fee, amount1 + amount1Fee);
+    }
+
+    function _amountToPoolLiquidity(uint256 amount) private view returns (uint128) {
+        uint256 liquidity = usdSwapProxy.getLiquidityOf(usdc, usdce);
+        address poolAddress = usdSwapProxy.getPoolAddressOf(usdc, usdce);
+
+        uint256 totalPoolBalance = IERC20(usdc).balanceOf(poolAddress) + 
+                                IERC20(usdce).balanceOf(poolAddress) * _getUsdcePrice();
+
+        return uint128(amount * liquidity / totalPoolBalance);
     }
 
     function _rebalanceUsdLPAssets() private {
