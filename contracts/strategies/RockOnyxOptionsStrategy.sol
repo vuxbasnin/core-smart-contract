@@ -8,9 +8,12 @@ import "../extensions/RockOnyxAccessControl.sol";
 import "../interfaces/IOptionsVendorProxy.sol";
 import "../interfaces/ISwapProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../structs/RockOnyxStructs.sol";
 
 contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
     address internal optionsAssetAddress;
     address internal vaultAssetAddress;
     address internal optionsReceiver;
@@ -49,6 +52,8 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         optionsReceiver = _optionsReceiver;
         optionsAssetAddress = _optionsAssetAddress;
         vaultAssetAddress = _vaultAssetAddress;
+
+        _grantRole(ROCK_ONYX_OPTIONS_TRADER_ROLE, optionsReceiver);
     }
 
     function depositToOptionsStrategy(uint256 amountIn) internal {
@@ -68,6 +73,36 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
 
     function withdrawFromOptionsStrategy(uint256 amount) internal {
         optionsState.unAllocatedBalance -= amount;
+    }
+
+    /**
+     * @notice Acquires withdrawal funds in USDC options
+     * @param withdrawUsdOptionsAmount The requested withdrawal amount in USDC
+     */
+    function acquireWithdrawalFundsUsdOptions(uint256 withdrawUsdOptionsAmount) internal nonReentrant returns (uint256) {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        uint256 amountToWithdrawInOptionsAsset = (withdrawUsdOptionsAmount * swapProxy.getPriceOf(vaultAssetAddress, optionsAssetAddress, 6, 6)) / 1e6;
+
+        // Ensure enough balance is available
+        require(optionsState.unAllocatedBalance >= amountToWithdrawInOptionsAsset, "INSUFFICIENT_UNALLOCATED_BALANCE");
+
+        // Perform the swap from USDC.e to USDC
+        uint256 usdcAmount = swapProxy.swapTo(
+            address(this),
+            optionsAssetAddress,
+            amountToWithdrawInOptionsAsset + 1e6, // we need to increase for the slippage
+            vaultAssetAddress
+        );
+
+        // Verify the swap result
+        require(usdcAmount > 0, "SWAP_FAILED");
+
+        // Update unAllocatedBalance safely
+        optionsState.unAllocatedBalance -= amountToWithdrawInOptionsAsset;
+
+        // Return the converted amount
+        return usdcAmount;
     }
 
     /**
@@ -91,17 +126,13 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         emit OptionsVendorDeposited(address(optionsVendor), optionsReceiver, amount);
     }
 
-    function withdrawFromVendor(uint256 amount) external nonReentrant {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
-
-        emit OptionsVendorWithdrawed(amount);
-    }
-
     function handlePostWithdrawalFromVendor(
         uint256 amount
     ) external nonReentrant {
         require(amount > 0, "INVALID_WITHDRAW_AMOUNT");
-        _auth(ROCK_ONYX_ADMIN_ROLE);
+        _auth(ROCK_ONYX_OPTIONS_TRADER_ROLE);
+
+        IERC20(optionsAssetAddress).safeTransferFrom(msg.sender, address(this), amount);
 
         uint256 oldBalance = optionsState.unAllocatedBalance;
         optionsState.unAllocatedBalance += amount;

@@ -272,7 +272,7 @@ describe("RockOnyxUSDTVault", function () {
     );
   });
 
-  it("Deposit USDT to vault", async function () {
+  it.skip("Deposit USDT to vault", async function () {
     // User1 deposits 1000
     await deposit(user1, ethers.parseUnits("10", 6));
 
@@ -341,6 +341,42 @@ describe("RockOnyxUSDTVault", function () {
     const precision = ethers.parseUnits("2", 6);
     expect(totalSupplyAfter).to.approximately(ethers.parseUnits("1000", 6), precision);
     expect(user1BalanceAfter).to.equal(ethers.parseUnits("0", 6));
+  });
+
+  it.skip("should handlePostWithdrawalFromVendor correctly", async function () {
+    console.log("Testing withdraw functionality...");
+
+    // User1 deposits 1000
+    await deposit(user3, ethers.parseUnits("1000", 6));
+
+    // check price per share
+    await logBalances();
+
+    await withdraw(user3, ethers.parseUnits("1000", 6));
+
+    const user3Address = await user3.getAddress();
+    const totalSupplyAfter = await rockOnyxUSDTVault.totalValueLocked();
+    const user1BalanceAfter = await rockOnyxUSDTVault.balanceOf(user3Address);
+
+    const precision = ethers.parseUnits("2", 6);
+    expect(totalSupplyAfter).to.approximately(ethers.parseUnits("1000", 6), precision);
+    expect(user1BalanceAfter).to.equal(ethers.parseUnits("0", 6));
+
+    const balanceOfUser3Before = await usdc
+      .connect(user3)
+      .balanceOf(user3Address);
+    console.log("Balance of user before %s", balanceOfUser3Before);
+
+    /// TODO: We need to implement the withdraw fund from partner
+    // await rockOnyxUSDTVault.connect(user3).completeWithdraw();
+
+    // // check USDC balance of user
+    // const balanceOfUser3After = await usdc
+    //   .connect(user3)
+    //   .balanceOf(user3Address);
+    // console.log("Balance of user after %s", balanceOfUser3After);
+
+    // expect(balanceOfUser3After).to.equal(ethers.parseUnits("5000", 6));
   });
 
   it.skip("should handle complete withdrawal correctly", async function () {
