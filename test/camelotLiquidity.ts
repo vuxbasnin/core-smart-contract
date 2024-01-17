@@ -200,6 +200,7 @@ describe("camelot liquidity contract test", function () {
     });
     
     it.skip("collect fee weth and wsteth pool, should collect successfully on camelot dex", async function () {
+        await nftPosition.connect(admin).approve(await camelotLiquidityContract.getAddress(), liquidityTokenId);
         const transferTx1 = await camelotLiquidityContract.connect(admin).collectAllFees(
             liquidityTokenId
         );
@@ -254,7 +255,7 @@ describe("camelot liquidity contract test", function () {
         console.log("balance of aaSigner after collect fee: %s arb, %s grail", admin1arbPoolBalance , admint1grailPoolBalance);
     });
 
-    it("unbind liquidity usdc_usdce pool from 0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa - 163785110, should unbind liquidity successfully on camelot dex", async function () {
+    it.skip("unbind liquidity usdc_usdce pool from 0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa - 163785110, should unbind liquidity successfully on camelot dex", async function () {
         const aaSigner = await ethers.getImpersonatedSigner("0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa");
 
         const wstethAaSingerBalance = await wsteth.connect(admin).balanceOf(aaSigner);

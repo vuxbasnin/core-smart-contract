@@ -9,6 +9,7 @@ import "../../extensions/TransferHelper.sol";
 import "../../interfaces/INonfungiblePositionManager.sol";
 import "../../interfaces/IVenderLiquidityProxy.sol";
 import "../../lib/BaseProxy.sol";
+import "hardhat/console.sol";
 
 contract CamelotLiquidity is IVenderLiquidityProxy, RockOnyxAccessControl, ReentrancyGuard {
     INonfungiblePositionManager private nonfungiblePositionManager;

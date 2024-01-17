@@ -60,7 +60,7 @@ contract RockOnyxUSDTVault is
 
         currentRound = 0;
         vaultParams = VaultParams(6, _usdc, 10_000_000, 1_000_000 * 10 ** 6);
-        vaultState = VaultState(0, 0);
+        vaultState = VaultState(0, 0, 0);
 
         options_Initialize(_optionsVendorProxy, _optionsReceiver, _usdce, _usdc, _swapProxy);
         ethLP_Initialize( _vendorLiquidityProxy, _vendorNftPositionddress, _swapProxy, _usdc, _weth, _wstEth);
@@ -107,7 +107,7 @@ contract RockOnyxUSDTVault is
         return
             ShareMath.assetToShares(
                 amount,
-                pricePerShare(),
+                _pricePerShare(),
                 vaultParams.decimals
             );
     }
@@ -126,7 +126,7 @@ contract RockOnyxUSDTVault is
 
         allocateAssets();
 
-        emit Deposit(msg.sender, amount, shares);
+        emit Deposited(msg.sender, amount, shares);
     }
 
     /**
@@ -137,32 +137,34 @@ contract RockOnyxUSDTVault is
      */
     function allocateAssets() private {
         uint256 depositToEthLPAmount = (vaultState
-            .pendingDepositAmount * 60) / 100;
-        uint256 depositToOptionStrategyAmount = (vaultState
-            .pendingDepositAmount * 20) / 100;
-        uint256 depositToCashAmount = (vaultState.pendingDepositAmount * 20) /
-             100;
+            .pendingDepositAmount * 100) / 100;
+        // uint256 depositToOptionStrategyAmount = (vaultState
+        //     .pendingDepositAmount * 20) / 100;
+        // uint256 depositToCashAmount = (vaultState.pendingDepositAmount * 20) /
+        //      100;
         
         depositToEthLiquidityStrategy(depositToEthLPAmount);
-        depositToUsdLiquidityStrategy(depositToCashAmount);
-        depositToOptionsStrategy(depositToOptionStrategyAmount);
+        //depositToUsdLiquidityStrategy(depositToCashAmount);
+        //depositToOptionsStrategy(depositToOptionStrategyAmount);
 
         vaultState.pendingDepositAmount = 0;
     }
 
     /**
      * @notice Initiates a withdrawal that can be processed once the round completes
-     * @param numShares is the number of shares to withdraw
+     * @param shares is the number of shares to withdraw
      */
-    function initiateWithdrawal(uint256 numShares) external nonReentrant {
+    function initiateWithdrawal(uint256 shares) external nonReentrant {
         DepositReceipt storage depositReceipt = depositReceipts[msg.sender];
-        require(depositReceipt.shares >= numShares, "INVALID_SHARES");
+        require(depositReceipt.shares >= shares, "INVALID_SHARES");
 
         Withdrawal storage withdrawal = roundWithdrawals[currentRound][msg.sender];
-        withdrawal.shares += numShares;
-        depositReceipt.shares -= numShares;
+        withdrawal.shares += shares;
+        depositReceipt.shares -= shares;
         
-        roundWithdrawalShares[currentRound] += numShares;
+        roundWithdrawalShares[currentRound] += shares;
+        console.log("currentRound ", currentRound);
+        console.log("roundWithdrawalShares ", roundWithdrawalShares[currentRound]);
     }
 
     /**
@@ -192,48 +194,61 @@ contract RockOnyxUSDTVault is
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         closeEthLPRound();
-        closeUsdLPRound();
+        // closeUsdLPRound();
         // closeUsdOptionsRound();
 
-        roundPricePerShares[currentRound] = pricePerShare();
+        roundPricePerShares[currentRound] = _pricePerShare();
+        console.log("roundPricePerShares", _pricePerShare());
         currentRound++;
     }
 
-    function acquireWithdrawalFunds() external nonReentrant {
+    function acquireWithdrawalFunds(uint256 round) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
+        console.log("roundWithdrawalShares ", roundWithdrawalShares[round]);
+        console.log("roundPricePerShares ", roundPricePerShares[round]);
 
-        uint256 withdrawAmount = roundWithdrawalShares[currentRound] * roundPricePerShares[currentRound];
-        uint256 withdrawEthLPAmount = (withdrawAmount * 60) / 100;
-        uint256 withdrawUsdLPAmount = (withdrawAmount * 20) / 100;
-        uint256 withdrawUsdOptionsAmount = (withdrawAmount * 20) / 100;
+        uint256 withdrawAmount = roundWithdrawalShares[round] * roundPricePerShares[round] / 1e6;
+        uint256 withdrawEthLPAmount = (withdrawAmount * 100) / 100;
+        // uint256 withdrawUsdLPAmount = (withdrawAmount * 20) / 100;
+        // uint256 withdrawUsdOptionsAmount = (withdrawAmount * 20) / 100;
         
+        console.log("withdrawEthLPAmount ", withdrawEthLPAmount);
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsEthLP(withdrawEthLPAmount);
-        vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdLP(withdrawUsdLPAmount);
+        // vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdLP(withdrawUsdLPAmount);
         // vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdOptions(withdrawUsdOptionsAmount);
+        console.log("withdrawPoolAmount ", vaultState.withdrawPoolAmount);
     }
 
-    function balanceOf(address account) external view returns (uint256) {
-        return depositReceipts[account].shares;
+    function balanceOf(address owner) external view returns (uint256) {
+        return depositReceipts[owner].shares;
     }
 
-    function pricePerShare() public view returns (uint256) {
+    function pricePerShare() external view returns (uint256) {
+        return _pricePerShare();
+    }
+
+    function totalValueLocked() external view returns (uint256) {
+        return _totalValueLocked();
+    }
+
+    function _pricePerShare() private view returns (uint256) {
         return
             ShareMath.pricePerShare(
                 vaultState.totalShares,
-                totalValueLocked(),
+                _totalValueLocked(),
                 vaultParams.decimals
             );
     }
 
-    function totalValueLocked() public view returns (uint256) {
-
+    function _totalValueLocked() private view returns(uint256){
         return
             vaultState.pendingDepositAmount +
-            getTotalOptionsAmount() +
-            getTotalEthLPAssets() +
-            getTotalUsdLPAssets();
-    }
+            getTotalEthLPAssets();
+            // getTotalUsdLPAssets() +
+            // getTotalOptionsAmount();
 
+    }
+    
     function emergencyShutdown(
         address receiver,
         address tokenAddress,
