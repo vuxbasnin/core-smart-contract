@@ -93,13 +93,18 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
 
         // Add network cost
         uint256 totalAmountRequired = totalAmountWithSlippageAndImpact + NETWORK_COST;
-        console.log("totalAmountRequired = %s", totalAmountRequired / 1e6);
+        console.log("totalAmountRequired = %s", totalAmountRequired);
 
         uint256 amountToWithdrawInOptionsAsset = (totalAmountRequired * 1e6) / swapProxy.getPriceOf(vaultAssetAddress, optionsAssetAddress, 6, 6);
-        console.log("amountToWithdrawInOptionsAsset = %s", amountToWithdrawInOptionsAsset / 1e6);
+        console.log("amountToWithdrawInOptionsAsset = %s", amountToWithdrawInOptionsAsset);
 
         // Ensure enough balance is available
         require(optionsState.unAllocatedBalance >= amountToWithdrawInOptionsAsset, "INSUFFICIENT_UNALLOCATED_BALANCE");
+
+        uint256 vaultBalance = IERC20(optionsAssetAddress).balanceOf(address(this));
+        console.log("vaultBalance = %s USDC.e", vaultBalance);
+
+        IERC20(optionsAssetAddress).approve(address(swapProxy), amountToWithdrawInOptionsAsset);
 
         // Perform the swap from USDC.e to USDC
         uint256 withdrawalAmountInVaultAsset = swapProxy.swapTo(
@@ -108,14 +113,14 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
             amountToWithdrawInOptionsAsset,
             vaultAssetAddress
         );
-        console.log("withdrawalAmountInVaultAsset = %s", withdrawalAmountInVaultAsset / 1e6);
+        console.log("withdrawalAmountInVaultAsset = %s", withdrawalAmountInVaultAsset);
 
         // Verify the swap result
         require(withdrawalAmountInVaultAsset > 0, "SWAP_FAILED");
 
         // Update unAllocatedBalance safely
         optionsState.unAllocatedBalance -= amountToWithdrawInOptionsAsset;
-        console.log("optionsState.unAllocatedBalance = %s", optionsState.unAllocatedBalance / 1e6);
+        console.log("optionsState.unAllocatedBalance = %s", optionsState.unAllocatedBalance);
 
         console.log("================ // acquireWithdrawalFundsUsdOptions =============");
 

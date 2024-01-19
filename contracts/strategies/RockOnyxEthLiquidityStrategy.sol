@@ -180,7 +180,6 @@ contract RockOnyxEthLiquidityStrategy is
 
         return totalAssets;
 
-
     }
 
     function _ethLPSwapTo(
