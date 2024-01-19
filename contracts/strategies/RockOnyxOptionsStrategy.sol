@@ -21,6 +21,11 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     OptionsStrategyState internal optionsState;
     ISwapProxy private swapProxy;
 
+    // Constants for fees and slippage
+    uint256 private constant PRICE_IMPACT = 10; // 0.01% price impact
+    uint256 private constant MAX_SLIPPAGE = 500; // 0.5% slippage
+    uint256 private constant NETWORK_COST = 1e6; // Network cost in smallest unit of USDC (1 USDC), will improve later on
+
     /************************************************
      *  EVENTS
      ***********************************************/
@@ -67,7 +72,7 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
             amountIn,
             optionsAssetAddress
         );
-
+        console.log("[depositToOptionsStrategy] swappedAmount = %s", swappedAmount);
         optionsState.unAllocatedBalance += swappedAmount;
     }
 
@@ -79,30 +84,43 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
      * @notice Acquires withdrawal funds in USDC options
      * @param withdrawUsdOptionsAmount The requested withdrawal amount in USDC
      */
-    function acquireWithdrawalFundsUsdOptions(uint256 withdrawUsdOptionsAmount) internal nonReentrant returns (uint256) {
+    function acquireWithdrawalFundsUsdOptions(uint256 withdrawUsdOptionsAmount) external nonReentrant returns (uint256) {
         _auth(ROCK_ONYX_ADMIN_ROLE);
+        console.log("================ acquireWithdrawalFundsUsdOptions =============");
+        // Adjust for price impact and slippage
+        uint256 totalAmountWithSlippageAndImpact = (withdrawUsdOptionsAmount * (1e5 + MAX_SLIPPAGE + PRICE_IMPACT)) / 1e5;
+        console.log("totalAmountWithSlippageAndImpact = %s", totalAmountWithSlippageAndImpact);
 
-        uint256 amountToWithdrawInOptionsAsset = (withdrawUsdOptionsAmount * swapProxy.getPriceOf(vaultAssetAddress, optionsAssetAddress, 6, 6)) / 1e6;
+        // Add network cost
+        uint256 totalAmountRequired = totalAmountWithSlippageAndImpact + NETWORK_COST;
+        console.log("totalAmountRequired = %s", totalAmountRequired / 1e6);
+
+        uint256 amountToWithdrawInOptionsAsset = (totalAmountRequired * 1e6) / swapProxy.getPriceOf(vaultAssetAddress, optionsAssetAddress, 6, 6);
+        console.log("amountToWithdrawInOptionsAsset = %s", amountToWithdrawInOptionsAsset / 1e6);
 
         // Ensure enough balance is available
         require(optionsState.unAllocatedBalance >= amountToWithdrawInOptionsAsset, "INSUFFICIENT_UNALLOCATED_BALANCE");
 
         // Perform the swap from USDC.e to USDC
-        uint256 usdcAmount = swapProxy.swapTo(
+        uint256 withdrawalAmountInVaultAsset = swapProxy.swapTo(
             address(this),
             optionsAssetAddress,
-            amountToWithdrawInOptionsAsset + 1e6, // we need to increase for the slippage
+            amountToWithdrawInOptionsAsset,
             vaultAssetAddress
         );
+        console.log("withdrawalAmountInVaultAsset = %s", withdrawalAmountInVaultAsset / 1e6);
 
         // Verify the swap result
-        require(usdcAmount > 0, "SWAP_FAILED");
+        require(withdrawalAmountInVaultAsset > 0, "SWAP_FAILED");
 
         // Update unAllocatedBalance safely
         optionsState.unAllocatedBalance -= amountToWithdrawInOptionsAsset;
+        console.log("optionsState.unAllocatedBalance = %s", optionsState.unAllocatedBalance / 1e6);
+
+        console.log("================ // acquireWithdrawalFundsUsdOptions =============");
 
         // Return the converted amount
-        return usdcAmount;
+        return withdrawalAmountInVaultAsset;
     }
 
     /**

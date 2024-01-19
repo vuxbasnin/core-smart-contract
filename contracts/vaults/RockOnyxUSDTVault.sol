@@ -137,15 +137,15 @@ contract RockOnyxUSDTVault is
      */
     function allocateAssets() private {
         uint256 depositToEthLPAmount = (vaultState
-            .pendingDepositAmount * 100) / 100;
-        // uint256 depositToOptionStrategyAmount = (vaultState
-        //     .pendingDepositAmount * 20) / 100;
-        // uint256 depositToCashAmount = (vaultState.pendingDepositAmount * 20) /
-        //      100;
+            .pendingDepositAmount * 60) / 100;
+        uint256 depositToOptionStrategyAmount = (vaultState
+            .pendingDepositAmount * 20) / 100;
+        uint256 depositToCashAmount = (vaultState.pendingDepositAmount * 20) /
+             100;
         
         depositToEthLiquidityStrategy(depositToEthLPAmount);
-        //depositToUsdLiquidityStrategy(depositToCashAmount);
-        //depositToOptionsStrategy(depositToOptionStrategyAmount);
+        // depositToUsdLiquidityStrategy(depositToCashAmount);
+        depositToOptionsStrategy(depositToOptionStrategyAmount);
 
         vaultState.pendingDepositAmount = 0;
     }
@@ -195,7 +195,7 @@ contract RockOnyxUSDTVault is
 
         closeEthLPRound();
         // closeUsdLPRound();
-        // closeUsdOptionsRound();
+        // closeOptionsRound();
 
         roundPricePerShares[currentRound] = _pricePerShare();
         console.log("roundPricePerShares", _pricePerShare());

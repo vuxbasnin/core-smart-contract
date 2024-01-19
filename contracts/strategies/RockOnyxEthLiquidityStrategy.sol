@@ -86,10 +86,10 @@ contract RockOnyxEthLiquidityStrategy is
                 IERC20(weth).balanceOf(address(this))
             );
 
-        console.log("-----mintEthLPPosition-----");
-        console.log("liquidity: ", liquidity);
-        console.log("wsteth mint amount: ", amount0);
-        console.log("weth mint amount: ", amount1);
+        // console.log("-----mintEthLPPosition-----");
+        // console.log("liquidity: ", liquidity);
+        // console.log("wsteth mint amount: ", amount0);
+        // console.log("weth mint amount: ", amount1);
 
         depositState.tokenId = tokenId;
         depositState.liquidity = liquidity;
@@ -153,30 +153,30 @@ contract RockOnyxEthLiquidityStrategy is
         uint256 poolLiquidity = ethSwapProxy.getLiquidityOf(wstEth, weth);
         address poolAddress = ethSwapProxy.getPoolAddressOf(wstEth, weth);
 
-        console.log("-----getTotalEthLPAssets-----");
-        console.log("poolLiquidity:", poolLiquidity);
-        console.log("depositState.liquidity:", depositState.liquidity);
+        // console.log("-----getTotalEthLPAssets-----");
+        // console.log("poolLiquidity:", poolLiquidity);
+        // console.log("depositState.liquidity:", depositState.liquidity);
 
         uint256 wstethPoolReturn = IERC20(wstEth).balanceOf(address(poolAddress)) * depositState.liquidity / poolLiquidity;
         uint256 wethPoolReturn = IERC20(weth).balanceOf(address(poolAddress)) * depositState.liquidity / poolLiquidity;
         
-        console.log("IERC20(wstEth).balanceOf(address(poolAddress)):", IERC20(wstEth).balanceOf(address(poolAddress)));
-        console.log("IERC20(weth).balanceOf(address(poolAddress)):", IERC20(weth).balanceOf(address(poolAddress)));
-        console.log("wstethPoolReturn:", wstethPoolReturn);
-        console.log("wethPoolReturn:", wethPoolReturn);
+        // console.log("IERC20(wstEth).balanceOf(address(poolAddress)):", IERC20(wstEth).balanceOf(address(poolAddress)));
+        // console.log("IERC20(weth).balanceOf(address(poolAddress)):", IERC20(weth).balanceOf(address(poolAddress)));
+        // console.log("wstethPoolReturn:", wstethPoolReturn);
+        // console.log("wethPoolReturn:", wethPoolReturn);
 
         uint256 amountLiquidityReturns = wstethPoolReturn * _getWstEthPrice() + 
                                 wethPoolReturn * _getEthPrice();
-        console.log("amountLiquidityReturns:", amountLiquidityReturns);
+        // console.log("amountLiquidityReturns:", amountLiquidityReturns);
         
-        console.log("weth asset", IERC20(weth).balanceOf(address(this)));
-        console.log("wsteth asset", IERC20(wstEth).balanceOf(address(this)));
+        // console.log("weth asset", IERC20(weth).balanceOf(address(this)));
+        // console.log("wsteth asset", IERC20(wstEth).balanceOf(address(this)));
 
         uint256 totalAssets = IERC20(weth).balanceOf(address(this)) * _getEthPrice() / 1e18 +
                 IERC20(wstEth).balanceOf(address(this)) * _getWstEthPrice() / 1e18 +
                 amountLiquidityReturns;
         
-        console.log("totalAssets:", totalAssets / 1e18);
+        // console.log("totalAssets:", totalAssets / 1e18);
 
         return totalAssets;
 
@@ -224,10 +224,10 @@ contract RockOnyxEthLiquidityStrategy is
                                 IERC20(weth).balanceOf(poolAddress) * _getEthPrice();
 
         uint128 liquidity = uint128(amount * poolLiquidity / totalPoolBalance);
-        console.log("amount:", amount);
-        console.log("poolLiquidity:", poolLiquidity);
-        console.log("totalPoolBalance:", totalPoolBalance);
-        console.log("liquidity:", liquidity);
+        // console.log("amount:", amount);
+        // console.log("poolLiquidity:", poolLiquidity);
+        // console.log("totalPoolBalance:", totalPoolBalance);
+        // console.log("liquidity:", liquidity);
         return liquidity;
     }
 
