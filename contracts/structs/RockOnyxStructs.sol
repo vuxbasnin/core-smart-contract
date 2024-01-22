@@ -6,6 +6,8 @@ struct VaultParams {
     address asset;
     uint256 minimumSupply;
     uint256 cap;
+    uint256 performanceFeeRate;
+    uint256 managementFeeRate;
 }
 
 struct VaultState {

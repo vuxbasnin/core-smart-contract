@@ -164,7 +164,7 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         emit OptionsBalanceChanged(oldBalance, optionsState.unAllocatedBalance);
     }
 
-    function closeOptionsRound(uint256 balance) external nonReentrant {
+    function updateAllocatedBalance(uint256 balance) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         uint256 oldAllocatedBalance = optionsState.allocatedBalance;
