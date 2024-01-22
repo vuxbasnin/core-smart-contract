@@ -61,6 +61,15 @@ contract BaseSwap is ISwapProxy {
         return address(pool);
     }
 
+    function getPoolCurrentTickOf(
+        address token0,
+        address token1
+    ) external view returns (int24) {
+        ISwapPool pool = ISwapPool(factory.poolByPair(token0, token1));
+        (, int24 tick, , , , , , ) = pool.globalState();
+        return tick;
+    }
+
     function getPriceOf(
         address token0,
         address token1,

@@ -84,7 +84,7 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
      * @notice Acquires withdrawal funds in USDC options
      * @param withdrawUsdOptionsAmount The requested withdrawal amount in USDC
      */
-    function acquireWithdrawalFundsUsdOptions(uint256 withdrawUsdOptionsAmount) external nonReentrant returns (uint256) {
+    function acquireWithdrawalFundsUsdOptions(uint256 withdrawUsdOptionsAmount) internal returns (uint256) {
         _auth(ROCK_ONYX_ADMIN_ROLE);
         console.log("================ acquireWithdrawalFundsUsdOptions =============");
         // Adjust for price impact and slippage
@@ -164,7 +164,7 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         emit OptionsBalanceChanged(oldBalance, optionsState.unAllocatedBalance);
     }
 
-    function closeOptionsRound(uint256 balance) external nonReentrant {
+    function closeOptionsRound(uint256 balance) internal {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         uint256 oldAllocatedBalance = optionsState.allocatedBalance;

@@ -30,4 +30,6 @@ struct Withdrawal {
 struct DepositState {
     uint256 tokenId;
     uint128 liquidity;
+    int24 lowerTick;
+    int24 upperTick;
 }

@@ -75,4 +75,8 @@ export const AEVO_TRADER_ADDRESS: { [key in CHAINID]?: string } = {
   [CHAINID.ARBITRUM_MAINNET]: "0xd8704552a605Db1dF4a3f0F5006B364Ab307038c",
 };
 
+export const NFT_POSITION_ADDRESS: { [key in CHAINID]?: string } = {
+  [CHAINID.ARBITRUM_MAINNET]: "0x00c7f3082833e796a5b3e4bd59f6642ff44dcd15",
+};
+
 
