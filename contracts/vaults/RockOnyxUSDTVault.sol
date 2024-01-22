@@ -138,7 +138,7 @@ contract RockOnyxUSDTVault is
         return
             ShareMath.assetToShares(
                 amount,
-                _getRoundPPS(),
+                roundPricePerShares[currentRound],
                 vaultParams.decimals
             );
     }
@@ -173,9 +173,10 @@ contract RockOnyxUSDTVault is
             .pendingDepositAmount * 20) / 100;
         uint256 depositToCashAmount = (vaultState.pendingDepositAmount * 20) /
             100;
+        console.log("depositToOptionStrategyAmount %s", depositToOptionStrategyAmount);
 
         depositToEthLiquidityStrategy(depositToEthLPAmount);
-        // depositToUsdLiquidityStrategy(depositToCashAmount);
+        depositToUsdLiquidityStrategy(depositToCashAmount);
         depositToOptionsStrategy(depositToOptionStrategyAmount);
 
         vaultState.pendingDepositAmount = 0;
@@ -234,22 +235,31 @@ contract RockOnyxUSDTVault is
 
     function closeRound() external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
+        console.log("=========== closeRound ==========");
+
+        // We store the last locked value before update balance from vendors
+        vaultState.lastLockedAmount = _totalValueLocked();
+        console.log("vaultState.lastLockedAmount %s", vaultState.lastLockedAmount);
 
         closeEthLPRound();
-        // closeUsdLPRound();
+        closeUsdLPRound();
+        closeOptionsRound();
 
         // Calculate fees and update vault state
         (uint256 performanceFee, uint256 managementFee) = getVaultFees();
         uint256 totalFee = performanceFee + managementFee;
-
+        console.log("totalFee %s", totalFee);
+        
         // Update price per share after fee deduction
+        console.log("TVL %s", _totalValueLocked());
+        console.log("vaultState.totalShares %s", vaultState.totalShares);
         roundPricePerShares[currentRound] = _getRoundPPS(totalFee);
 
         console.log("roundPricePerShares", roundPricePerShares[currentRound]);
         currentRound++;
-        vaultState.lastLockedAmount = _totalValueLocked(); // Update last locked amount
+        
         // Emit event for round closure
-        emit RoundClosed(vaultState.totalAssets, totalFee);
+        emit RoundClosed(currentRound - 1, _totalValueLocked(), totalFee);
     }
 
     function getVaultFees()
@@ -259,18 +269,23 @@ contract RockOnyxUSDTVault is
     {
         uint256 netBalance = _totalValueLocked();
         uint256 lastLockedAmount = vaultState.lastLockedAmount;
+        console.log("netBalance %s", netBalance);
+        console.log("lastLockedAmount %s", lastLockedAmount);
 
         // Calculate performance fee
         if (netBalance > lastLockedAmount) {
             uint256 profit = netBalance - lastLockedAmount;
+            console.log("profit %s", profit);
             performanceFee =
                 (profit * vaultParams.performanceFeeRate) /
                 100 /
                 52; // Weekly rate
+            console.log("performanceFee %s", performanceFee);
         }
 
         // Calculate management fee based on the current balance
         managementFee = (netBalance * vaultParams.managementFeeRate) / 100 / 52; // Weekly rate
+        console.log("managementFee %s", managementFee);
     }
 
     function acquireWithdrawalFunds(uint256 round) external nonReentrant {
@@ -322,6 +337,8 @@ contract RockOnyxUSDTVault is
     }
 
     function pricePerShare() external view returns (uint256) {
+        if (currentRound == 0) return 1 * 10 ** vaultParams.decimals;
+
         return roundPricePerShares[currentRound - 1];
     }
 
@@ -339,9 +356,9 @@ contract RockOnyxUSDTVault is
     }
 
     function _totalValueLocked() private view returns (uint256) {
-        return vaultState.pendingDepositAmount + getTotalEthLPAssets();
-        // getTotalUsdLPAssets() +
-        // getTotalOptionsAmount();
+        return vaultState.pendingDepositAmount + getTotalEthLPAssets() +
+         getTotalUsdLPAssets() +
+         getTotalOptionsAmount();
     }
 
     function emergencyShutdown(
