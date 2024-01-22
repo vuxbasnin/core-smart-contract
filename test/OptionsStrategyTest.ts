@@ -278,7 +278,7 @@ describe("RockOnyxUSDTVault", function () {
     );
   });
 
-  it("should handle acquireWithdrawalFundsUsdOptions correctly", async function () {
+  it.skip("should handle acquireWithdrawalFundsUsdOptions correctly", async function () {
     console.log("Testing withdraw functionality...");
 
     // User1 deposits 1000

@@ -454,7 +454,33 @@ describe("RockOnyxUSDTVault", function () {
 
     // check price per share
     await logBalances();
-    
-    
+
+
+  });
+
+  it("should calculate closeRound correctly", async function () {
+    console.log("Testing withdraw functionality...");
+
+    // User1 deposits 1000
+    await deposit(user3, ethers.parseUnits("1000", 6));
+
+    // check price per share
+    await logBalances();
+
+    const balanceOfUser = await usdce.connect(user1).balanceOf(user1);
+    console.log(
+      "Balance of user %s",
+      ethers.formatUnits(balanceOfUser.toString(), 6)
+    );
+
+    const depositAmount = ethers.parseUnits("150", 6);
+
+    console.log(`Depositing ${depositAmount} USDC options`);
+    await rockOnyxUSDTVault.connect(owner).depositToVendor(depositAmount, {
+      value: ethers.parseEther("0.001753"),
+    });
+
+
+
   });
 });

@@ -39,8 +39,12 @@ contract RockOnyxUSDTVault is
         uint256 shares
     );
     event Withdrawn(address indexed account, uint256 amount, uint256 shares);
-    event RoundClosed(uint256 roundNumber, uint256 totalAssets, uint256 totalFee);
-
+    event RoundClosed(
+        uint256 roundNumber,
+        uint256 totalAssets,
+        uint256 totalFee
+    );
+    event FeeRatesUpdated(uint256 performanceFee, uint256 managementFee);
 
     constructor(
         address _usdc,
@@ -60,8 +64,15 @@ contract RockOnyxUSDTVault is
         _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
 
         currentRound = 0;
-        vaultParams = VaultParams(6, _usdc, 10_000_000, 1_000_000 * 10 ** 6, 10, 1);
-        vaultState = VaultState(0, 0, 0);
+        vaultParams = VaultParams(
+            6,
+            _usdc,
+            10_000_000,
+            1_000_000 * 10 ** 6,
+            10,
+            1
+        );
+        vaultState = VaultState(0, 0, 0, 0);
 
         options_Initialize(
             _optionsVendorProxy,
@@ -127,7 +138,7 @@ contract RockOnyxUSDTVault is
         return
             ShareMath.assetToShares(
                 amount,
-                _pricePerShare(),
+                _getRoundPPS(),
                 vaultParams.decimals
             );
     }
@@ -231,15 +242,12 @@ contract RockOnyxUSDTVault is
         (uint256 performanceFee, uint256 managementFee) = getVaultFees();
         uint256 totalFee = performanceFee + managementFee;
 
-        // Deduct fees from total value locked
-        vaultState.totalAssets -= totalFee;
-
         // Update price per share after fee deduction
-        roundPricePerShares[currentRound] = _pricePerShare();
+        roundPricePerShares[currentRound] = _getRoundPPS(totalFee);
 
-        console.log("roundPricePerShares", _pricePerShare());
+        console.log("roundPricePerShares", roundPricePerShares[currentRound]);
         currentRound++;
-        vaultState.lastLockedAmount = vaultState.totalAssets; // Update last locked amount
+        vaultState.lastLockedAmount = _totalValueLocked(); // Update last locked amount
         // Emit event for round closure
         emit RoundClosed(vaultState.totalAssets, totalFee);
     }
@@ -250,16 +258,19 @@ contract RockOnyxUSDTVault is
         returns (uint256 performanceFee, uint256 managementFee)
     {
         uint256 netBalance = _totalValueLocked();
-        uint256 lastLockedAmount = vaultState.lastLockedAmount; // You need to maintain this state in your contract
+        uint256 lastLockedAmount = vaultState.lastLockedAmount;
 
         // Calculate performance fee
         if (netBalance > lastLockedAmount) {
             uint256 profit = netBalance - lastLockedAmount;
-            performanceFee = (profit * performanceFeeRate) / 100 / 52; // Weekly rate
+            performanceFee =
+                (profit * vaultParams.performanceFeeRate) /
+                100 /
+                52; // Weekly rate
         }
 
         // Calculate management fee based on the current balance
-        managementFee = (netBalance * managementFeeRate) / 100 / 52; // Weekly rate
+        managementFee = (netBalance * vaultParams.managementFeeRate) / 100 / 52; // Weekly rate
     }
 
     function acquireWithdrawalFunds(uint256 round) external nonReentrant {
@@ -282,23 +293,47 @@ contract RockOnyxUSDTVault is
         console.log("withdrawPoolAmount ", vaultState.withdrawPoolAmount);
     }
 
+    /**
+     * @notice Allows admin to update the performance and management fee rates
+     * @param _performanceFeeRate The new performance fee rate (in percentage)
+     * @param _managementFeeRate The new management fee rate (in percentage)
+     */
+    function setFeeRates(
+        uint256 _performanceFeeRate,
+        uint256 _managementFeeRate
+    ) external {
+        // Access control: Only admin can update the fee rates
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        // Validate fee rates (optional: add max fee rate limits if needed)
+        require(_performanceFeeRate <= 100, "Invalid performance fee rate");
+        require(_managementFeeRate <= 100, "Invalid management fee rate");
+
+        // Update state variables
+        vaultParams.performanceFeeRate = _performanceFeeRate;
+        vaultParams.managementFeeRate = _managementFeeRate;
+
+        // Emit an event if needed (optional)
+        emit FeeRatesUpdated(_performanceFeeRate, _managementFeeRate);
+    }
+
     function balanceOf(address owner) external view returns (uint256) {
         return depositReceipts[owner].shares;
     }
 
     function pricePerShare() external view returns (uint256) {
-        return _pricePerShare();
+        return roundPricePerShares[currentRound - 1];
     }
 
     function totalValueLocked() external view returns (uint256) {
         return _totalValueLocked();
     }
 
-    function _pricePerShare() private view returns (uint256) {
+    function _getRoundPPS(uint256 totalFee) private view returns (uint256) {
         return
             ShareMath.pricePerShare(
                 vaultState.totalShares,
-                _totalValueLocked(),
+                _totalValueLocked() - totalFee,
                 vaultParams.decimals
             );
     }
