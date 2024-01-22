@@ -89,13 +89,13 @@ async function main() {
     await deployer.getAddress()
   );
 
-  // const camelotLiquidityAddress = await deployLiquidityContract();
-  // const camelotSwapAddress = await deployCamelotSwapContract();
-  // const aevoProxyAddress = await deployAevoContract();
+  const camelotLiquidityAddress = await deployLiquidityContract();
+  const camelotSwapAddress = await deployCamelotSwapContract();
+  const aevoProxyAddress = await deployAevoContract();
 
-  const camelotLiquidityAddress = "0xe22edc2f94857F9a4703fb85793ebd69762aF596";
-  const camelotSwapAddress = "0x527B821B7eadC2Ea01c9BD3dFd8a99f025B15203";
-  const aevoProxyAddress = "0xF15e8c271a77D8A6F0B4B5D1345BcC83355Cf150";
+  // const camelotLiquidityAddress = "0xe22edc2f94857F9a4703fb85793ebd69762aF596";
+  // const camelotSwapAddress = "0x527B821B7eadC2Ea01c9BD3dFd8a99f025B15203";
+  // const aevoProxyAddress = "0xF15e8c271a77D8A6F0B4B5D1345BcC83355Cf150";
 
   const RockOnyxUSDTVaultFactory = await ethers.getContractFactory(
     "RockOnyxUSDTVault"
