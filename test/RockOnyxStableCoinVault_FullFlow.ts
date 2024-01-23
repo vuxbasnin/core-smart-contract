@@ -414,7 +414,7 @@ describe("RockOnyxUSDTVault", function () {
     // expect(balanceOfUser3After).to.equal(ethers.parseUnits("5000", 6));
   });
 
-  it.skip("should handle closeOptionsRound correctly", async function () {
+  it("should handle closeRound correctly", async function () {
     console.log("Testing withdraw functionality...");
 
     // User1 deposits 1000
@@ -424,36 +424,33 @@ describe("RockOnyxUSDTVault", function () {
     await logBalances();
 
     const pps = await rockOnyxUSDTVault.pricePerShare();
+    console.log("pps %s", pps);
     expect(pps).to.approximately(ethers.parseUnits("1", 6), ethers.parseUnits("0.1", 6));
+
+    // rebalance portfolio
+    const depositAmount = ethers.parseUnits("100", 6);
+
+    console.log(`Depositing ${depositAmount} USDC options`);
+    await rockOnyxUSDTVault.connect(owner).depositToVendor(depositAmount, {
+      value: ethers.parseEther("0.001753"),
+    });
 
     await rockOnyxUSDTVault
       .connect(owner)
-      .closeOptionsRound(ethers.parseUnits("500", 6));
+      .updateAllocatedBalance(ethers.parseUnits("110", 6));
 
-    // await rockOnyxUSDTVault.connect(owner).closeRound();
+    await rockOnyxUSDTVault.connect(owner).closeRound();
 
     const ppsAfter = await rockOnyxUSDTVault.pricePerShare();
     console.log("ppsAfter", ppsAfter);
-    expect(ppsAfter).to.approximately(ethers.parseUnits("1.5", 6), ethers.parseUnits("0.1", 6));
+    expect(ppsAfter).to.approximately(ethers.parseUnits("1.01", 6), ethers.parseUnits("0.001", 6));
 
-    const totalSupplyAfter = await rockOnyxUSDTVault.totalValueLocked();
-    const user1BalanceAfter = await rockOnyxUSDTVault.balanceOf(
-      await user3.getAddress()
-    );
+    // const totalSupplyAfter = await rockOnyxUSDTVault.totalValueLocked();
+    // const user1BalanceAfter = await rockOnyxUSDTVault.balanceOf(
+    //   await user3.getAddress()
+    // );
 
-    expect(totalSupplyAfter).to.approximately(ethers.parseUnits("1500", 6), ethers.parseUnits("2", 6));
-    expect(user1BalanceAfter).to.equal(ethers.parseUnits("1000", 6));
-  });
-
-  it.skip("should handle acquireWithdrawalFundsUsdOptions correctly", async function () {
-    console.log("Testing withdraw functionality...");
-
-    // User1 deposits 1000
-    await deposit(user3, ethers.parseUnits("1000", 6));
-
-    // check price per share
-    await logBalances();
-    
-    
+    // expect(totalSupplyAfter).to.approximately(ethers.parseUnits("1500", 6), ethers.parseUnits("2", 6));
+    // expect(user1BalanceAfter).to.equal(ethers.parseUnits("1000", 6));
   });
 });

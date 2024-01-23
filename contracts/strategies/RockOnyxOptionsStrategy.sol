@@ -37,10 +37,10 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
 
     event OptionsVendorWithdrawed(uint256 amount);
 
-    event OptionsBalanceChanged(uint256 oldBalance, uint256 newBalance);
+    event OptionsBalanceChanged(uint256 oldBalance, uint256 newBlanace);
 
     constructor() {
-        optionsState = OptionsStrategyState(0, 0);
+        optionsState = OptionsStrategyState(0, 0, 0);
     }
 
     function options_Initialize(
@@ -164,18 +164,17 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         emit OptionsBalanceChanged(oldBalance, optionsState.unAllocatedBalance);
     }
 
-    function closeOptionsRound(uint256 balance) internal {
+    function closeOptionsRound() internal {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        uint256 oldAllocatedBalance = optionsState.allocatedBalance;
+        optionsState.allocatedBalance = uint256(int256(optionsState.allocatedBalance) + optionsState.unsettledProfit);
+        optionsState.unsettledProfit = 0;
+    }
 
-        optionsState.allocatedBalance = balance;
+    function updateAllocatedBalance(uint256 balance) external nonReentrant {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        // Emitting an event to log the change in allocated balance
-        emit OptionsBalanceChanged(
-            oldAllocatedBalance,
-            optionsState.allocatedBalance
-        );
+        optionsState.unsettledProfit = int256(balance) - int256(optionsState.allocatedBalance);
     }
 
     function getTotalOptionsAmount() internal view returns (uint256) {
