@@ -19,6 +19,7 @@ contract RockOnyxUSDTVault is
 {
     using SafeERC20 for IERC20;
     using ShareMath for DepositReceipt;
+    using LiquidityAmounts for uint256;
 
     uint256 currentRound;
     uint256 currentRoundWithdrawalAmount;
@@ -146,8 +147,6 @@ contract RockOnyxUSDTVault is
     function deposit(uint256 amount) external nonReentrant {
         require(amount > 0, "INVALID_DEPOSIT_AMOUNT");
 
-        uint256 shares = _depositFor(amount, msg.sender);
-
         // An approve() by the msg.sender is required beforehand
         IERC20(vaultParams.asset).safeTransferFrom(
             msg.sender,
@@ -155,8 +154,12 @@ contract RockOnyxUSDTVault is
             amount
         );
 
-        allocateAssets();
+        uint256 shares = _depositFor(amount, msg.sender);
+        console.log("shares %s", shares);
 
+        allocateAssets();
+        
+        console.log("wstEth %s, weth %s", IERC20(wstEth).balanceOf(address(this)), IERC20(weth).balanceOf(address(this)));
         emit Deposited(msg.sender, amount, shares);
     }
 
@@ -173,7 +176,6 @@ contract RockOnyxUSDTVault is
             .pendingDepositAmount * 20) / 100;
         uint256 depositToCashAmount = (vaultState.pendingDepositAmount * 20) /
             100;
-        console.log("depositToOptionStrategyAmount %s", depositToOptionStrategyAmount);
 
         depositToEthLiquidityStrategy(depositToEthLPAmount);
         depositToUsdLiquidityStrategy(depositToCashAmount);
@@ -189,30 +191,17 @@ contract RockOnyxUSDTVault is
     function initiateWithdrawal(uint256 shares) external nonReentrant {
         DepositReceipt storage depositReceipt = depositReceipts[msg.sender];
         require(depositReceipt.shares >= shares, "INVALID_SHARES");
-
-        Withdrawal storage withdrawal = roundWithdrawals[currentRound][
-            msg.sender
-        ];
-        withdrawal.shares += shares;
+        
+        roundWithdrawals[currentRound][msg.sender].shares += shares;
         depositReceipt.shares -= shares;
-
         roundWithdrawalShares[currentRound] += shares;
-        console.log("currentRound ", currentRound);
-        console.log(
-            "roundWithdrawalShares ",
-            roundWithdrawalShares[currentRound]
-        );
     }
 
     /**
      * @notice Completes a scheduled withdrawal from a past round. Uses finalized pps for the round
      */
-    function completeWithdrawal(
-        uint256 round,
-        uint256 shares
-    ) external nonReentrant {
-        Withdrawal storage withdrawal = roundWithdrawals[round][msg.sender];
-        require(withdrawal.shares > shares, "INVALID_SHARES");
+    function completeWithdrawal(uint256 round, uint256 shares) external nonReentrant {
+        require(roundWithdrawals[round][msg.sender].shares >= shares, "INVALID_SHARES");
 
         uint256 withdrawAmount = ShareMath.sharesToAsset(
             shares,
@@ -225,12 +214,12 @@ contract RockOnyxUSDTVault is
             "EXCEED_WITHDRAW_POOL_CAPACITY"
         );
 
-        withdrawal.shares -= shares;
+        roundWithdrawals[round][msg.sender].shares -= shares;
         vaultState.withdrawPoolAmount -= withdrawAmount;
 
         IERC20(vaultParams.asset).safeTransfer(msg.sender, withdrawAmount);
 
-        emit Withdrawn(msg.sender, withdrawAmount, withdrawal.shares);
+        emit Withdrawn(msg.sender, withdrawAmount, roundWithdrawals[round][msg.sender].shares);
     }
 
     function closeRound() external nonReentrant {
@@ -290,22 +279,40 @@ contract RockOnyxUSDTVault is
 
     function acquireWithdrawalFunds(uint256 round) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        console.log("roundWithdrawalShares ", roundWithdrawalShares[round]);
-        console.log("roundPricePerShares ", roundPricePerShares[round]);
 
-        uint256 withdrawAmount = (roundWithdrawalShares[round] *
-            roundPricePerShares[round]) / 1e6;
-        uint256 withdrawEthLPAmount = (withdrawAmount * 100) / 100;
-        // uint256 withdrawUsdLPAmount = (withdrawAmount * 20) / 100;
+        uint256 withdrawAmount = 1e6 + roundWithdrawalShares[round] * roundPricePerShares[round] / 1e6;
+
+        uint256 withdrawEthLPAmount = (withdrawAmount * 60) / 100;
+        uint256 withdrawUsdLPAmount = (withdrawAmount * 40) / 100;
         // uint256 withdrawUsdOptionsAmount = (withdrawAmount * 20) / 100;
-
-        console.log("withdrawEthLPAmount ", withdrawEthLPAmount);
-        vaultState.withdrawPoolAmount += acquireWithdrawalFundsEthLP(
-            withdrawEthLPAmount
-        );
-        // vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdLP(withdrawUsdLPAmount);
+        
+        vaultState.withdrawPoolAmount += acquireWithdrawalFundsEthLP(withdrawEthLPAmount);
+        vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdLP(withdrawUsdLPAmount);
         // vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdOptions(withdrawUsdOptionsAmount);
-        console.log("withdrawPoolAmount ", vaultState.withdrawPoolAmount);
+    }
+
+    /**
+     * @notice Allows admin to update the performance and management fee rates
+     * @param _performanceFeeRate The new performance fee rate (in percentage)
+     * @param _managementFeeRate The new management fee rate (in percentage)
+     */
+    function setFeeRates(
+        uint256 _performanceFeeRate,
+        uint256 _managementFeeRate
+    ) external {
+        // Access control: Only admin can update the fee rates
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        // Validate fee rates (optional: add max fee rate limits if needed)
+        require(_performanceFeeRate <= 100, "Invalid performance fee rate");
+        require(_managementFeeRate <= 100, "Invalid management fee rate");
+
+        // Update state variables
+        vaultParams.performanceFeeRate = _performanceFeeRate;
+        vaultParams.managementFeeRate = _managementFeeRate;
+
+        // Emit an event if needed (optional)
+        emit FeeRatesUpdated(_performanceFeeRate, _managementFeeRate);
     }
 
     /**

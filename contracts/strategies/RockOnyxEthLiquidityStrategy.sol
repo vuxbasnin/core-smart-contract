@@ -8,6 +8,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "../extensions/RockOnyxAccessControl.sol";
 import "../lib/ShareMath.sol";
+import "../lib/LiquidityAmounts.sol";
 import "../interfaces/IVenderLiquidityProxy.sol";
 import "../interfaces/ISwapProxy.sol";
 import "../interfaces/IERC721Receiver.sol";
@@ -18,6 +19,8 @@ contract RockOnyxEthLiquidityStrategy is
     RockOnyxAccessControl,
     ReentrancyGuard
 {
+    using LiquidityAmounts for uint256;
+
     IVenderLiquidityProxy internal ethLPProvider;
     ISwapProxy internal ethSwapProxy;
 
@@ -33,7 +36,7 @@ contract RockOnyxEthLiquidityStrategy is
      ***********************************************/
 
     constructor() {
-        depositState = DepositState(0, 0);
+        depositState = DepositState(0, 0, 0, 0);
     }
 
     function ethLP_Initialize(
@@ -77,7 +80,7 @@ contract RockOnyxEthLiquidityStrategy is
             IERC20(weth).balanceOf(address(this))
         );
 
-        (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) = ethLPProvider.mintPosition(
+        (uint256 tokenId, uint128 liquidity,,) = ethLPProvider.mintPosition(
                 lowerTick,
                 upperTick,
                 wstEth,
@@ -86,13 +89,10 @@ contract RockOnyxEthLiquidityStrategy is
                 IERC20(weth).balanceOf(address(this))
             );
 
-        // console.log("-----mintEthLPPosition-----");
-        // console.log("liquidity: ", liquidity);
-        // console.log("wsteth mint amount: ", amount0);
-        // console.log("weth mint amount: ", amount1);
-
         depositState.tokenId = tokenId;
         depositState.liquidity = liquidity;
+        depositState.lowerTick = lowerTick;
+        depositState.upperTick = upperTick;
 
         IERC721(ethNftPositionAddress).approve(
             address(ethLPProvider),
@@ -140,46 +140,22 @@ contract RockOnyxEthLiquidityStrategy is
 
     function acquireWithdrawalFundsEthLP(uint256 amount) internal returns (uint256){
         uint128 liquidity = _amountToPoolLiquidity(amount);
-
         (uint256 wstEthAmount, uint256 wethAmount) = _decreaseEthLPLiquidity(liquidity);
 
-        uint256 wstEthUsdAmount = _ethLPSwapTo(wstEth, wstEthAmount, usd);
-        uint256 wEthUsdAmount = _ethLPSwapTo(weth, wethAmount, usd);
-
-        return wstEthUsdAmount + wEthUsdAmount;
+        uint256 wstEthWethAmount = _ethLPSwapTo(wstEth, wstEthAmount, weth);
+        uint256 wethUsdAmount = _ethLPSwapTo(weth, wethAmount + wstEthWethAmount, usd);
+        return wethUsdAmount;
     }
 
     function getTotalEthLPAssets() internal view returns (uint256) {
-        uint256 poolLiquidity = ethSwapProxy.getLiquidityOf(wstEth, weth);
-        address poolAddress = ethSwapProxy.getPoolAddressOf(wstEth, weth);
-
-        // console.log("-----getTotalEthLPAssets-----");
-        // console.log("poolLiquidity:", poolLiquidity);
-        // console.log("depositState.liquidity:", depositState.liquidity);
-
-        uint256 wstethPoolReturn = IERC20(wstEth).balanceOf(address(poolAddress)) * depositState.liquidity / poolLiquidity;
-        uint256 wethPoolReturn = IERC20(weth).balanceOf(address(poolAddress)) * depositState.liquidity / poolLiquidity;
+        int24 tick = ethSwapProxy.getPoolCurrentTickOf(wstEth, weth);
+        (uint256 wstethAmount, uint256 wethAmount) = LiquidityAmounts.getAmountsForLiquidityByTick(tick, depositState.lowerTick, depositState.upperTick, depositState.liquidity);
         
-        // console.log("IERC20(wstEth).balanceOf(address(poolAddress)):", IERC20(wstEth).balanceOf(address(poolAddress)));
-        // console.log("IERC20(weth).balanceOf(address(poolAddress)):", IERC20(weth).balanceOf(address(poolAddress)));
-        // console.log("wstethPoolReturn:", wstethPoolReturn);
-        // console.log("wethPoolReturn:", wethPoolReturn);
-
-        uint256 amountLiquidityReturns = wstethPoolReturn * _getWstEthPrice() + 
-                                wethPoolReturn * _getEthPrice();
-        // console.log("amountLiquidityReturns:", amountLiquidityReturns);
+        uint256 totalAssets = 
+            (IERC20(wstEth).balanceOf(address(this)) + wstethAmount) * _getWstEthPrice()  +
+            (IERC20(weth).balanceOf(address(this)) + wethAmount) * _getEthPrice() ;
         
-        // console.log("weth asset", IERC20(weth).balanceOf(address(this)));
-        // console.log("wsteth asset", IERC20(wstEth).balanceOf(address(this)));
-
-        uint256 totalAssets = IERC20(weth).balanceOf(address(this)) * _getEthPrice() / 1e18 +
-                IERC20(wstEth).balanceOf(address(this)) * _getWstEthPrice() / 1e18 +
-                amountLiquidityReturns;
-        
-        // console.log("totalAssets:", totalAssets / 1e18);
-
-        return totalAssets;
-
+        return totalAssets / 1e18;
     }
 
     function _ethLPSwapTo(
@@ -205,29 +181,27 @@ contract RockOnyxEthLiquidityStrategy is
             depositState.tokenId,
             liquidity
         );
-
+        
         (amount0, amount1) = ethLPProvider.collectAllFees(
             depositState.tokenId
         );
-
+        
         depositState.liquidity -= liquidity;
 
         return (amount0, amount1);
     }
 
+    function _getLiquidAsset() private view returns(uint256){
+        int24 tick = ethSwapProxy.getPoolCurrentTickOf(wstEth, weth);
+        (uint256 wstethAmount, uint256 wethAmount) = LiquidityAmounts.getAmountsForLiquidityByTick(tick, depositState.lowerTick, depositState.upperTick, depositState.liquidity);
+        
+        uint256 liquidityAssets = wstethAmount * _getWstEthPrice() + wethAmount * _getEthPrice() ;
+        
+        return liquidityAssets / 1e18;
+    }
+
     function _amountToPoolLiquidity(uint256 amount) private view returns (uint128) {
-        uint256 poolLiquidity = ethSwapProxy.getLiquidityOf(wstEth, weth);
-        address poolAddress = ethSwapProxy.getPoolAddressOf(wstEth, weth);
-
-        uint256 totalPoolBalance = IERC20(wstEth).balanceOf(poolAddress) * _getWstEthPrice() + 
-                                IERC20(weth).balanceOf(poolAddress) * _getEthPrice();
-
-        uint128 liquidity = uint128(amount * poolLiquidity / totalPoolBalance);
-        // console.log("amount:", amount);
-        // console.log("poolLiquidity:", poolLiquidity);
-        // console.log("totalPoolBalance:", totalPoolBalance);
-        // console.log("liquidity:", liquidity);
-        return liquidity;
+        return uint128(amount * depositState.liquidity / _getLiquidAsset());
     }
 
     function _rebalanceEthLPAssets(uint8 ratio) private {
