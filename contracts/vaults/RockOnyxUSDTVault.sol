@@ -315,30 +315,6 @@ contract RockOnyxUSDTVault is
         emit FeeRatesUpdated(_performanceFeeRate, _managementFeeRate);
     }
 
-    /**
-     * @notice Allows admin to update the performance and management fee rates
-     * @param _performanceFeeRate The new performance fee rate (in percentage)
-     * @param _managementFeeRate The new management fee rate (in percentage)
-     */
-    function setFeeRates(
-        uint256 _performanceFeeRate,
-        uint256 _managementFeeRate
-    ) external {
-        // Access control: Only admin can update the fee rates
-        _auth(ROCK_ONYX_ADMIN_ROLE);
-
-        // Validate fee rates (optional: add max fee rate limits if needed)
-        require(_performanceFeeRate <= 100, "Invalid performance fee rate");
-        require(_managementFeeRate <= 100, "Invalid management fee rate");
-
-        // Update state variables
-        vaultParams.performanceFeeRate = _performanceFeeRate;
-        vaultParams.managementFeeRate = _managementFeeRate;
-
-        // Emit an event if needed (optional)
-        emit FeeRatesUpdated(_performanceFeeRate, _managementFeeRate);
-    }
-
     function balanceOf(address owner) external view returns (uint256) {
         return depositReceipts[owner].shares;
     }
