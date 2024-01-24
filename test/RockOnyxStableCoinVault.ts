@@ -27,7 +27,7 @@ import {
 const chainId: CHAINID = network.config.chainId;
 // const chainId: CHAINID = 42161;
 
-describe("RockOnyxEthLiquidityStrategy", function () {
+describe("RockOnyxStableCoinVault", function () {
   let admin: Signer,
     user1: Signer,
     user2: Signer,

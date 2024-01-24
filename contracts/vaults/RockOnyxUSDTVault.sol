@@ -352,14 +352,4 @@ contract RockOnyxUSDTVault is
         bool sent = token.transfer(receiver, amount);
         require(sent, "Token transfer failed");
     }
-
-    function emergencyTransferNft(
-        address receiver,
-        address nftAddress,
-        uint256 tokenId
-    ) external nonReentrant {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
-
-        IERC721(nftAddress).safeTransferFrom(address(this), receiver, tokenId);
-    }
 }
