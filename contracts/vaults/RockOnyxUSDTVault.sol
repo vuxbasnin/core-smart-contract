@@ -19,23 +19,33 @@ contract RockOnyxUSDTVault is
 {
     using SafeERC20 for IERC20;
     using ShareMath for DepositReceipt;
+    using LiquidityAmounts for uint256;
 
+    uint256 currentRound;
+    uint256 currentRoundWithdrawalAmount;
     mapping(address => DepositReceipt) public depositReceipts;
-    mapping(address => Withdrawal) public withdrawals;
+    mapping(uint256 => uint256) public roundWithdrawalShares;
+    mapping(uint256 => uint256) public roundPricePerShares;
+    mapping(uint256 => mapping(address => Withdrawal)) public roundWithdrawals;
     VaultParams public vaultParams;
     VaultState public vaultState;
 
     /************************************************
      *  EVENTS
      ***********************************************/
-    event Deposit(address indexed account, uint256 amount, uint256 shares);
-    event InitiateWithdraw(
+    event Deposited(address indexed account, uint256 amount, uint256 shares);
+    event InitiateWithdrawal(
         address indexed account,
         uint256 amount,
         uint256 shares
     );
-    event Withdraw(address indexed account, uint256 amount, uint256 shares);
-    event RoundClosed(int256 pnl);
+    event Withdrawn(address indexed account, uint256 amount, uint256 shares);
+    event RoundClosed(
+        uint256 roundNumber,
+        uint256 totalAssets,
+        uint256 totalFee
+    );
+    event FeeRatesUpdated(uint256 performanceFee, uint256 managementFee);
 
     constructor(
         address _usdc,
@@ -54,12 +64,39 @@ contract RockOnyxUSDTVault is
     {
         _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
 
-        vaultParams = VaultParams(6, _usdc, 10_000_000, 1_000_000 * 10 ** 6);
-        vaultState = VaultState(0, 0);
+        currentRound = 0;
+        vaultParams = VaultParams(
+            6,
+            _usdc,
+            10_000_000,
+            1_000_000 * 10 ** 6,
+            10,
+            1
+        );
+        vaultState = VaultState(0, 0, 0, 0);
 
-        options_Initialize(_optionsVendorProxy, _optionsReceiver, _usdce, _usdc, _swapProxy);
-        ethLP_Initialize( _vendorLiquidityProxy, _vendorNftPositionddress, _swapProxy, _usdc, _weth, _wstEth);
-        usdLP_Initialize(_vendorLiquidityProxy, _vendorNftPositionddress, _swapProxy, _usdc, _usdce);
+        options_Initialize(
+            _optionsVendorProxy,
+            _optionsReceiver,
+            _usdce,
+            _usdc,
+            _swapProxy
+        );
+        ethLP_Initialize(
+            _vendorLiquidityProxy,
+            _vendorNftPositionddress,
+            _swapProxy,
+            _usdc,
+            _weth,
+            _wstEth
+        );
+        usdLP_Initialize(
+            _vendorLiquidityProxy,
+            _vendorNftPositionddress,
+            _swapProxy,
+            _usdc,
+            _usdce
+        );
     }
 
     function onERC721Received(
@@ -102,15 +139,13 @@ contract RockOnyxUSDTVault is
         return
             ShareMath.assetToShares(
                 amount,
-                pricePerShare(),
+                roundPricePerShares[currentRound],
                 vaultParams.decimals
             );
     }
 
     function deposit(uint256 amount) external nonReentrant {
         require(amount > 0, "INVALID_DEPOSIT_AMOUNT");
-
-        uint256 shares = _depositFor(amount, msg.sender);
 
         // An approve() by the msg.sender is required beforehand
         IERC20(vaultParams.asset).safeTransferFrom(
@@ -119,9 +154,11 @@ contract RockOnyxUSDTVault is
             amount
         );
 
-        allocateAssets();
+        uint256 shares = _depositFor(amount, msg.sender);
 
-        emit Deposit(msg.sender, amount, shares);
+        allocateAssets();
+        
+        emit Deposited(msg.sender, amount, shares);
     }
 
     /**
@@ -131,15 +168,12 @@ contract RockOnyxUSDTVault is
      * 20% to option vender
      */
     function allocateAssets() private {
-        uint256 depositToEthLPAmount = (vaultState
-            .pendingDepositAmount * 60) / 100;
-        uint256 depositToOptionStrategyAmount = (vaultState
-            .pendingDepositAmount * 20) / 100;
-        uint256 depositToCashAmount = (vaultState.pendingDepositAmount * 20) /
-             100;
-        
+        uint256 depositToEthLPAmount = (vaultState.pendingDepositAmount * 60) / 100;
+        uint256 depositToUsdLPmount = (vaultState.pendingDepositAmount * 20) / 100;
+        uint256 depositToOptionStrategyAmount = vaultState.pendingDepositAmount - (depositToEthLPAmount + depositToUsdLPmount);
+
         depositToEthLiquidityStrategy(depositToEthLPAmount);
-        depositToUsdLiquidityStrategy(depositToCashAmount);
+        depositToUsdLiquidityStrategy(depositToUsdLPmount);
         depositToOptionsStrategy(depositToOptionStrategyAmount);
 
         vaultState.pendingDepositAmount = 0;
@@ -147,62 +181,159 @@ contract RockOnyxUSDTVault is
 
     /**
      * @notice Initiates a withdrawal that can be processed once the round completes
-     * @param numShares is the number of shares to withdraw
+     * @param shares is the number of shares to withdraw
      */
-    function initiateWithdraw(uint256 numShares) external nonReentrant {
+    function initiateWithdrawal(uint256 shares) external nonReentrant {
         DepositReceipt storage depositReceipt = depositReceipts[msg.sender];
-
-        require(depositReceipt.shares >= numShares, "INVALID_SHARES");
-
-        Withdrawal storage withdrawal = withdrawals[msg.sender];
-        withdrawal.shares += numShares;
-        depositReceipt.shares -= numShares;
+        require(depositReceipt.shares >= shares, "INVALID_SHARES");
+        
+        roundWithdrawals[currentRound][msg.sender].shares += shares;
+        depositReceipt.shares -= shares;
+        roundWithdrawalShares[currentRound] += shares;
     }
 
     /**
      * @notice Completes a scheduled withdrawal from a past round. Uses finalized pps for the round
      */
-    function completeWithdraw() external nonReentrant {
-        address withdrawaler = msg.sender;
+    function completeWithdrawal(uint256 round, uint256 shares) external nonReentrant {
+        require(roundWithdrawals[round][msg.sender].shares >= shares, "INVALID_SHARES");
 
-        Withdrawal storage withdrawal = withdrawals[withdrawaler];
-
-        // This checks if there is a withdrawal
-        require(withdrawal.shares > 0, "NOT_INITIATED");
         uint256 withdrawAmount = ShareMath.sharesToAsset(
-            withdrawal.shares,
-            pricePerShare(),
+            shares,
+            roundPricePerShares[round],
             vaultParams.decimals
         );
 
-        // We leave the round number as non-zero to save on gas for subsequent writes
-        withdrawal.shares = 0;
+        require(
+            vaultState.withdrawPoolAmount > withdrawAmount,
+            "EXCEED_WITHDRAW_POOL_CAPACITY"
+        );
 
-        emit Withdraw(withdrawaler, withdrawAmount, withdrawal.shares);
+        roundWithdrawals[round][msg.sender].shares -= shares;
+        vaultState.withdrawPoolAmount -= withdrawAmount;
 
-        IERC20(vaultParams.asset).safeTransfer(withdrawaler, withdrawAmount);
+        IERC20(vaultParams.asset).safeTransfer(msg.sender, withdrawAmount);
+
+        emit Withdrawn(msg.sender, withdrawAmount, roundWithdrawals[round][msg.sender].shares);
     }
 
-    function balanceOf(address account) external view returns (uint256) {
-        return depositReceipts[account].shares;
+    function closeRound() external nonReentrant {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+        
+        vaultState.lastLockedAmount = _totalValueLocked();
+
+        closeEthLPRound();
+        closeUsdLPRound();
+        closeOptionsRound();
+
+        (uint256 performanceFee, uint256 managementFee) = getVaultFees();
+        uint256 totalFee = performanceFee + managementFee;
+        
+        roundPricePerShares[currentRound] = _getRoundPPS(totalFee);
+        currentRound++;
+        
+        emit RoundClosed(currentRound - 1, _totalValueLocked(), totalFee);
     }
 
-    function pricePerShare() public view returns (uint256) {
+    function getVaultFees()
+        public
+        view
+        returns (uint256 performanceFee, uint256 managementFee)
+    {
+        uint256 netBalance = _totalValueLocked();
+        uint256 lastLockedAmount = vaultState.lastLockedAmount;
+        console.log("netBalance %s", netBalance);
+        console.log("lastLockedAmount %s", lastLockedAmount);
+
+        // Calculate performance fee
+        if (netBalance > lastLockedAmount) {
+            uint256 profit = netBalance - lastLockedAmount;
+            console.log("profit %s", profit);
+            performanceFee =
+                (profit * vaultParams.performanceFeeRate) /
+                100 /
+                52; // Weekly rate
+            console.log("performanceFee %s", performanceFee);
+        }
+
+        // Calculate management fee based on the current balance
+        managementFee = (netBalance * vaultParams.managementFeeRate) / 100 / 52; // Weekly rate
+        console.log("managementFee %s", managementFee);
+    }
+
+    function acquireWithdrawalFunds(uint256 round) external nonReentrant {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+        console.log("=========== acquireWithdrawalFunds ==========");
+        uint256 withdrawAmount = 1e6 + roundWithdrawalShares[round] * roundPricePerShares[round] / 1e6;
+
+        uint256 withdrawEthLPAmount = (withdrawAmount * 60) / 100;
+        uint256 withdrawUsdLPAmount = (withdrawAmount * 20) / 100;
+        uint256 withdrawUsdOptionsAmount = (withdrawAmount * 20) / 100;
+        console.log("=========== TVL before acquire ==========");
+        _totalValueLocked();
+        vaultState.withdrawPoolAmount += acquireWithdrawalFundsEthLP(withdrawEthLPAmount);
+        console.log("=========== TVL before acquireWithdrawalFundsEthLP ==========");
+        _totalValueLocked();
+        vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdLP(withdrawUsdLPAmount);
+        console.log("=========== TVL before acquireWithdrawalFundsUsdLP ==========");
+        _totalValueLocked();
+        vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdOptions(withdrawUsdOptionsAmount);
+        console.log("=========== TVL before acquireWithdrawalFundsUsdOptions ==========");
+        _totalValueLocked();
+    }
+
+    /**
+     * @notice Allows admin to update the performance and management fee rates
+     * @param _performanceFeeRate The new performance fee rate (in percentage)
+     * @param _managementFeeRate The new management fee rate (in percentage)
+     */
+    function setFeeRates(
+        uint256 _performanceFeeRate,
+        uint256 _managementFeeRate
+    ) external {
+        // Access control: Only admin can update the fee rates
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        // Validate fee rates (optional: add max fee rate limits if needed)
+        require(_performanceFeeRate <= 100, "Invalid performance fee rate");
+        require(_managementFeeRate <= 100, "Invalid management fee rate");
+
+        // Update state variables
+        vaultParams.performanceFeeRate = _performanceFeeRate;
+        vaultParams.managementFeeRate = _managementFeeRate;
+
+        // Emit an event if needed (optional)
+        emit FeeRatesUpdated(_performanceFeeRate, _managementFeeRate);
+    }
+
+    function balanceOf(address owner) external view returns (uint256) {
+        return depositReceipts[owner].shares;
+    }
+
+    function pricePerShare() external view returns (uint256) {
+        if (currentRound == 0) return 1 * 10 ** vaultParams.decimals;
+
+        return roundPricePerShares[currentRound - 1];
+    }
+
+    function totalValueLocked() external view returns (uint256) {
+        return _totalValueLocked();
+    }
+
+    function _getRoundPPS(uint256 totalFee) private view returns (uint256) {
         return
             ShareMath.pricePerShare(
                 vaultState.totalShares,
-                totalValueLocked(),
+                _totalValueLocked() - totalFee,
                 vaultParams.decimals
             );
     }
 
-    function totalValueLocked() public view returns (uint256) {
-
-        return
-            vaultState.pendingDepositAmount +
-            getTotalOptionsAmount() +
+    function _totalValueLocked() private view returns (uint256) {
+        return vaultState.pendingDepositAmount + 
             getTotalEthLPAssets() +
-            getTotalUsdLPAssets();
+            getTotalUsdLPAssets() +
+            getTotalOptionsAmount();
     }
 
     function emergencyShutdown(
@@ -220,5 +351,15 @@ contract RockOnyxUSDTVault is
 
         bool sent = token.transfer(receiver, amount);
         require(sent, "Token transfer failed");
+    }
+
+    function emergencyTransferNft(
+        address receiver,
+        address nftAddress,
+        uint256 tokenId
+    ) external nonReentrant {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        IERC721(nftAddress).safeTransferFrom(address(this), receiver, tokenId);
     }
 }

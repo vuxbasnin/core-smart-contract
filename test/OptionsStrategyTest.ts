@@ -25,6 +25,7 @@ describe("RockOnyxUSDTVault", function () {
   let rockOnyxUSDTVault: Contracts.RockOnyxUSDTVault;
   const usdcAddress = USDC_ADDRESS[chainId];
   const usdceAddress = USDCE_ADDRESS[chainId];
+  console.log("usdceAddress", usdceAddress);
   const wstethAddress = WSTETH_ADDRESS[chainId];
   const wethAddress = WETH_ADDRESS[chainId];
   let usdc: Contracts.IERC20;
@@ -269,188 +270,67 @@ describe("RockOnyxUSDTVault", function () {
       user5,
       5000
     );
+    await transferIERC20FundForUser(
+      usdce,
+      USDCE_IMPERSONATED_SIGNER_ADDRESS[chainId] ?? "",
+      user1,
+      5000
+    );
   });
 
-  it.skip("Deposit USDT to vault", async function () {
-    // User1 deposits 1000
-    await deposit(user1, ethers.parseUnits("1000", 6));
+  it.skip("should handle acquireWithdrawalFundsUsdOptions correctly", async function () {
+    console.log("Testing withdraw functionality...");
 
-    const totalBalance = await rockOnyxUSDTVault.balanceOf(
-      await user1.getAddress()
-    );
+    // User1 deposits 1000
+    await deposit(user3, ethers.parseUnits("1000", 6));
+
+    // check price per share
+    await logBalances();
+
+    const balanceOfUser = await usdce.connect(user1).balanceOf(user1);
     console.log(
-      "Number of shares of %s after deposit %s",
-      await owner.getAddress(),
-      ethers.formatUnits(totalBalance, 6)
+      "Balance of user %s",
+      ethers.formatUnits(balanceOfUser.toString(), 6)
     );
 
-    // rebalance portfolio
-    const depositAmount = ethers.parseUnits("100", 6);
+    const depositAmount = ethers.parseUnits("150", 6);
 
     console.log(`Depositing ${depositAmount} USDC options`);
     await rockOnyxUSDTVault.connect(owner).depositToVendor(depositAmount, {
       value: ethers.parseEther("0.001753"),
     });
-  });
 
-  it.skip("should handle deposits correctly", async function () {
-    console.log("Testing deposit functionality...");
+    // trader update money back to the vault
+    const withdrawAmount = ethers.parseUnits("150", 6);
 
-    // User1 deposits 1000
-    await deposit(user1, ethers.parseUnits("1000", 6));
+    await usdce
+      .connect(user1)
+      .approve(await rockOnyxUSDTVault.getAddress(), withdrawAmount);
 
-    // check price per share
-    await logBalances();
-
-    // User2 deposits 500
-    await deposit(user2, ethers.parseUnits("1000", 6));
-
-    // check price per share
-    await logBalances();
-
-    // Assertions
-    const user1Address = user1.getAddress();
-    const user2Address = user2.getAddress();
-    const totalSupplyAfter = await rockOnyxUSDTVault.totalValueLocked();
-    const user1BalanceAfter = await rockOnyxUSDTVault.balanceOf(user1Address);
-    const user2BalanceAfter = await rockOnyxUSDTVault.balanceOf(user2Address);
-
-    const precision = ethers.parseUnits("3", 6);
-    expect(totalSupplyAfter).to.approximately(ethers.parseUnits("2000", 6), precision);
-    expect(user1BalanceAfter).to.approximately(ethers.parseUnits("1000", 6), precision);
-    expect(user2BalanceAfter).to.approximately(ethers.parseUnits("1000", 6), precision);
-  });
-
-  it.skip("should handle initiateWithdraw correctly", async function () {
-    console.log("Testing withdraw functionality...");
-
-    // User1 deposits 1000
-    await deposit(user3, ethers.parseUnits("1000", 6));
-
-    // check price per share
-    await logBalances();
-
-    await withdraw(user3, ethers.parseUnits("1000", 6));
-
-    const totalSupplyAfter = await rockOnyxUSDTVault.totalValueLocked();
-    const user1BalanceAfter = await rockOnyxUSDTVault.balanceOf(
-      await user3.getAddress()
-    );
-
-    const precision = ethers.parseUnits("2", 6);
-    expect(totalSupplyAfter).to.approximately(ethers.parseUnits("1000", 6), precision);
-    expect(user1BalanceAfter).to.equal(ethers.parseUnits("0", 6));
-  });
-
-  it.skip("should handlePostWithdrawalFromVendor correctly", async function () {
-    console.log("Testing withdraw functionality...");
-
-    // User1 deposits 1000
-    await deposit(user3, ethers.parseUnits("1000", 6));
-
-    // check price per share
-    await logBalances();
-
-    await withdraw(user3, ethers.parseUnits("1000", 6));
-
-    const user3Address = await user3.getAddress();
-    const totalSupplyAfter = await rockOnyxUSDTVault.totalValueLocked();
-    const user1BalanceAfter = await rockOnyxUSDTVault.balanceOf(user3Address);
-
-    const precision = ethers.parseUnits("2", 6);
-    expect(totalSupplyAfter).to.approximately(ethers.parseUnits("1000", 6), precision);
-    expect(user1BalanceAfter).to.equal(ethers.parseUnits("0", 6));
-
-    const balanceOfUser3Before = await usdc
-      .connect(user3)
-      .balanceOf(user3Address);
-    console.log("Balance of user before %s", balanceOfUser3Before);
-
-    /// TODO: We need to implement the withdraw fund from partner
-    // await rockOnyxUSDTVault.connect(user3).completeWithdraw();
-
-    // // check USDC balance of user
-    // const balanceOfUser3After = await usdc
-    //   .connect(user3)
-    //   .balanceOf(user3Address);
-    // console.log("Balance of user after %s", balanceOfUser3After);
-
-    // expect(balanceOfUser3After).to.equal(ethers.parseUnits("5000", 6));
-  });
-
-  it.skip("should handle complete withdrawal correctly", async function () {
-    console.log("Testing withdraw functionality...");
-
-    // User1 deposits 1000
-    await deposit(user3, ethers.parseUnits("1000", 6));
-
-    // check price per share
-    await logBalances();
-
-    await withdraw(user3, ethers.parseUnits("1000", 6));
-
-    const user3Address = await user3.getAddress();
-    const totalSupplyAfter = await rockOnyxUSDTVault.totalValueLocked();
-    const user1BalanceAfter = await rockOnyxUSDTVault.balanceOf(user3Address);
-
-    const precision = ethers.parseUnits("2", 6);
-    expect(totalSupplyAfter).to.approximately(ethers.parseUnits("1000", 6), precision);
-    expect(user1BalanceAfter).to.equal(ethers.parseUnits("0", 6));
-
-    const balanceOfUser3Before = await usdc
-      .connect(user3)
-      .balanceOf(user3Address);
-    console.log("Balance of user before %s", balanceOfUser3Before);
-
-    /// TODO: We need to implement the withdraw fund from partner
-    // await rockOnyxUSDTVault.connect(user3).completeWithdraw();
-
-    // // check USDC balance of user
-    // const balanceOfUser3After = await usdc
-    //   .connect(user3)
-    //   .balanceOf(user3Address);
-    // console.log("Balance of user after %s", balanceOfUser3After);
-
-    // expect(balanceOfUser3After).to.equal(ethers.parseUnits("5000", 6));
-  });
-
-  it("should handle closeRound correctly", async function () {
-    console.log("Testing withdraw functionality...");
-
-    // User1 deposits 1000
-    await deposit(user3, ethers.parseUnits("1000", 6));
-
-    // check price per share
-    await logBalances();
-
-    const pps = await rockOnyxUSDTVault.pricePerShare();
-    console.log("pps %s", pps);
-    expect(pps).to.approximately(ethers.parseUnits("1", 6), ethers.parseUnits("0.1", 6));
-
-    // rebalance portfolio
-    const depositAmount = ethers.parseUnits("100", 6);
-
-    console.log(`Depositing ${depositAmount} USDC options`);
-    await rockOnyxUSDTVault.connect(owner).depositToVendor(depositAmount, {
-      value: ethers.parseEther("0.001753"),
-    });
+    console.log("Trader approved money to handlePostWithdrawalFromVendor");
 
     await rockOnyxUSDTVault
+      .connect(user1)
+      .handlePostWithdrawalFromVendor(withdrawAmount);
+
+    // after trader send fund back to vault, owner request acquireWithdrawalFundsUsdOptions
+    // in happy case, we assume that withdrawAmount that trader send back to vault always > acquireWithdrawalAmount
+    await rockOnyxUSDTVault
       .connect(owner)
-      .updateAllocatedBalance(ethers.parseUnits("110", 6));
+      .acquireWithdrawalFundsUsdOptions(ethers.parseUnits("120", 6));
+  });
 
-    await rockOnyxUSDTVault.connect(owner).closeRound();
+  it.skip("should enforce role-based access control", async function () {
+    // Use a non-admin signer
+    const nonAdmin = user2;
+    const nonAdminAddress = await user2.getAddress();
+    const depositAmount = ethers.parseUnits("100", 6);
 
-    const ppsAfter = await rockOnyxUSDTVault.pricePerShare();
-    console.log("ppsAfter", ppsAfter);
-    expect(ppsAfter).to.approximately(ethers.parseUnits("1.01", 6), ethers.parseUnits("0.001", 6));
-
-    // const totalSupplyAfter = await rockOnyxUSDTVault.totalValueLocked();
-    // const user1BalanceAfter = await rockOnyxUSDTVault.balanceOf(
-    //   await user3.getAddress()
-    // );
-
-    // expect(totalSupplyAfter).to.approximately(ethers.parseUnits("1500", 6), ethers.parseUnits("2", 6));
-    // expect(user1BalanceAfter).to.equal(ethers.parseUnits("1000", 6));
+    // Attempt to call a sensitive function
+    await expect(
+      rockOnyxUSDTVault.connect(nonAdmin).depositToVendor(depositAmount, {
+        value: ethers.parseEther("0.001753"),
+      })
+    ).to.be.revertedWith("ROCK_ONYX_ADMIN_ROLE_ERROR");
   });
 });

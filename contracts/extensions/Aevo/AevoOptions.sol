@@ -22,10 +22,6 @@ contract AevoOptions is IOptionsVendorProxy, BaseProxy {
         asset = _asset;
     }
 
-    function topUpGasFees() public payable {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
-    }
-
     function depositToVendor(
         address receiver,
         uint256 amount
@@ -36,16 +32,11 @@ contract AevoOptions is IOptionsVendorProxy, BaseProxy {
 
         IERC20(asset).approve(address(AEVO), amount);
 
-        // uint256 amountInWei = 0.001753 * 10**18;
         AEVO.depositToAppChain{value: msg.value}(
             receiver,
             amount,
             gasLimit,
             connector
         );
-    }
-
-    function withdrawFromVendor(uint256 amount) external {
-        // Implementation of withdrawFromVendor
     }
 }
