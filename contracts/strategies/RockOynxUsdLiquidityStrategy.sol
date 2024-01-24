@@ -178,6 +178,7 @@ contract RockOynxUsdLiquidityStrategy is
         uint256 totalAssets = usdLiquidityAssets.unAllocatedUsdc + usdcAmount +
             (usdLiquidityAssets.unAllocatedUsdce + usdceAmount) * _getUsdcePrice() / 1e6 ;
             
+        console.log('getTotalUsdLPAssets totalAssets: ', totalAssets);
         return totalAssets;
     }
 

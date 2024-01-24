@@ -13,6 +13,7 @@ import {
   AEVO_ADDRESS,
   AEVO_CONNECTOR_ADDRESS,
   USDC_IMPERSONATED_SIGNER_ADDRESS,
+  USDCE_IMPERSONATED_SIGNER_ADDRESS,
   NFT_POSITION_ADDRESS
 } from "../constants";
 import {
@@ -23,8 +24,8 @@ import {
   ContractTransactionReceipt,
 } from "ethers";
 
-// const chainId: CHAINID = network.config.chainId;
-const chainId: CHAINID = 42161;
+const chainId: CHAINID = network.config.chainId;
+// const chainId: CHAINID = 42161;
 
 describe("RockOnyxEthLiquidityStrategy", function () {
   let admin: Signer,
@@ -57,6 +58,7 @@ describe("RockOnyxEthLiquidityStrategy", function () {
 
   const nftPositionAddress = NFT_POSITION_ADDRESS[chainId];
   const usdcImpersonatedSigner = USDC_IMPERSONATED_SIGNER_ADDRESS[chainId];
+  const usdceImpersonatedSigner = USDCE_IMPERSONATED_SIGNER_ADDRESS[chainId];
   const nonfungiblePositionManager = NonfungiblePositionManager[chainId];
   const usdcAddress = USDC_ADDRESS[chainId];
   const usdceAddress = USDCE_ADDRESS[chainId];
@@ -206,6 +208,17 @@ describe("RockOnyxEthLiquidityStrategy", function () {
     await transferTx.wait();
   }
 
+  async function transferUsdceForUser(
+    from: Signer,
+    to: Signer,
+    amount: number
+  ) {
+    const transferTx = await usdce
+      .connect(from)
+      .transfer(to, amount);
+    await transferTx.wait();
+  }
+
   async function logAndReturnTotalValueLock() {
     const totalValueLocked = await rockOnyxUSDTVaultContract
       .connect(admin)
@@ -218,11 +231,14 @@ describe("RockOnyxEthLiquidityStrategy", function () {
 
   it("seed data", async function () {
     const usdcSigner = await ethers.getImpersonatedSigner(usdcImpersonatedSigner);
+    const usdceSigner = await ethers.getImpersonatedSigner(usdceImpersonatedSigner);
 
     await transferUsdcForUser(usdcSigner, user1, 1000*1e6);
     await transferUsdcForUser(usdcSigner, user2, 1000*1e6);
     await transferUsdcForUser(usdcSigner, user3, 1000*1e6);
     await transferUsdcForUser(usdcSigner, user4, 1000*1e6);
+
+    await transferUsdceForUser(usdceSigner, optionsReceiver, 1000*1e6);
   });
 
   it("deposit to rockOnyxUSDTVault, should deposit successfully", async function () {
@@ -288,6 +304,16 @@ describe("RockOnyxEthLiquidityStrategy", function () {
     expect(totalValueLock).to.approximately(400*1e6, PRECISION);
   });
 
+  it("deposit to vender on eavo, should deposit successfully", async function () {
+    console.log('-------------deposit to vender on eavo---------------');
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
+      value: ethers.parseEther("0.001753"),
+    });
+
+    let totalValueLock = await logAndReturnTotalValueLock();
+    expect(totalValueLock).to.approximately(400*1e6, PRECISION);
+  });
+
   it("add more deposits to rockOnyxUSDTVault, should deposit successfully", async function () {
     console.log('-------------add more deposits torockOnyxUSDTVault---------------')
     await deposit(user1, 100*1e6);
@@ -313,12 +339,39 @@ describe("RockOnyxEthLiquidityStrategy", function () {
     expect(totalValueLock).to.approximately(600*1e6, PRECISION);
   });
 
+  it("update allocated balance from eavo vender, should update successfully", async function () {
+    console.log('-------------update allocated balance from eavo vender---------------');
+    const updateProfitTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .updateProfitFromVender(80*1e6);
+    await updateProfitTx.wait();
+
+    let totalValueLock = await logAndReturnTotalValueLock();
+    expect(totalValueLock).to.approximately(600*1e6, PRECISION);
+  });
+
   it("close round, should close successfully", async function () {
     console.log('-------------close round---------------');
     const closeRoundTx = await rockOnyxUSDTVaultContract
       .connect(admin)
       .closeRound();
     await closeRoundTx.wait();
+
+    let totalValueLock = await logAndReturnTotalValueLock();
+    expect(totalValueLock).to.approximately(600*1e6, PRECISION);
+  });
+
+  it("handle withdrawal from eavo vender, should handle successfully", async function () {
+    console.log('-------------handle withdrawal from eavo vender---------------');
+    
+    const withdrawAmount = 50 * 1e6;
+    await usdce
+      .connect(optionsReceiver)
+      .approve(await rockOnyxUSDTVaultContract.getAddress(), withdrawAmount);
+
+    await rockOnyxUSDTVaultContract
+      .connect(optionsReceiver)
+      .handlePostWithdrawalFromVendor(withdrawAmount);
 
     let totalValueLock = await logAndReturnTotalValueLock();
     expect(totalValueLock).to.approximately(600*1e6, PRECISION);
@@ -332,23 +385,23 @@ describe("RockOnyxEthLiquidityStrategy", function () {
     await acquireWithdrawalFundsTx.wait();
 
     let totalValueLock = await logAndReturnTotalValueLock();
-    expect(totalValueLock).to.approximately(500*1e6, PRECISION);
+    expect(totalValueLock).to.approximately(498*1e6, PRECISION);
   });
 
   it("complete withdrawals, should complete successfully", async function () {
     console.log('-------------complete withdrawals---------------');
+    let user1Balance = await usdc.connect(user1).balanceOf(user1);
+
     const completeWithdrawalTx = await rockOnyxUSDTVaultContract
       .connect(user1)
       .completeWithdrawal(0, 5*1e6);
     await completeWithdrawalTx.wait();
 
     let totalValueLock = await logAndReturnTotalValueLock();
-    expect(totalValueLock).to.approximately(500*1e6, PRECISION);
+    expect(totalValueLock).to.approximately(498*1e6, PRECISION);
 
-    let user1Balance = await usdc.connect(user1).balanceOf(user1);
-    console.log("user1Balance %s", user1Balance);
-
-    expect(user1Balance).to.approximately(805*1e6, PRECISION);
+    let user1BalanceAfterWithdraw = await usdc.connect(user1).balanceOf(user1);
+    expect(user1BalanceAfterWithdraw).to.approximately(user1Balance + BigInt(5*1e6), PRECISION);
   });
 
   it.skip("fullflow deposit and stake to camelot liquidity, should successfully", async function () {

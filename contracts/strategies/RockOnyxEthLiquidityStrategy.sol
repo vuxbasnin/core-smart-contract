@@ -144,6 +144,7 @@ contract RockOnyxEthLiquidityStrategy is
 
         uint256 wstEthWethAmount = _ethLPSwapTo(wstEth, wstEthAmount, weth);
         uint256 wethUsdAmount = _ethLPSwapTo(weth, wethAmount + wstEthWethAmount, usd);
+        
         return wethUsdAmount;
     }
 
@@ -154,7 +155,8 @@ contract RockOnyxEthLiquidityStrategy is
         uint256 totalAssets = 
             (IERC20(wstEth).balanceOf(address(this)) + wstethAmount) * _getWstEthPrice()  +
             (IERC20(weth).balanceOf(address(this)) + wethAmount) * _getEthPrice() ;
-        
+        console.log('getTotalEthLPAssets totalAssets: ', totalAssets / 1e18);
+
         return totalAssets / 1e18;
     }
 
@@ -195,9 +197,7 @@ contract RockOnyxEthLiquidityStrategy is
         int24 tick = ethSwapProxy.getPoolCurrentTickOf(wstEth, weth);
         (uint256 wstethAmount, uint256 wethAmount) = LiquidityAmounts.getAmountsForLiquidityByTick(tick, depositState.lowerTick, depositState.upperTick, depositState.liquidity);
         
-        uint256 liquidityAssets = wstethAmount * _getWstEthPrice() + wethAmount * _getEthPrice() ;
-        
-        return liquidityAssets / 1e18;
+        return (wstethAmount * _getWstEthPrice() + wethAmount * _getEthPrice()) / 1e18 ;
     }
 
     function _amountToPoolLiquidity(uint256 amount) private view returns (uint128) {

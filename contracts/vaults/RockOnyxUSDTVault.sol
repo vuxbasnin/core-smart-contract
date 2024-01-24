@@ -155,11 +155,9 @@ contract RockOnyxUSDTVault is
         );
 
         uint256 shares = _depositFor(amount, msg.sender);
-        console.log("shares %s", shares);
 
         allocateAssets();
         
-        console.log("wstEth %s, weth %s", IERC20(wstEth).balanceOf(address(this)), IERC20(weth).balanceOf(address(this)));
         emit Deposited(msg.sender, amount, shares);
     }
 
@@ -170,15 +168,12 @@ contract RockOnyxUSDTVault is
      * 20% to option vender
      */
     function allocateAssets() private {
-        uint256 depositToEthLPAmount = (vaultState.pendingDepositAmount * 60) /
-            100;
-        uint256 depositToOptionStrategyAmount = (vaultState
-            .pendingDepositAmount * 20) / 100;
-        uint256 depositToCashAmount = (vaultState.pendingDepositAmount * 20) /
-            100;
+        uint256 depositToEthLPAmount = (vaultState.pendingDepositAmount * 60) / 100;
+        uint256 depositToUsdLPmount = (vaultState.pendingDepositAmount * 20) / 100;
+        uint256 depositToOptionStrategyAmount = vaultState.pendingDepositAmount - (depositToEthLPAmount + depositToUsdLPmount);
 
         depositToEthLiquidityStrategy(depositToEthLPAmount);
-        depositToUsdLiquidityStrategy(depositToCashAmount);
+        depositToUsdLiquidityStrategy(depositToUsdLPmount);
         depositToOptionsStrategy(depositToOptionStrategyAmount);
 
         vaultState.pendingDepositAmount = 0;
@@ -224,30 +219,19 @@ contract RockOnyxUSDTVault is
 
     function closeRound() external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        console.log("=========== closeRound ==========");
-
-        // We store the last locked value before update balance from vendors
+        
         vaultState.lastLockedAmount = _totalValueLocked();
-        console.log("vaultState.lastLockedAmount %s", vaultState.lastLockedAmount);
 
         closeEthLPRound();
         closeUsdLPRound();
         closeOptionsRound();
 
-        // Calculate fees and update vault state
         (uint256 performanceFee, uint256 managementFee) = getVaultFees();
         uint256 totalFee = performanceFee + managementFee;
-        console.log("totalFee %s", totalFee);
         
-        // Update price per share after fee deduction
-        console.log("TVL %s", _totalValueLocked());
-        console.log("vaultState.totalShares %s", vaultState.totalShares);
         roundPricePerShares[currentRound] = _getRoundPPS(totalFee);
-
-        console.log("roundPricePerShares", roundPricePerShares[currentRound]);
         currentRound++;
         
-        // Emit event for round closure
         emit RoundClosed(currentRound - 1, _totalValueLocked(), totalFee);
     }
 
@@ -279,16 +263,23 @@ contract RockOnyxUSDTVault is
 
     function acquireWithdrawalFunds(uint256 round) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-
+        console.log("=========== acquireWithdrawalFunds ==========");
         uint256 withdrawAmount = 1e6 + roundWithdrawalShares[round] * roundPricePerShares[round] / 1e6;
 
         uint256 withdrawEthLPAmount = (withdrawAmount * 60) / 100;
-        uint256 withdrawUsdLPAmount = (withdrawAmount * 40) / 100;
-        // uint256 withdrawUsdOptionsAmount = (withdrawAmount * 20) / 100;
-        
+        uint256 withdrawUsdLPAmount = (withdrawAmount * 20) / 100;
+        uint256 withdrawUsdOptionsAmount = (withdrawAmount * 20) / 100;
+        console.log("=========== TVL before acquire ==========");
+        _totalValueLocked();
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsEthLP(withdrawEthLPAmount);
+        console.log("=========== TVL before acquireWithdrawalFundsEthLP ==========");
+        _totalValueLocked();
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdLP(withdrawUsdLPAmount);
-        // vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdOptions(withdrawUsdOptionsAmount);
+        console.log("=========== TVL before acquireWithdrawalFundsUsdLP ==========");
+        _totalValueLocked();
+        vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdOptions(withdrawUsdOptionsAmount);
+        console.log("=========== TVL before acquireWithdrawalFundsUsdOptions ==========");
+        _totalValueLocked();
     }
 
     /**
@@ -339,9 +330,10 @@ contract RockOnyxUSDTVault is
     }
 
     function _totalValueLocked() private view returns (uint256) {
-        return vaultState.pendingDepositAmount + getTotalEthLPAssets() +
-         getTotalUsdLPAssets() +
-         getTotalOptionsAmount();
+        return vaultState.pendingDepositAmount + 
+            getTotalEthLPAssets() +
+            getTotalUsdLPAssets() +
+            getTotalOptionsAmount();
     }
 
     function emergencyShutdown(
