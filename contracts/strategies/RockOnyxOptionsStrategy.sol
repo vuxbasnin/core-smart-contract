@@ -40,7 +40,7 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     event OptionsBalanceChanged(uint256 oldBalance, uint256 newBlanace);
 
     constructor() {
-        optionsState = OptionsStrategyState(0, 0, 0);
+        optionsState = OptionsStrategyState(0, 0, 0, 0);
     }
 
     function options_Initialize(
@@ -112,7 +112,6 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     function depositToVendor() external payable nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        console.log("================ depositToVendor =============");
         IERC20(optionsAssetAddress).approve(address(optionsVendor), optionsState.unAllocatedBalance);
 
         optionsVendor.depositToVendor{value: msg.value}(
@@ -143,16 +142,14 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     function closeOptionsRound() internal {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        optionsState.allocatedBalance = optionsState.unsettledProfit > 0 ? 
-            optionsState.allocatedBalance + uint256(optionsState.unsettledProfit) : 
-            optionsState.allocatedBalance - uint256(-optionsState.unsettledProfit);
-        optionsState.unsettledProfit = 0;
+        optionsState.allocatedBalance = optionsState.allocatedBalance + optionsState.unsettledProfit - optionsState.unsettledLoss;
     }
 
     function updateProfitFromVender(uint256 balance) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        optionsState.unsettledProfit = int256(balance) - int256(optionsState.allocatedBalance);
+        optionsState.unsettledProfit = balance > optionsState.allocatedBalance ? balance - optionsState.allocatedBalance : 0;
+        optionsState.unsettledLoss = balance < optionsState.allocatedBalance ? optionsState.allocatedBalance - balance : 0;
     }
 
     function getTotalOptionsAmount() internal view returns (uint256) {

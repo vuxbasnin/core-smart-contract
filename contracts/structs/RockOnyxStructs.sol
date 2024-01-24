@@ -20,7 +20,8 @@ struct VaultState {
 struct OptionsStrategyState {
     uint256 allocatedBalance;
     uint256 unAllocatedBalance;
-    int256 unsettledProfit;
+    uint256 unsettledProfit;
+    uint256 unsettledLoss;
 }
 
 struct DepositReceipt {
