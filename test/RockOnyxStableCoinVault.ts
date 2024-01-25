@@ -68,15 +68,6 @@ describe("RockOnyxStableCoinVault", function () {
   const aevoAddress = AEVO_ADDRESS[chainId];
   const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId];
 
-  // const usdcAddress = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
-  // const usdceAddress = "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8";
-  // const wstethAddress = "0x5979D7b546E38E414F7E9822514be443A4800529";
-  // const wethAddress = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1";
-  // const swapRouterAddress: string = "0x1F721E2E82F6676FCE4eA07A5958cF098D339e18";
-  // const nonfungiblePositionManager = "0x00c7f3082833e796A5b3e4Bd59f6642FF44DCD15";
-  // const aevoAddress = "0x80d40e32FAD8bE8da5C6A42B8aF1E181984D137c";
-  // const aevoConnectorAddress = "0x69Adf49285c25d9f840c577A0e3cb134caF944D3";
-
   let camelotSwapContract: Contracts.CamelotSwap;
 
   async function deployCamelotLiquidity() {
@@ -381,20 +372,32 @@ describe("RockOnyxStableCoinVault", function () {
     console.log('-------------accquire withdrawal funds for the round---------------');
     const acquireWithdrawalFundsTx = await rockOnyxUSDTVaultContract
       .connect(admin)
-      .acquireWithdrawalFunds(0);
+      .acquireWithdrawalFunds();
     await acquireWithdrawalFundsTx.wait();
 
     let totalValueLock = await logAndReturnTotalValueLock();
     expect(totalValueLock).to.approximately(498*1e6, PRECISION);
   });
 
+  it("Users initial withdrawals time 2, should init successfully", async function () {
+    console.log('-------------Users initial withdrawals time 2---------------');
+    
+    await expect(rockOnyxUSDTVaultContract
+      .connect(user1)
+      .initiateWithdrawal(50*1e6))
+      .to.be.revertedWith("INVALID_WITHDRAW_STATE");
+
+    let totalValueLock = await logAndReturnTotalValueLock();
+    expect(totalValueLock).to.approximately(498*1e6, PRECISION);
+  });
+  
   it("complete withdrawals, should complete successfully", async function () {
     console.log('-------------complete withdrawals---------------');
     let user1Balance = await usdc.connect(user1).balanceOf(user1);
 
     const completeWithdrawalTx = await rockOnyxUSDTVaultContract
       .connect(user1)
-      .completeWithdrawal(0, 5*1e6);
+      .completeWithdrawal(5*1e6);
     await completeWithdrawalTx.wait();
 
     let totalValueLock = await logAndReturnTotalValueLock();
@@ -402,93 +405,5 @@ describe("RockOnyxStableCoinVault", function () {
 
     let user1BalanceAfterWithdraw = await usdc.connect(user1).balanceOf(user1);
     expect(user1BalanceAfterWithdraw).to.approximately(user1Balance + BigInt(5*1e6), PRECISION);
-  });
-
-  it.skip("fullflow deposit and stake to camelot liquidity, should successfully", async function () {
-    const usdcSigner = await ethers.getImpersonatedSigner(
-      "0x463f5d63e5a5edb8615b0e485a090a18aba08578"
-    );
-    const transferTx0 = await usdc
-      .connect(usdcSigner)
-      .transfer(admin, ethers.parseUnits("10000", 6));
-    await transferTx0.wait();
-
-    await usdc
-      .connect(admin)
-      .approve(await rockOnyxUSDTVaultContract.getAddress(), 10*1e6);
-
-    await rockOnyxUSDTVaultContract.connect(admin).deposit(10*1e6);
-
-    console.log(
-      "balance shares of admin : %s shares",
-      await rockOnyxUSDTVaultContract.connect(admin).balanceOf(admin)
-    );
-
-    const mintEthLPPositionTx = await rockOnyxUSDTVaultContract
-      .connect(admin)
-      .mintEthLPPosition(701, 2101, 50);
-    var transferTx1Result = await mintEthLPPositionTx.wait();
-
-    liquidityTokenId = await getMintPositionResult(
-      transferTx1Result!,
-      LIQUIDITY_TOKEN_ID_INDEX
-    );
-    liquidityAmount = await getMintPositionResult(
-      transferTx1Result!,
-      LIQUIDITY_AMOUNT_INDEX
-    );
-
-    console.log(
-      "liquidityTokenId %s, liquidityAmount %s",
-      liquidityTokenId,
-      liquidityAmount
-    );
-
-    const mintUsdLPPositionTx = await rockOnyxUSDTVaultContract
-      .connect(admin)
-      .mintUsdLPPosition(-5, 5, 50);
-    var transferTx1Result = await mintUsdLPPositionTx.wait();
-
-    liquidityTokenId = await getMintPositionResult(
-      transferTx1Result!,
-      LIQUIDITY_TOKEN_ID_INDEX
-    );
-    liquidityAmount = await getMintPositionResult(
-      transferTx1Result!,
-      LIQUIDITY_AMOUNT_INDEX
-    );
-
-    console.log(
-      "liquidityTokenId %s, liquidityAmount %s",
-      liquidityTokenId,
-      liquidityAmount
-    );
-
-    const totalValueLocked = await rockOnyxUSDTVaultContract
-      .connect(admin)
-      .totalValueLocked();
-
-      console.log(
-        "totalValueLocked %s", totalValueLocked);
-
-    const transferTx3 = await rockOnyxUSDTVaultContract
-      .connect(admin)
-      .initiateWithdrawal(5*1e6);
-    await transferTx3.wait();
-
-    const transferTx2 = await rockOnyxUSDTVaultContract
-      .connect(admin)
-      .closeRound();
-    await transferTx2.wait();
-
-    const transferTx4 = await rockOnyxUSDTVaultContract
-      .connect(admin)
-      .acquireWithdrawalFunds(0);
-    await transferTx4.wait();
-
-    const transferTx5 = await rockOnyxUSDTVaultContract
-      .connect(admin)
-      .completeWithdrawal(0, 5*1e6);
-    await transferTx5.wait();
   });
 });

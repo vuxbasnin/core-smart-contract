@@ -30,6 +30,7 @@ struct DepositReceipt {
 
 struct Withdrawal {
     uint256 shares;
+    uint256 round;
 }
 
 struct DepositState {
