@@ -21,11 +21,6 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     OptionsStrategyState internal optionsState;
     ISwapProxy private swapProxy;
 
-    // Constants for fees and slippage
-    uint256 private constant PRICE_IMPACT = 10; // 0.01% price impact
-    uint256 private constant MAX_SLIPPAGE = 500; // 0.5% slippage
-    uint256 private constant NETWORK_COST = 1e6; // Network cost in smallest unit of USDC (1 USDC), will improve later on
-
     /************************************************
      *  EVENTS
      ***********************************************/
@@ -84,9 +79,7 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     function acquireWithdrawalFundsUsdOptions(uint256 withdrawUsdOptionsAmount) internal returns (uint256) {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        uint256 totalAmountWithSlippageAndImpact = (withdrawUsdOptionsAmount * (1e5 + MAX_SLIPPAGE + PRICE_IMPACT)) / 1e5;
-        uint256 totalAmountRequired = totalAmountWithSlippageAndImpact + NETWORK_COST;
-        uint256 amountToWithdrawInOptionsAsset = (totalAmountRequired * 1e6) / swapProxy.getPriceOf(vaultAssetAddress, optionsAssetAddress, 6, 6);
+        uint256 amountToWithdrawInOptionsAsset = (withdrawUsdOptionsAmount * 1e6) / swapProxy.getPriceOf(vaultAssetAddress, optionsAssetAddress, 6, 6);
         
         require(optionsState.unAllocatedBalance >= amountToWithdrawInOptionsAsset, "INSUFFICIENT_UNALLOCATED_BALANCE");
         IERC20(optionsAssetAddress).approve(address(swapProxy), amountToWithdrawInOptionsAsset);

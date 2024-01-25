@@ -17,6 +17,10 @@ contract RockOnyxUSDTVault is
     RockOnyxOptionStrategy,
     RockOynxUsdLiquidityStrategy
 {
+    uint256 private constant PRICE_IMPACT = 10; // 0.01% price impact
+    uint256 private constant MAX_SLIPPAGE = 500; // 0.5% slippage
+    uint256 private constant NETWORK_COST = 1e6; // Network cost in smallest unit of USDC (1 USDC), will improve later on
+
     using SafeERC20 for IERC20;
     using ShareMath for DepositReceipt;
     using LiquidityAmounts for uint256;
@@ -147,7 +151,6 @@ contract RockOnyxUSDTVault is
     function deposit(uint256 amount) external nonReentrant {
         require(amount > 0, "INVALID_DEPOSIT_AMOUNT");
 
-        // An approve() by the msg.sender is required beforehand
         IERC20(vaultParams.asset).safeTransferFrom(
             msg.sender,
             address(this),
@@ -230,9 +233,10 @@ contract RockOnyxUSDTVault is
         uint256 totalFee = performanceFee + managementFee;
         
         roundPricePerShares[currentRound] = _getRoundPPS(totalFee);
+
+        emit RoundClosed(currentRound , _totalValueLocked(), totalFee);
+
         currentRound++;
-        
-        emit RoundClosed(currentRound - 1, _totalValueLocked(), totalFee);
     }
 
     function getVaultFees()
@@ -242,44 +246,43 @@ contract RockOnyxUSDTVault is
     {
         uint256 netBalance = _totalValueLocked();
         uint256 lastLockedAmount = vaultState.lastLockedAmount;
-        console.log("netBalance %s", netBalance);
-        console.log("lastLockedAmount %s", lastLockedAmount);
 
-        // Calculate performance fee
         if (netBalance > lastLockedAmount) {
             uint256 profit = netBalance - lastLockedAmount;
-            console.log("profit %s", profit);
             performanceFee =
                 (profit * vaultParams.performanceFeeRate) /
                 100 /
-                52; // Weekly rate
-            console.log("performanceFee %s", performanceFee);
+                52;
         }
 
-        // Calculate management fee based on the current balance
-        managementFee = (netBalance * vaultParams.managementFeeRate) / 100 / 52; // Weekly rate
-        console.log("managementFee %s", managementFee);
+        managementFee = (netBalance * vaultParams.managementFeeRate) / 100 / 52;
     }
 
     function acquireWithdrawalFunds(uint256 round) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
         console.log("=========== acquireWithdrawalFunds ==========");
-        uint256 withdrawAmount = 1e6 + roundWithdrawalShares[round] * roundPricePerShares[round] / 1e6;
 
-        uint256 withdrawEthLPAmount = (withdrawAmount * 60) / 100;
-        uint256 withdrawUsdLPAmount = (withdrawAmount * 20) / 100;
-        uint256 withdrawUsdOptionsAmount = (withdrawAmount * 20) / 100;
-        console.log("=========== TVL before acquire ==========");
-        _totalValueLocked();
+        uint256 withdrawAmount = roundWithdrawalShares[round] * roundPricePerShares[round] / 1e6;
+        uint256 withdrawAmountWithSlippageAndImpact = (withdrawAmount * (1e5 + MAX_SLIPPAGE + PRICE_IMPACT)) / 1e5 + NETWORK_COST;
+        (uint256 performanceFee, uint256 managementFee) = getVaultFees();
+        uint256 withdrawAmountIncluceFees = withdrawAmountWithSlippageAndImpact + performanceFee + managementFee;
+        if(withdrawAmountIncluceFees > vaultState.withdrawPoolAmount)
+            withdrawAmountIncluceFees -= vaultState.withdrawPoolAmount;
+
+        console.log('roundWithdrawalShares %s, roundPricePerShares %s', roundWithdrawalShares[round], roundPricePerShares[round]);
+        console.log('withdrawAmount %s', withdrawAmount);
+        console.log('withdrawAmountWithSlippageAndImpact %s', withdrawAmountWithSlippageAndImpact);
+        console.log('withdrawAmountIncluceFees %s', withdrawAmountIncluceFees);
+
+        uint256 withdrawEthLPAmount = (withdrawAmountIncluceFees * 60) / 100;
+        uint256 withdrawUsdLPAmount = (withdrawAmountIncluceFees * 20) / 100;
+        uint256 withdrawUsdOptionsAmount = (withdrawAmountIncluceFees * 20) / 100;
+        
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsEthLP(withdrawEthLPAmount);
-        console.log("=========== TVL before acquireWithdrawalFundsEthLP ==========");
-        _totalValueLocked();
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdLP(withdrawUsdLPAmount);
-        console.log("=========== TVL before acquireWithdrawalFundsUsdLP ==========");
-        _totalValueLocked();
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdOptions(withdrawUsdOptionsAmount);
-        console.log("=========== TVL before acquireWithdrawalFundsUsdOptions ==========");
-        _totalValueLocked();
+
+        console.log('vaultState.withdrawPoolAmount %s', vaultState.withdrawPoolAmount);
     }
 
     /**
@@ -294,15 +297,12 @@ contract RockOnyxUSDTVault is
         // Access control: Only admin can update the fee rates
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        // Validate fee rates (optional: add max fee rate limits if needed)
-        require(_performanceFeeRate <= 100, "Invalid performance fee rate");
-        require(_managementFeeRate <= 100, "Invalid management fee rate");
+        require(_performanceFeeRate <= 100, "INVALID_PERFORMANCE_FEE_RATE");
+        require(_managementFeeRate <= 100, "INVALID_MANAGEMENT_FEE_RATE");
 
-        // Update state variables
         vaultParams.performanceFeeRate = _performanceFeeRate;
         vaultParams.managementFeeRate = _managementFeeRate;
 
-        // Emit an event if needed (optional)
         emit FeeRatesUpdated(_performanceFeeRate, _managementFeeRate);
     }
 
@@ -314,6 +314,17 @@ contract RockOnyxUSDTVault is
         if (currentRound == 0) return 1 * 10 ** vaultParams.decimals;
 
         return roundPricePerShares[currentRound - 1];
+    }
+
+    function getRoundWithdrawAmount(uint256 round) external view returns (uint256) {
+        uint256 withdrawAmount = roundWithdrawalShares[round] * roundPricePerShares[round] / 1e6;
+        uint256 withdrawAmountWithSlippageAndImpact = (withdrawAmount * (1e5 + MAX_SLIPPAGE + PRICE_IMPACT)) / 1e5 + NETWORK_COST;
+        (uint256 performanceFee, uint256 managementFee) = getVaultFees();
+        uint256 withdrawAmountIncluceFees = withdrawAmountWithSlippageAndImpact + performanceFee + managementFee;
+        if(withdrawAmountIncluceFees > vaultState.withdrawPoolAmount)
+            withdrawAmountIncluceFees -= vaultState.withdrawPoolAmount;
+
+        return withdrawAmountIncluceFees;
     }
 
     function totalValueLocked() external view returns (uint256) {
@@ -343,13 +354,13 @@ contract RockOnyxUSDTVault is
     ) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
         IERC20 token = IERC20(tokenAddress);
-        require(amount > 0, "Amount must be greater than 0");
+        require(amount > 0, "INVALID_AMOUNT");
         require(
             token.balanceOf(address(this)) >= amount,
-            "Insufficient balance in contract"
+            "INSUFFICIENT_BALANCE"
         );
 
         bool sent = token.transfer(receiver, amount);
-        require(sent, "Token transfer failed");
+        require(sent, "TOKEN_TRANSFER_FAILED");
     }
 }
