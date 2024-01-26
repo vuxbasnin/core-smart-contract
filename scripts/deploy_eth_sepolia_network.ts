@@ -88,7 +88,7 @@ async function deployCamelotSwapContract() {
   );
   await camelotSwapContract.waitForDeployment();
 
-  await addLiquidityToPool(await camelotSwapContract.getAddress());
+  // await addLiquidityToPool(await camelotSwapContract.getAddress());
   
   console.log(
     "Deployed Camelot Swap contract at address %s",
@@ -122,14 +122,14 @@ async function main() {
   console.log("Deploying contracts with the account:", await deployer.getAddress());
 
   // deploy all assets
-  // usdcAddress = await deployMockAsset("USDC", deployer, 6);
-  // usdceAddress = await deployMockAsset("USDC.e", deployer, 6);
-  // wethAddress = await deployMockAsset("WETH", deployer, 18);
-  // wstethAddress = await deployMockAsset("wstETH", deployer, 18);
-  usdcAddress = "0xA33a482E2e470E2d1286d0e791923657F59428f2";
-  usdceAddress = "0xd654B1bA9FfC696285FA8deF26eEbAdD7D875033";
-  wethAddress = "0x5551d35dE07BebC4e6a5FAdc1c9073ce02a02b5F";
-  wstethAddress = "0x2C5E28dEaa0E10241Ba38d136EBed75037732c15";
+  usdcAddress = await deployMockAsset("USDC", deployer, 6);
+  usdceAddress = await deployMockAsset("USDC.e", deployer, 6);
+  wethAddress = await deployMockAsset("WETH", deployer, 18);
+  wstethAddress = await deployMockAsset("wstETH", deployer, 18);
+  // usdcAddress = "0xA33a482E2e470E2d1286d0e791923657F59428f2";
+  // usdceAddress = "0xd654B1bA9FfC696285FA8deF26eEbAdD7D875033";
+  // wethAddress = "0x5551d35dE07BebC4e6a5FAdc1c9073ce02a02b5F";
+  // wstethAddress = "0x2C5E28dEaa0E10241Ba38d136EBed75037732c15";
 
   usdc = await ethers.getContractAt("IERC20", usdcAddress);
   usdce = await ethers.getContractAt("IERC20", usdceAddress);

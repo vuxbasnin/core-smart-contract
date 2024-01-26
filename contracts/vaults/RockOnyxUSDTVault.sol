@@ -132,12 +132,12 @@ contract RockOnyxUSDTVault is
      * shares = amount / pricePerShare <=> amount / (vaultState.totalAssets / vaultState.totalShares)
      */
     function _issueShares(uint256 amount) private view returns (uint256) {
-        if (vaultState.pendingDepositAmount <= 0) return amount;
+        // if (vaultState.pendingDepositAmount <= 0) return amount;
 
         return
             ShareMath.assetToShares(
                 amount,
-                roundPricePerShares[currentRound-1],
+                _getPricePerShare(),
                 vaultParams.decimals
             );
     }
@@ -323,10 +323,14 @@ contract RockOnyxUSDTVault is
         return depositReceipts[owner].shares;
     }
 
-    function pricePerShare() external view returns (uint256) {
+    function _getPricePerShare() private view returns (uint256) {
         if (currentRound == 0) return 1 * 10 ** vaultParams.decimals;
 
         return roundPricePerShares[currentRound - 1];
+    }
+
+    function pricePerShare() external view returns (uint256) {
+        return _getPricePerShare();
     }
 
     function getRoundWithdrawAmount() external view returns (uint256) {

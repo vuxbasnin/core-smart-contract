@@ -24,7 +24,7 @@ const wethAddress = WETH_ADDRESS[chainId] ?? "";
 const nonfungiblePositionManager = NonfungiblePositionManager[chainId] ?? "";
 let deployer: Signer;
 
-const GAS_LIMIT = 11988531;
+const GAS_LIMIT = 50988531;
 
 async function deployLiquidityContract() {
   const factory = await ethers.getContractFactory("CamelotLiquidity");
@@ -89,13 +89,13 @@ async function main() {
     await deployer.getAddress()
   );
 
-  const camelotLiquidityAddress = await deployLiquidityContract();
-  const camelotSwapAddress = await deployCamelotSwapContract();
-  const aevoProxyAddress = await deployAevoContract();
+  // const camelotLiquidityAddress = await deployLiquidityContract();
+  // const camelotSwapAddress = await deployCamelotSwapContract();
+  // const aevoProxyAddress = await deployAevoContract();
 
-  // const camelotLiquidityAddress = "0xe22edc2f94857F9a4703fb85793ebd69762aF596";
-  // const camelotSwapAddress = "0x527B821B7eadC2Ea01c9BD3dFd8a99f025B15203";
-  // const aevoProxyAddress = "0xF15e8c271a77D8A6F0B4B5D1345BcC83355Cf150";
+  const camelotLiquidityAddress = "0x05AAe168AEB8516a068D9DED91F56f81C76706Eb";
+  const camelotSwapAddress = "0x7EA2362e578212d7FDA082E0bBB5134f89EDc4DC";
+  const aevoProxyAddress = "0xd6d7a2557DE8d91AD6F22AbDAe32BCE226dAE68d";
 
   const RockOnyxUSDTVaultFactory = await ethers.getContractFactory(
     "RockOnyxUSDTVault"
