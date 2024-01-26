@@ -278,8 +278,6 @@ contract RockOnyxUSDTVault is
         uint256 withdrawAmountWithSlippageAndImpact = (withdrawAmount * (1e5 + MAX_SLIPPAGE + PRICE_IMPACT)) / 1e5 + NETWORK_COST;
         (uint256 performanceFee, uint256 managementFee) = getVaultFees();
         uint256 withdrawAmountIncluceFees = withdrawAmountWithSlippageAndImpact + performanceFee + managementFee;
-        if(withdrawAmountIncluceFees > vaultState.withdrawPoolAmount)
-            withdrawAmountIncluceFees -= vaultState.withdrawPoolAmount;
 
         uint256 withdrawEthLPAmount = (withdrawAmountIncluceFees * 60) / 100;
         uint256 withdrawUsdLPAmount = (withdrawAmountIncluceFees * 20) / 100;
@@ -311,6 +309,16 @@ contract RockOnyxUSDTVault is
         emit FeeRatesUpdated(_performanceFeeRate, _managementFeeRate);
     }
 
+    /**
+     * @notice get number shares of sender
+     */
+    function getWithdrawPoolAmount() external view returns (uint256) {
+        return vaultState.withdrawPoolAmount;
+    }
+
+    /**
+     * @notice get number shares of sender
+     */
     function balanceOf(address owner) external view returns (uint256) {
         return depositReceipts[owner].shares;
     }
