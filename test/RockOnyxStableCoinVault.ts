@@ -295,8 +295,8 @@ describe("RockOnyxStableCoinVault", function () {
     expect(totalValueLock).to.approximately(400*1e6, PRECISION);
   });
 
-  it("deposit to vender on eavo, should deposit successfully", async function () {
-    console.log('-------------deposit to vender on eavo---------------');
+  it("deposit to vender on aevo, should deposit successfully", async function () {
+    console.log('-------------deposit to vender on aevo---------------');
     await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
       value: ethers.parseEther("0.001753"),
     });
@@ -330,8 +330,8 @@ describe("RockOnyxStableCoinVault", function () {
     expect(totalValueLock).to.approximately(600*1e6, PRECISION);
   });
 
-  it("update allocated balance from eavo vender, should update successfully", async function () {
-    console.log('-------------update allocated balance from eavo vender---------------');
+  it("update allocated balance from aevo vender, should update successfully", async function () {
+    console.log('-------------update allocated balance from aevo vender---------------');
     const updateProfitTx = await rockOnyxUSDTVaultContract
       .connect(admin)
       .updateProfitFromVender(80*1e6);
@@ -352,8 +352,8 @@ describe("RockOnyxStableCoinVault", function () {
     expect(totalValueLock).to.approximately(600*1e6, PRECISION);
   });
 
-  it("handle withdrawal from eavo vender, should handle successfully", async function () {
-    console.log('-------------handle withdrawal from eavo vender---------------');
+  it("handle withdrawal from aevo vender, should handle successfully", async function () {
+    console.log('-------------handle withdrawal from aevo vender---------------');
     
     const withdrawAmount = 50 * 1e6;
     await usdce
