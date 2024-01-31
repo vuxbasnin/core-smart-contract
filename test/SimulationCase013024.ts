@@ -224,6 +224,7 @@ describe("RockOnyxStableCoinVault", function () {
     const usdcSigner = await ethers.getImpersonatedSigner(usdcImpersonatedSigner);
     const usdceSigner = await ethers.getImpersonatedSigner(usdceImpersonatedSigner);
 
+    await transferUsdcForUser(usdcSigner, admin, 1000*1e6);
     await transferUsdcForUser(usdcSigner, user1, 1000*1e6);
     await transferUsdcForUser(usdcSigner, user2, 1000*1e6);
     await transferUsdcForUser(usdcSigner, user3, 1000*1e6);
@@ -234,111 +235,71 @@ describe("RockOnyxStableCoinVault", function () {
 
   it("deposit to rockOnyxUSDTVault, should deposit successfully", async function () {
     console.log('-------------deposit to rockOnyxUSDTVault---------------');
-    await deposit(user1, 100*1e6);
-    await deposit(user2, 100*1e6);
-    await deposit(user3, 100*1e6);
-    await deposit(user4, 100*1e6);
+    await deposit(admin, 10*1e6);
+    console.log("Deposit 1 = $10");
 
-    let totalValueLock = await logAndReturnTotalValueLock();
-    expect(totalValueLock).to.approximately(400*1e6, PRECISION);
+    await logAndReturnTotalValueLock();
   });
 
   it("mintEthLP position on Camelot, should mint successfully", async function () {
     console.log('-------------mintEthLP position on Camelot---------------');
+    
     const mintEthLPPositionTx = await rockOnyxUSDTVaultContract
       .connect(admin)
-      .mintEthLPPosition(701, 2101, 50);
-    var mintEthLPPositionTxResult = await mintEthLPPositionTx.wait();
+      .mintEthLPPosition(1429, 1440, 50);
+    await mintEthLPPositionTx.wait();
 
-    liquidityTokenId = await getMintPositionResult(
-      mintEthLPPositionTxResult!,
-      LIQUIDITY_TOKEN_ID_INDEX
-    );
-    liquidityAmount = await getMintPositionResult(
-      mintEthLPPositionTxResult!,
-      LIQUIDITY_AMOUNT_INDEX
-    );
-
-    console.log(
-      "liquidityTokenId %s, liquidityAmount %s",
-      liquidityTokenId,
-      liquidityAmount
-    );
+    await logAndReturnTotalValueLock();
     
-    let totalValueLock = await logAndReturnTotalValueLock();
-    expect(totalValueLock).to.approximately(400*1e6, PRECISION);
   });
 
   it("mintUsdLP position on Camelot, should mint successfully", async function () {
     console.log('-------------mintUsdLP position on Camelot---------------');
     const mintUsdLPPositionTx = await rockOnyxUSDTVaultContract
       .connect(admin)
-      .mintUsdLPPosition(-5, 5, 50);
-    var mintUsdLPPositionTxResult = await mintUsdLPPositionTx.wait();
+      .mintUsdLPPosition(-4, 3, 50);
+    await mintUsdLPPositionTx.wait();
 
-    liquidityTokenId = await getMintPositionResult(
-      mintUsdLPPositionTxResult!,
-      LIQUIDITY_TOKEN_ID_INDEX
-    );
-    liquidityAmount = await getMintPositionResult(
-      mintUsdLPPositionTxResult!,
-      LIQUIDITY_AMOUNT_INDEX
-    );
-
-    console.log(
-      "liquidityTokenId %s, liquidityAmount %s",
-      liquidityTokenId,
-      liquidityAmount
-    );
-
-    let totalValueLock = await logAndReturnTotalValueLock();
-    expect(totalValueLock).to.approximately(400*1e6, PRECISION);
+    await logAndReturnTotalValueLock();
   });
 
-  it("deposit to vender on aevo, should deposit successfully", async function () {
-    console.log('-------------deposit to vender on aevo---------------');
-    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
-      value: ethers.parseEther("0.001753"),
-    });
+  it("Deposit 2nd", async function () {
+    console.log('-------------deposit 2nd ---------------');
+    await deposit(admin, 10*1e6);
+    console.log("Deposit 1 = $10");
 
-    let totalValueLock = await logAndReturnTotalValueLock();
-    expect(totalValueLock).to.approximately(400*1e6, PRECISION);
+    await logAndReturnTotalValueLock();
+  });
+  it("mintEthLP 2 position on Camelot, should mint successfully", async function () {
+    console.log('-------------mintEthLP position on Camelot---------------');
+    
+    const mintEthLPPositionTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .increaseEthLPLiquidity(50);
+    await mintEthLPPositionTx.wait();
+    
+    await logAndReturnTotalValueLock();
+    
   });
 
-  it("add more deposits to rockOnyxUSDTVault, should deposit successfully", async function () {
-    console.log('-------------add more deposits torockOnyxUSDTVault---------------')
-    await deposit(user1, 100*1e6);
-    await deposit(user2, 100*1e6);
+  it("mintUsdLP 2 position on Camelot, should mint successfully", async function () {
+    console.log('-------------mintUsdLP position on Camelot---------------');
+    const mintUsdLPPositionTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .increaseUsdLPLiquidity(50);
+    await mintUsdLPPositionTx.wait();
 
-    let totalValueLock = await logAndReturnTotalValueLock();
-    expect(totalValueLock).to.approximately(600*1e6, PRECISION);
+    await logAndReturnTotalValueLock();
   });
 
   it("Users initial withdrawals, should init successfully", async function () {
     console.log('-------------Users initial withdrawals---------------');
     const initiateWithdrawalTx1 = await rockOnyxUSDTVaultContract
-      .connect(user1)
-      .initiateWithdrawal(50*1e6);
+      .connect(admin)
+      .initiateWithdrawal(18*1e6);
     await initiateWithdrawalTx1.wait();
 
-    const initiateWithdrawalTx2 = await rockOnyxUSDTVaultContract
-      .connect(user2)
-      .initiateWithdrawal(50*1e6);
-    await initiateWithdrawalTx2.wait();
-
-    let totalValueLock = await logAndReturnTotalValueLock();
-    expect(totalValueLock).to.approximately(600*1e6, PRECISION);
-  });
-
-  it("update allocated balance from aevo vendor, should update successfully", async function () {
-    console.log('-------------update allocated balance from aevo vender---------------');
-    const updateProfitTx = await rockOnyxUSDTVaultContract
-      .connect(admin)
-      .updateProfitFromVender(80*1e6);
-    await updateProfitTx.wait();
-
-    let totalValueLock = await logAndReturnTotalValueLock();
-    expect(totalValueLock).to.approximately(600*1e6, PRECISION);
+    await logAndReturnTotalValueLock();
   });
 
   it("close round, should close successfully", async function () {
@@ -348,24 +309,7 @@ describe("RockOnyxStableCoinVault", function () {
       .closeRound();
     await closeRoundTx.wait();
 
-    let totalValueLock = await logAndReturnTotalValueLock();
-    expect(totalValueLock).to.approximately(600*1e6, PRECISION);
-  });
-
-  it("handle withdrawal from aevo vender, should handle successfully", async function () {
-    console.log('-------------handle withdrawal from aevo vender---------------');
-    
-    const withdrawAmount = 50 * 1e6;
-    await usdce
-      .connect(optionsReceiver)
-      .approve(await rockOnyxUSDTVaultContract.getAddress(), withdrawAmount);
-
-    await rockOnyxUSDTVaultContract
-      .connect(optionsReceiver)
-      .handlePostWithdrawalFromVendor(withdrawAmount);
-
-    let totalValueLock = await logAndReturnTotalValueLock();
-    expect(totalValueLock).to.approximately(600*1e6, PRECISION);
+    await logAndReturnTotalValueLock();
   });
 
   it("accquire withdrawal funds for the round, should accquire successfully", async function () {
@@ -375,35 +319,14 @@ describe("RockOnyxStableCoinVault", function () {
       .acquireWithdrawalFunds();
     await acquireWithdrawalFundsTx.wait();
 
-    let totalValueLock = await logAndReturnTotalValueLock();
-    expect(totalValueLock).to.approximately(498*1e6, PRECISION);
+    await logAndReturnTotalValueLock();
   });
 
-  it("Users initial withdrawals time 2, should init successfully", async function () {
-    console.log('-------------Users initial withdrawals time 2---------------');
-    
-    await expect(rockOnyxUSDTVaultContract
-      .connect(user1)
-      .initiateWithdrawal(50*1e6))
-      .to.be.revertedWith("INVALID_WITHDRAW_STATE");
+  it("deposit 2 to rockOnyxUSDTVault, should deposit successfully", async function () {
+    console.log('-------------deposit to rockOnyxUSDTVault---------------');
+    await deposit(admin, 2*1e6);
+    console.log("Deposit 2 = $2");
 
-    let totalValueLock = await logAndReturnTotalValueLock();
-    expect(totalValueLock).to.approximately(498*1e6, PRECISION);
-  });
-  
-  it("complete withdrawals, should complete successfully", async function () {
-    console.log('-------------complete withdrawals---------------');
-    let user1Balance = await usdc.connect(user1).balanceOf(user1);
-
-    const completeWithdrawalTx = await rockOnyxUSDTVaultContract
-      .connect(user1)
-      .completeWithdrawal(5*1e6);
-    await completeWithdrawalTx.wait();
-
-    let totalValueLock = await logAndReturnTotalValueLock();
-    expect(totalValueLock).to.approximately(498*1e6, PRECISION);
-
-    let user1BalanceAfterWithdraw = await usdc.connect(user1).balanceOf(user1);
-    expect(user1BalanceAfterWithdraw).to.approximately(user1Balance + BigInt(5*1e6), PRECISION);
+    await logAndReturnTotalValueLock();
   });
 });

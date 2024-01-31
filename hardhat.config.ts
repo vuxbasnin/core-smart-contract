@@ -18,7 +18,7 @@ const config: HardhatUserConfig = {
     hardhat: {
       forking: {
         url: "https://arbitrum-mainnet.infura.io/v3/85cde589ce754dafa0a57001c326104d",
-        blockNumber: 171931590,
+        blockNumber: 174314069,
       },
       chainId: 42161
     },

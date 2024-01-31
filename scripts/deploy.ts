@@ -24,7 +24,7 @@ const wethAddress = WETH_ADDRESS[chainId] ?? "";
 const nonfungiblePositionManager = NonfungiblePositionManager[chainId] ?? "";
 let deployer: Signer;
 
-const GAS_LIMIT = 50988531;
+const GAS_LIMIT = 30000000;
 
 async function deployLiquidityContract() {
   const factory = await ethers.getContractFactory("CamelotLiquidity");

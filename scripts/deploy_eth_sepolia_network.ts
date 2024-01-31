@@ -122,14 +122,14 @@ async function main() {
   console.log("Deploying contracts with the account:", await deployer.getAddress());
 
   // deploy all assets
-  usdcAddress = await deployMockAsset("USDC", deployer, 6);
-  usdceAddress = await deployMockAsset("USDC.e", deployer, 6);
-  wethAddress = await deployMockAsset("WETH", deployer, 18);
-  wstethAddress = await deployMockAsset("wstETH", deployer, 18);
-  // usdcAddress = "0xA33a482E2e470E2d1286d0e791923657F59428f2";
-  // usdceAddress = "0xd654B1bA9FfC696285FA8deF26eEbAdD7D875033";
-  // wethAddress = "0x5551d35dE07BebC4e6a5FAdc1c9073ce02a02b5F";
-  // wstethAddress = "0x2C5E28dEaa0E10241Ba38d136EBed75037732c15";
+  // usdcAddress = await deployMockAsset("USDC", deployer, 6);
+  // usdceAddress = await deployMockAsset("USDC.e", deployer, 6);
+  // wethAddress = await deployMockAsset("WETH", deployer, 18);
+  // wstethAddress = await deployMockAsset("wstETH", deployer, 18);
+  usdcAddress = "0xfE8239240aA2eb7D4222851269c147BeD421cd3f";
+  usdceAddress = "0xe3663F98fd164a4F0F77eEf76B372B1338303bdb";
+  wethAddress = "0xe22edc2f94857F9a4703fb85793ebd69762aF596";
+  wstethAddress = "0x527B821B7eadC2Ea01c9BD3dFd8a99f025B15203";
 
   usdc = await ethers.getContractAt("IERC20", usdcAddress);
   usdce = await ethers.getContractAt("IERC20", usdceAddress);
