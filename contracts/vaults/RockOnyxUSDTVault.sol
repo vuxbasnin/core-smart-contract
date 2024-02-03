@@ -289,6 +289,23 @@ contract RockOnyxUSDTVault is
     }
 
     /**
+     * @notice Allow admin to settle the covered calls mechanism
+     * @param amount the amount in ETH we should sell 
+     */
+    function settleCoveredCalls(uint256 amount) external nonReentrant {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        require(amount <= getTotalEthLPAssets(), "INVALID_OPTIONS_POSITION_SIZE");
+        uint128 liquidity = _amountToPoolLiquidity(amount);
+        (uint256 wstEthAmount, uint256 wethAmount) = _decreaseEthLPLiquidity(liquidity);
+
+        uint256 wstEthWethAmount = _ethLPSwapTo(wstEth, wstEthAmount, weth);
+        uint256 swappedUsdAmount = _ethLPSwapTo(weth, wethAmount + wstEthWethAmount, usd);
+        
+        depositToUsdLiquidityStrategy(swappedUsdAmount);
+    }
+
+    /**
      * @notice Allows admin to update the performance and management fee rates
      * @param _performanceFeeRate The new performance fee rate (in percentage)
      * @param _managementFeeRate The new management fee rate (in percentage)
