@@ -146,10 +146,11 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     }
 
     function getTotalOptionsAmount() internal view returns (uint256) {
-        uint256 totalAssets = ((optionsState.allocatedBalance + optionsState.unAllocatedBalance) *
-                swapProxy.getPriceOf(optionsAssetAddress, vaultAssetAddress, 6, 6)) / 1e6;
-
-        console.log('getTotalOptionsAmount totalAssets: ', totalAssets);
-        return totalAssets;
+        // console.log('getTotalOptionsAmount ', 
+        //     ((optionsState.allocatedBalance + optionsState.unAllocatedBalance) *
+        //     swapProxy.getPriceOf(optionsAssetAddress, vaultAssetAddress, 6, 6)) / 1e6);
+        return 
+            ((optionsState.allocatedBalance + optionsState.unAllocatedBalance) *
+            swapProxy.getPriceOf(optionsAssetAddress, vaultAssetAddress, 6, 6)) / 1e6;
     }
 }

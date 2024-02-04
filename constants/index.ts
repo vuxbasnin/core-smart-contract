@@ -32,6 +32,10 @@ export const USDCE_ADDRESS: { [key in CHAINID]?: string } = {
   [CHAINID.ARBITRUM_MAINNET]: "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8",
 };
 
+export const ARB_ADDRESS: { [key in CHAINID]?: string } = {
+  [CHAINID.ARBITRUM_MAINNET]: "0x912ce59144191c1204e64559fe8253a0e49e6548",
+};
+
 export const NonfungiblePositionManager: { [key in CHAINID]?: string } = {
   [CHAINID.ETH_SEPOLIA]: "0x00c7f3082833e796A5b3e4Bd59f6642FF44DCD15",
   [CHAINID.ARBITRUM_MAINNET]: "0x00c7f3082833e796A5b3e4Bd59f6642FF44DCD15",

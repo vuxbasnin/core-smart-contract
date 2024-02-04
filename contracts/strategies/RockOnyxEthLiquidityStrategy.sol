@@ -11,6 +11,7 @@ import "../lib/ShareMath.sol";
 import "../lib/LiquidityAmounts.sol";
 import "../interfaces/IVenderLiquidityProxy.sol";
 import "../interfaces/ISwapProxy.sol";
+import "../interfaces/IRewardVendor.sol";
 import "../interfaces/IERC721Receiver.sol";
 import "../structs/RockOnyxStructs.sol";
 import "hardhat/console.sol";
@@ -22,21 +23,25 @@ contract RockOnyxEthLiquidityStrategy is
     using LiquidityAmounts for uint256;
 
     IVenderLiquidityProxy internal ethLPProvider;
+    IRewardVendor internal ethRewardVendor;
     ISwapProxy internal ethSwapProxy;
 
+    address arb;
+    address grail;
     address usd;
     address weth;
     address wstEth;
     address ethNftPositionAddress;
+    address rewardVendor = address(bytes20(bytes("0x3ef3d8ba38ebe18db133cec108f4d14ce00dd9ae")));
 
-    DepositState depositState;
+    EthLPState ethLPState;
 
     /************************************************
      *  EVENTS
      ***********************************************/
 
     constructor() {
-        depositState = DepositState(0, 0, 0, 0);
+        ethLPState = EthLPState(0, 0, 0, 0, 0);
     }
 
     function ethLP_Initialize(
@@ -45,32 +50,36 @@ contract RockOnyxEthLiquidityStrategy is
         address _swapAddress,
         address _usd,
         address _weth,
-        address _wstEth
+        address _wstEth,
+        address _arb
     ) internal {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         ethLPProvider = IVenderLiquidityProxy(_LiquidityProviderAddress);
+        ethRewardVendor = IRewardVendor(rewardVendor);
         ethNftPositionAddress = _ethNftPositionAddress;
         ethSwapProxy = ISwapProxy(_swapAddress);
         usd = _usd;
         weth = _weth;
         wstEth = _wstEth;
+        arb = _arb;
     }
 
-    function depositToEthLiquidityStrategy(uint256 _amount) internal {
-        _ethLPSwapTo(usd, _amount, weth);
+    function depositToEthLiquidityStrategy(uint256 amount) internal {
+        ethLPState.unAllocatedBalance += amount;
     }
 
     function mintEthLPPosition(
         int24 lowerTick,
         int24 upperTick,
-        uint8 ratio
+        uint16 ratio,
+        uint8 decimals
     ) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        require(depositState.liquidity == 0, "POSITION_ALREADY_OPEN");
+        require(ethLPState.liquidity == 0, "POSITION_ALREADY_OPEN");
         
-        _rebalanceEthLPAssets(ratio);
-        
+        _rebalanceEthLPAssets(ratio, decimals);
+
         IERC20(wstEth).approve(
             address(ethLPProvider),
             IERC20(wstEth).balanceOf(address(this))
@@ -89,22 +98,22 @@ contract RockOnyxEthLiquidityStrategy is
                 IERC20(weth).balanceOf(address(this))
             );
 
-        depositState.tokenId = tokenId;
-        depositState.liquidity = liquidity;
-        depositState.lowerTick = lowerTick;
-        depositState.upperTick = upperTick;
+        ethLPState.tokenId = tokenId;
+        ethLPState.liquidity = liquidity;
+        ethLPState.lowerTick = lowerTick;
+        ethLPState.upperTick = upperTick;
 
         IERC721(ethNftPositionAddress).approve(
             address(ethLPProvider),
-            depositState.tokenId
+            ethLPState.tokenId
         );
     }
-
-    function increaseEthLPLiquidity(uint8 ratio) external nonReentrant {
+    
+    function increaseEthLPLiquidity(uint16 ratio, uint8 decimals) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        require(depositState.tokenId > 0, "POSITION_HAS_NOT_OPEN");
+        require(ethLPState.tokenId > 0, "POSITION_HAS_NOT_OPEN");
 
-        _rebalanceEthLPAssets(ratio);
+        _rebalanceEthLPAssets(ratio, decimals);
 
         IERC20(wstEth).approve(
             address(ethLPProvider),
@@ -117,14 +126,14 @@ contract RockOnyxEthLiquidityStrategy is
 
         (uint128 liquidity,,) = ethLPProvider
             .increaseLiquidityCurrentRange(
-                depositState.tokenId,
+                ethLPState.tokenId,
                 wstEth,
                 IERC20(wstEth).balanceOf(address(this)),
                 weth,
                 IERC20(weth).balanceOf(address(this))
             );
 
-        depositState.liquidity += liquidity;
+        ethLPState.liquidity += liquidity;
     }
 
     function decreaseEthLPLiquidity(uint128 liquidity) external nonReentrant {
@@ -134,30 +143,65 @@ contract RockOnyxEthLiquidityStrategy is
     }
 
     function closeEthLPRound() internal {
-        if(depositState.tokenId == 0) return;
-        ethLPProvider.collectAllFees(depositState.tokenId);
+        if(ethLPState.tokenId == 0) return;
+        ethLPProvider.collectAllFees(ethLPState.tokenId);
     }
 
     function acquireWithdrawalFundsEthLP(uint256 amount) internal returns (uint256){
-        uint128 liquidity = _amountToPoolLiquidity(amount);
-        (uint256 wstEthAmount, uint256 wethAmount) = _decreaseEthLPLiquidity(liquidity);
+        if(ethLPState.unAllocatedBalance > amount){
+            ethLPState.unAllocatedBalance -= amount;
+            return amount;
+        }
 
-        uint256 wstEthWethAmount = _ethLPSwapTo(wstEth, wstEthAmount, weth);
-        uint256 wethUsdAmount = _ethLPSwapTo(weth, wethAmount + wstEthWethAmount, usd);
+        uint256 amountToAcquire = amount - ethLPState.unAllocatedBalance;
+        ethLPState.unAllocatedBalance = 0;
+        uint128 liquidity = _amountToPoolLiquidity(amountToAcquire);
+        (uint256 wstEthAmount, uint256 wethAmount) = _decreaseEthLPLiquidity(liquidity);
+        wethAmount += _ethLPSwapTo(wstEth, wstEthAmount, weth);
+        return _ethLPSwapTo(weth, wethAmount, usd);
+    }
+
+    function claimReward(address[] calldata users, address[] calldata tokens, uint256[] calldata amounts, bytes32[][] calldata proofs) external nonReentrant {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
         
-        return wethUsdAmount;
+        require(users.length > 0, "INVALID_CLAIM_USERS");
+        require(tokens.length > 0, "INVALID_CLAIM_TOKENS");
+        require(amounts.length > 0, "INVALID_CLAIM_AMOUNTS");
+        require(proofs.length > 0, "INVALID_CLAIM_PROOFS");
+       
+        ethRewardVendor.claim(users, tokens, amounts, proofs);
+    }
+
+    function convertRewardToUsdc() external nonReentrant {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        if(IERC20(arb).balanceOf(address(this)) > 0){
+            ethLPState.unAllocatedBalance += _ethLPSwapTo(arb, IERC20(arb).balanceOf(address(this)), usd);
+        }
     }
 
     function getTotalEthLPAssets() internal view returns (uint256) {
-        int24 tick = ethSwapProxy.getPoolCurrentTickOf(wstEth, weth);
-        (uint256 wstethAmount, uint256 wethAmount) = LiquidityAmounts.getAmountsForLiquidityByTick(tick, depositState.lowerTick, depositState.upperTick, depositState.liquidity);
-        
-        uint256 totalAssets = 
-            (IERC20(wstEth).balanceOf(address(this)) + wstethAmount) * _getWstEthPrice()  +
-            (IERC20(weth).balanceOf(address(this)) + wethAmount) * _getEthPrice() ;
-        console.log('getTotalEthLPAssets totalAssets: ', totalAssets / 1e18);
+        if(ethLPState.liquidity == 0)
+            return
+                ethLPState.unAllocatedBalance +
+                (IERC20(arb).balanceOf(address(this)) * _getArbPrice() +
+                IERC20(wstEth).balanceOf(address(this)) * _getWstEthPrice()  +
+                IERC20(weth).balanceOf(address(this)) * _getEthPrice()) / 1e18;
 
-        return totalAssets / 1e18;
+        int24 tick = ethSwapProxy.getPoolCurrentTickOf(wstEth, weth);
+        (uint256 wstethAmount, uint256 wethAmount) = 
+            LiquidityAmounts.getAmountsForLiquidityByTick(tick, ethLPState.lowerTick, ethLPState.upperTick, ethLPState.liquidity);
+        
+        // console.log("getTotalEthLPAssets %s", 
+        //     ethLPState.unAllocatedBalance +
+        //     (IERC20(arb).balanceOf(address(this)) * _getArbPrice() +
+        //     (IERC20(wstEth).balanceOf(address(this)) + wstethAmount) * _getWstEthPrice()  +
+        //     (IERC20(weth).balanceOf(address(this)) + wethAmount) * _getEthPrice()) / 1e18);
+        return 
+            ethLPState.unAllocatedBalance +
+            (IERC20(arb).balanceOf(address(this)) * _getArbPrice() +
+            (IERC20(wstEth).balanceOf(address(this)) + wstethAmount) * _getWstEthPrice()  +
+            (IERC20(weth).balanceOf(address(this)) + wethAmount) * _getEthPrice()) / 1e18;
     }
 
     function _ethLPSwapTo(
@@ -178,35 +222,42 @@ contract RockOnyxEthLiquidityStrategy is
         return wstEthEthPrice * _getEthPrice() / 1e18;
     }
 
+    function _getArbPrice() private view returns (uint256) {
+        return ethSwapProxy.getPriceOf(arb, usd, 18, 6);
+    }
+
     function _decreaseEthLPLiquidity(uint128 liquidity) private  returns (uint256 amount0, uint256 amount1){
         ethLPProvider.decreaseLiquidityCurrentRange(
-            depositState.tokenId,
+            ethLPState.tokenId,
             liquidity
         );
         
         (amount0, amount1) = ethLPProvider.collectAllFees(
-            depositState.tokenId
+            ethLPState.tokenId
         );
         
-        depositState.liquidity -= liquidity;
+        ethLPState.liquidity -= liquidity;
 
         return (amount0, amount1);
     }
 
     function _getLiquidAsset() private view returns(uint256){
         int24 tick = ethSwapProxy.getPoolCurrentTickOf(wstEth, weth);
-        (uint256 wstethAmount, uint256 wethAmount) = LiquidityAmounts.getAmountsForLiquidityByTick(tick, depositState.lowerTick, depositState.upperTick, depositState.liquidity);
+        (uint256 wstethAmount, uint256 wethAmount) = LiquidityAmounts.getAmountsForLiquidityByTick(tick, ethLPState.lowerTick, ethLPState.upperTick, ethLPState.liquidity);
         
         return (wstethAmount * _getWstEthPrice() + wethAmount * _getEthPrice()) / 1e18 ;
     }
 
     function _amountToPoolLiquidity(uint256 amount) private view returns (uint128) {
-        return uint128(amount * depositState.liquidity / _getLiquidAsset());
+        return uint128(amount * ethLPState.liquidity / _getLiquidAsset());
     }
 
-    function _rebalanceEthLPAssets(uint8 ratio) private {
-        uint256 unAllocatedEthToSwap = IERC20(weth).balanceOf(address(this)) * ratio / 100;
-        
-        _ethLPSwapTo(weth, unAllocatedEthToSwap, wstEth);
+    function _rebalanceEthLPAssets(uint16 ratio, uint8 decimals) private {
+        uint256 amountToSwap = ethLPState.unAllocatedBalance;
+        ethLPState.unAllocatedBalance = 0;
+
+        _ethLPSwapTo(usd, amountToSwap, weth);
+        uint256 ethAmountToSwap = IERC20(weth).balanceOf(address(this)) * ratio / 10 ** decimals;
+        _ethLPSwapTo(weth, ethAmountToSwap, wstEth);
     }
 }

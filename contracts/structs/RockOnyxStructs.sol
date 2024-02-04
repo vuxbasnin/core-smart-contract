@@ -26,6 +26,7 @@ struct OptionsStrategyState {
 
 struct DepositReceipt {
     uint256 shares;
+    uint256 depositAmount;
 }
 
 struct Withdrawal {
@@ -33,9 +34,25 @@ struct Withdrawal {
     uint256 round;
 }
 
-struct DepositState {
+struct EthLPState {
     uint256 tokenId;
     uint128 liquidity;
     int24 lowerTick;
     int24 upperTick;
+    uint256 unAllocatedBalance;
+}
+
+struct UsdLPState {
+    uint256 tokenId;
+    uint128 liquidity;
+    int24 lowerTick;
+    int24 upperTick;
+    uint256 unAllocatedUsdcBalance;
+    uint256 unAllocatedUsdceBalance;
+}
+
+struct AllocateRatio{
+    uint256 ethLPRatio;
+    uint256 usdLPRatio;
+    uint8 decimals;
 }
