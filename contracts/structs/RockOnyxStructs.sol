@@ -54,4 +54,5 @@ struct UsdLPState {
 struct AllocateRatio{
     uint256 ethLPRatio;
     uint256 usdLPRatio;
+    uint8 decimals;
 }

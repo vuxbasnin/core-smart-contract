@@ -253,7 +253,7 @@ describe("RockOnyxStableCoinVault", function () {
     console.log('-------------mintEthLP position on Camelot---------------');
     const mintEthLPPositionTx = await rockOnyxUSDTVaultContract
       .connect(admin)
-      .mintEthLPPosition(701, 2101, 50);
+      .mintEthLPPosition(701, 2101, 5000, 4);
     var mintEthLPPositionTxResult = await mintEthLPPositionTx.wait();
 
     liquidityTokenId = await getMintPositionResult(
@@ -279,7 +279,7 @@ describe("RockOnyxStableCoinVault", function () {
     console.log('-------------mintUsdLP position on Camelot---------------');
     const mintUsdLPPositionTx = await rockOnyxUSDTVaultContract
       .connect(admin)
-      .mintUsdLPPosition(-5, 5, 50);
+      .mintUsdLPPosition(-5, 5, 5000, 4);
     var mintUsdLPPositionTxResult = await mintUsdLPPositionTx.wait();
 
     liquidityTokenId = await getMintPositionResult(

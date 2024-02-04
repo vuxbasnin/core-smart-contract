@@ -62,12 +62,13 @@ contract RockOynxUsdLiquidityStrategy is
     function mintUsdLPPosition(
         int24 lowerTick,
         int24 upperTick,
-        uint8 ratio
+        uint16 ratio,
+        uint8 decimals
     ) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
         require(usdLPState.tokenId == 0, "POSITION_ALREADY_OPEN");
 
-        _rebalanceUsdLPAssets(ratio);
+        _rebalanceUsdLPAssets(ratio, decimals);
 
         IERC20(usdc).approve(
             address(usdLPProvider),
@@ -106,11 +107,11 @@ contract RockOynxUsdLiquidityStrategy is
         );
     }
 
-    function increaseUsdLPLiquidity(uint8 ratio) external nonReentrant {
+    function increaseUsdLPLiquidity(uint16 ratio, uint8 decimals) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
         require(usdLPState.tokenId > 0, "POSITION_HAS_NOT_OPEN");
 
-        _rebalanceUsdLPAssets(ratio);
+        _rebalanceUsdLPAssets(ratio, decimals);
 
         IERC20(usdc).approve(
             address(usdLPProvider),
@@ -230,8 +231,8 @@ contract RockOynxUsdLiquidityStrategy is
          return uint128(amount * usdLPState.liquidity / _getLiquidityUsdPoolAsset());
     }
 
-    function _rebalanceUsdLPAssets(uint8 ratio) private {
-        uint256 unAllocatedUsdcToSwap = usdLPState.unAllocatedUsdcBalance * ratio / 100;
+    function _rebalanceUsdLPAssets(uint16 ratio, uint8 decimals) private {
+        uint256 unAllocatedUsdcToSwap = usdLPState.unAllocatedUsdcBalance * ratio / 10 ** decimals;
 
         usdLPState.unAllocatedUsdcBalance -= unAllocatedUsdcToSwap;
         usdLPState.unAllocatedUsdceBalance += _usdLPSwapTo(usdc, unAllocatedUsdcToSwap, usdce);

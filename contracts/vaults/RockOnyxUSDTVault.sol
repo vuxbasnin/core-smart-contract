@@ -75,12 +75,12 @@ contract RockOnyxUSDTVault is
             6,
             _usdc,
             10_000_000,
-            1_000_000 * 10 ** 6,
+            1_000_000 * 1e6,
             10,
             1
         );
         vaultState = VaultState(0, 0, 0, 0);
-        allocateRatio = AllocateRatio(60, 20);
+        allocateRatio = AllocateRatio(6000, 2000, 4);
         
         options_Initialize(
             _optionsVendorProxy,
@@ -168,8 +168,8 @@ contract RockOnyxUSDTVault is
      * @notice AllocateAssets amount
      */
     function allocateAssets() private {
-        uint256 depositToEthLPAmount = vaultState.pendingDepositAmount * allocateRatio.ethLPRatio / 100;
-        uint256 depositToUsdLPmount = vaultState.pendingDepositAmount * allocateRatio.usdLPRatio / 100;
+        uint256 depositToEthLPAmount = vaultState.pendingDepositAmount * allocateRatio.ethLPRatio / 10 ** allocateRatio.decimals;
+        uint256 depositToUsdLPmount = vaultState.pendingDepositAmount * allocateRatio.usdLPRatio / 10 ** allocateRatio.decimals;
         uint256 depositToOptionAmount = vaultState.pendingDepositAmount - (depositToEthLPAmount + depositToUsdLPmount);
         vaultState.pendingDepositAmount = 0;
 
@@ -182,8 +182,8 @@ contract RockOnyxUSDTVault is
         uint256 totalEthLPAssets = getTotalEthLPAssets();
         uint256 totalUsdLPAssets = getTotalUsdLPAssets();
 
-        allocateRatio.ethLPRatio = totalEthLPAssets * 100 / _totalValueLocked();
-        allocateRatio.usdLPRatio = totalUsdLPAssets * 100 / _totalValueLocked();
+        allocateRatio.ethLPRatio = totalEthLPAssets * 10 ** allocateRatio.decimals / _totalValueLocked();
+        allocateRatio.usdLPRatio = totalUsdLPAssets * 10 ** allocateRatio.decimals / _totalValueLocked();
         console.log("ethLPRatio %", allocateRatio.ethLPRatio);
         console.log("usdLPRatio %", allocateRatio.usdLPRatio);
     }
