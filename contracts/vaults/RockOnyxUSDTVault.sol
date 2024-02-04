@@ -17,9 +17,9 @@ contract RockOnyxUSDTVault is
     RockOnyxOptionStrategy,
     RockOynxUsdLiquidityStrategy
 {
-    uint256 private constant PRICE_IMPACT = 10; // 0.01% price impact
-    uint256 private constant MAX_SLIPPAGE = 500; // 0.5% slippage
-    uint256 private constant NETWORK_COST = 1e6; // Network cost in smallest unit of USDC (1 USDC), will improve later on
+    uint256 private constant PRICE_IMPACT = 10;
+    uint256 private constant MAX_SLIPPAGE = 500; 
+    uint256 private constant NETWORK_COST = 1e6; 
 
     using SafeERC20 for IERC20;
     using ShareMath for DepositReceipt;
@@ -33,6 +33,7 @@ contract RockOnyxUSDTVault is
     mapping(address => Withdrawal) public withdrawals;
     VaultParams public vaultParams;
     VaultState public vaultState;
+    AllocateRatio public allocateRatio;
 
     /************************************************
      *  EVENTS
@@ -60,7 +61,8 @@ contract RockOnyxUSDTVault is
         address _optionsReceiver,
         address _usdce,
         address _weth,
-        address _wstEth
+        address _wstEth,
+        address _arb
     )
         RockOnyxEthLiquidityStrategy()
         RockOnyxOptionStrategy()
@@ -78,7 +80,8 @@ contract RockOnyxUSDTVault is
             1
         );
         vaultState = VaultState(0, 0, 0, 0);
-
+        allocateRatio = AllocateRatio(60, 20);
+        
         options_Initialize(
             _optionsVendorProxy,
             _optionsReceiver,
@@ -92,7 +95,8 @@ contract RockOnyxUSDTVault is
             _swapProxy,
             _usdc,
             _weth,
-            _wstEth
+            _wstEth,
+            _arb
         );
         usdLP_Initialize(
             _vendorLiquidityProxy,
@@ -122,6 +126,7 @@ contract RockOnyxUSDTVault is
         uint256 shares = _issueShares(amount);
         DepositReceipt storage depositReceipt = depositReceipts[creditor];
         depositReceipt.shares += shares;
+        depositReceipt.depositAmount += amount;
         vaultState.pendingDepositAmount += amount;
         vaultState.totalShares += shares;
         return shares;
@@ -144,10 +149,7 @@ contract RockOnyxUSDTVault is
 
     function deposit(uint256 amount) external nonReentrant {
         require(amount >= vaultParams.minimumSupply, "INVALID_DEPOSIT_AMOUNT");
-        require(
-            vaultState.pendingDepositAmount + amount <= vaultParams.cap,
-            "EXCEED_CAP"
-        );
+        require( _totalValueLocked() + amount <= vaultParams.cap, "EXCEED_CAP");
 
         IERC20(vaultParams.asset).safeTransferFrom(
             msg.sender,
@@ -158,26 +160,32 @@ contract RockOnyxUSDTVault is
         uint256 shares = _depositFor(amount, msg.sender);
 
         allocateAssets();
-        
+
         emit Deposited(msg.sender, amount, shares);
     }
 
     /**
      * @notice AllocateAssets amount
-     * 60% stake ETH and WSTETH to staking vender
-     * 20% stake USDT to staking vender
-     * 20% to option vender
      */
     function allocateAssets() private {
-        uint256 depositToEthLPAmount = (vaultState.pendingDepositAmount * 60) / 100;
-        uint256 depositToUsdLPmount = (vaultState.pendingDepositAmount * 20) / 100;
-        uint256 depositToOptionStrategyAmount = vaultState.pendingDepositAmount - (depositToEthLPAmount + depositToUsdLPmount);
+        uint256 depositToEthLPAmount = vaultState.pendingDepositAmount * allocateRatio.ethLPRatio / 100;
+        uint256 depositToUsdLPmount = vaultState.pendingDepositAmount * allocateRatio.usdLPRatio / 100;
+        uint256 depositToOptionAmount = vaultState.pendingDepositAmount - (depositToEthLPAmount + depositToUsdLPmount);
+        vaultState.pendingDepositAmount = 0;
 
         depositToEthLiquidityStrategy(depositToEthLPAmount);
         depositToUsdLiquidityStrategy(depositToUsdLPmount);
-        depositToOptionsStrategy(depositToOptionStrategyAmount);
+        depositToOptionsStrategy(depositToOptionAmount);
+    }
 
-        vaultState.pendingDepositAmount = 0;
+    function recalculateAllocateRatio() private {
+        uint256 totalEthLPAssets = getTotalEthLPAssets();
+        uint256 totalUsdLPAssets = getTotalUsdLPAssets();
+
+        allocateRatio.ethLPRatio = totalEthLPAssets * 100 / _totalValueLocked();
+        allocateRatio.usdLPRatio = totalUsdLPAssets * 100 / _totalValueLocked();
+        console.log("ethLPRatio %", allocateRatio.ethLPRatio);
+        console.log("usdLPRatio %", allocateRatio.usdLPRatio);
     }
 
     /**
@@ -191,8 +199,17 @@ contract RockOnyxUSDTVault is
                     withdrawals[msg.sender].shares == 0, "INVALID_WITHDRAW_STATE");
 
         withdrawals[msg.sender].shares += shares;
+        depositReceipt.depositAmount -= depositReceipt.depositAmount * shares / depositReceipt.shares;
         depositReceipt.shares -= shares;
         roundWithdrawalShares[currentRound] += shares;
+    }
+
+    /**
+     * @notice get available withdrawl amount for sender
+     */
+    function getPnL() external view returns(uint256) {
+        DepositReceipt storage depositReceipt = depositReceipts[msg.sender];
+        return (depositReceipt.shares * _getPricePerShare() / depositReceipt.depositAmount) -1;
     }
 
     /**
@@ -289,23 +306,6 @@ contract RockOnyxUSDTVault is
     }
 
     /**
-     * @notice Allow admin to settle the covered calls mechanism
-     * @param amount the amount in ETH we should sell 
-     */
-    function settleCoveredCalls(uint256 amount) external nonReentrant {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
-
-        require(amount <= getTotalEthLPAssets(), "INVALID_OPTIONS_POSITION_SIZE");
-        uint128 liquidity = _amountToPoolLiquidity(amount);
-        (uint256 wstEthAmount, uint256 wethAmount) = _decreaseEthLPLiquidity(liquidity);
-
-        uint256 wstEthWethAmount = _ethLPSwapTo(wstEth, wstEthAmount, weth);
-        uint256 swappedUsdAmount = _ethLPSwapTo(weth, wethAmount + wstEthWethAmount, usd);
-        
-        depositToUsdLiquidityStrategy(swappedUsdAmount);
-    }
-
-    /**
      * @notice Allows admin to update the performance and management fee rates
      * @param _performanceFeeRate The new performance fee rate (in percentage)
      * @param _managementFeeRate The new management fee rate (in percentage)
@@ -363,6 +363,32 @@ contract RockOnyxUSDTVault is
 
     function totalValueLocked() external view returns (uint256) {
         return _totalValueLocked();
+    }
+
+    /**
+     * @notice Allow admin to settle the covered calls mechanism
+     * @param amount the amount in ETH we should sell 
+     */
+    function settleCoveredCalls(uint256 amount) external nonReentrant {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+        require(amount <= getTotalEthLPAssets(), "INVALID_OPTIONS_POSITION_SIZE");
+
+        uint256 usdAmount = acquireWithdrawalFundsEthLP(amount);
+        depositToUsdLiquidityStrategy(usdAmount);
+        recalculateAllocateRatio();
+    }
+
+    /**
+     * @notice Allow admin to settle the covered puts mechanism
+     * @param amount the amount in usd we should buy eth 
+     */
+    function settleCoveredPuts(uint256 amount) external nonReentrant{
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+        require(amount <= getTotalUsdLPAssets(), "INVALID_OPTIONS_POSITION_SIZE");
+
+        uint256 usdAmount = acquireWithdrawalFundsUsdLP(amount);
+        depositToEthLiquidityStrategy(usdAmount);
+        recalculateAllocateRatio();
     }
 
     function _getRoundPPS(uint256 totalFee) private view returns (uint256) {
