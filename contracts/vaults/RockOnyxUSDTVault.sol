@@ -116,25 +116,8 @@ contract RockOnyxUSDTVault is
 
     /**
      * @notice Mints the vault shares to the creditor
-     * @param amount is the amount of `asset` deposited
-     * @param creditor is the address to receieve the deposit
-     */
-    function _depositFor(
-        uint256 amount,
-        address creditor
-    ) private returns (uint256) {
-        uint256 shares = _issueShares(amount);
-        DepositReceipt storage depositReceipt = depositReceipts[creditor];
-        depositReceipt.shares += shares;
-        depositReceipt.depositAmount += amount;
-        vaultState.pendingDepositAmount += amount;
-        vaultState.totalShares += shares;
-        return shares;
-    }
-
-    /**
-     * @notice Mints the vault shares to the creditor
-     * shares = amount / pricePerShare <=> amount / (vaultState.totalAssets / vaultState.totalShares)
+     * @param amount is the amount to issue shares
+     * shares = amount / pricePerShare
      */
     function _issueShares(uint256 amount) private view returns (uint256) {
         // if (vaultState.pendingDepositAmount <= 0) return amount;
@@ -147,6 +130,10 @@ contract RockOnyxUSDTVault is
             );
     }
 
+    /**
+     * @notice Mints the vault shares for depositor
+     * @param amount is the amount of `asset` deposited
+     */
     function deposit(uint256 amount) external nonReentrant {
         require(amount >= vaultParams.minimumSupply, "INVALID_DEPOSIT_AMOUNT");
         require( _totalValueLocked() + amount <= vaultParams.cap, "EXCEED_CAP");
@@ -157,7 +144,12 @@ contract RockOnyxUSDTVault is
             amount
         );
 
-        uint256 shares = _depositFor(amount, msg.sender);
+        uint256 shares = _issueShares(amount);
+        DepositReceipt storage depositReceipt = depositReceipts[msg.sender];
+        depositReceipt.shares += shares;
+        depositReceipt.depositAmount += amount;
+        vaultState.pendingDepositAmount += amount;
+        vaultState.totalShares += shares;
 
         allocateAssets();
 
@@ -165,7 +157,7 @@ contract RockOnyxUSDTVault is
     }
 
     /**
-     * @notice AllocateAssets amount
+     * @notice allocate assets to strategies 
      */
     function allocateAssets() private {
         uint256 depositToEthLPAmount = vaultState.pendingDepositAmount * allocateRatio.ethLPRatio / 10 ** allocateRatio.decimals;
@@ -178,6 +170,9 @@ contract RockOnyxUSDTVault is
         depositToOptionsStrategy(depositToOptionAmount);
     }
 
+    /** 
+     * @notice recalculate allocate ratio vault
+     */
     function recalculateAllocateRatio() private {
         uint256 totalEthLPAssets = getTotalEthLPAssets();
         uint256 totalUsdLPAssets = getTotalUsdLPAssets();
@@ -205,7 +200,7 @@ contract RockOnyxUSDTVault is
     }
 
     /**
-     * @notice get available withdrawl amount for sender
+     * @notice get profit and loss of user
      */
     function getPnL() external view returns(uint256) {
         DepositReceipt storage depositReceipt = depositReceipts[msg.sender];
@@ -213,7 +208,7 @@ contract RockOnyxUSDTVault is
     }
 
     /**
-     * @notice get available withdrawl amount for sender
+     * @notice get available withdrawl amount of user
      */
     function getAvailableWithdrawlAmount() external view returns(uint256, bool) {
         return (withdrawals[msg.sender].shares, withdrawals[msg.sender].round == currentRound);
@@ -260,7 +255,7 @@ contract RockOnyxUSDTVault is
         (uint256 performanceFee, uint256 managementFee) = getVaultFees();
         uint256 totalFee = performanceFee + managementFee;
         
-        roundPricePerShares[currentRound] = _getRoundPPS(totalFee);
+        roundPricePerShares[currentRound] = _caculateRoundPPS(totalFee);
 
         emit RoundClosed(currentRound , _totalValueLocked(), totalFee);
 
@@ -287,7 +282,7 @@ contract RockOnyxUSDTVault is
     }
 
     /**
-     * @notice acquire asset form vender, prepare funds for withdrawal
+     * @notice acquire asset form vendor, prepare funds for withdrawal
      */
     function acquireWithdrawalFunds() external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
@@ -327,29 +322,38 @@ contract RockOnyxUSDTVault is
     }
 
     /**
-     * @notice get number shares of sender
+     * @notice get withdraw pool amount of the vault
      */
     function getWithdrawPoolAmount() external view returns (uint256) {
         return vaultState.withdrawPoolAmount;
     }
 
     /**
-     * @notice get number shares of sender
+     * @notice get number shares of user
      */
     function balanceOf(address owner) external view returns (uint256) {
         return depositReceipts[owner].shares;
     }
 
+    /**
+     * @notice get current price per share
+     */
     function _getPricePerShare() private view returns (uint256) {
         if (currentRound == 0) return 1 * 10 ** vaultParams.decimals;
 
         return roundPricePerShares[currentRound - 1];
     }
 
+    /**
+     * @notice get current price per share
+     */
     function pricePerShare() external view returns (uint256) {
         return _getPricePerShare();
     }
 
+    /**
+     * @notice get total withdraw amount of current round
+     */
     function getRoundWithdrawAmount() external view returns (uint256) {
         uint256 withdrawAmount = roundWithdrawalShares[currentRound - 1] * roundPricePerShares[currentRound - 1] / 1e6;
         uint256 withdrawAmountWithSlippageAndImpact = (withdrawAmount * (1e5 + MAX_SLIPPAGE + PRICE_IMPACT)) / 1e5 + NETWORK_COST;
@@ -361,6 +365,9 @@ contract RockOnyxUSDTVault is
         return withdrawAmountIncluceFees;
     }
 
+    /**
+     * @notice get total value locked vault
+     */
     function totalValueLocked() external view returns (uint256) {
         return _totalValueLocked();
     }
@@ -391,7 +398,11 @@ contract RockOnyxUSDTVault is
         recalculateAllocateRatio();
     }
 
-    function _getRoundPPS(uint256 totalFee) private view returns (uint256) {
+    /**
+     * @notice caculate round price pershare
+     * @param totalFee is total current round vault fee
+     */
+    function _caculateRoundPPS(uint256 totalFee) private view returns (uint256) {
         return
             ShareMath.pricePerShare(
                 vaultState.totalShares,
@@ -400,6 +411,9 @@ contract RockOnyxUSDTVault is
             );
     }
 
+    /**
+     * @notice get total value locked vault
+     */
     function _totalValueLocked() private view returns (uint256) {
         return vaultState.pendingDepositAmount + 
             getTotalEthLPAssets() +
