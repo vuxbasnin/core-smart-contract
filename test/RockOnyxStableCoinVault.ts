@@ -249,6 +249,14 @@ describe("RockOnyxStableCoinVault", function () {
     expect(totalValueLock).to.approximately(400*1e6, PRECISION);
   });
 
+  it("get user profitt and loss, should get successfully", async function () {
+    console.log('-------------deposit to rockOnyxUSDTVault---------------');
+    
+    const getPnLTx = await rockOnyxUSDTVaultContract
+      .connect(user1)
+      .getPnL();
+  });
+
   it("mintEthLP position on Camelot, should mint successfully", async function () {
     console.log('-------------mintEthLP position on Camelot---------------');
     const mintEthLPPositionTx = await rockOnyxUSDTVaultContract
@@ -411,6 +419,14 @@ describe("RockOnyxStableCoinVault", function () {
 
     let user1BalanceAfterWithdraw = await usdc.connect(user1).balanceOf(user1);
     expect(user1BalanceAfterWithdraw).to.approximately(user1Balance + BigInt(5*1e6), PRECISION);
+  });
+
+  it("get user profitt and loss, should get successfully", async function () {
+    console.log('-------------deposit to rockOnyxUSDTVault---------------');
+    
+    const getPnLTx = await rockOnyxUSDTVaultContract
+      .connect(user1)
+      .getPnL();
   });
 
   it("handle settle covered calls, should handle successfully", async function () {
