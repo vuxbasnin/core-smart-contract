@@ -202,9 +202,19 @@ contract RockOnyxUSDTVault is
     /**
      * @notice get profit and loss of user
      */
-    function getPnL() external view returns(uint256) {
+    function getPnL() external view returns(uint256 profit, uint256 loss) {
         DepositReceipt storage depositReceipt = depositReceipts[msg.sender];
-        return (depositReceipt.shares * _getPricePerShare() / depositReceipt.depositAmount) -1;
+        uint256 currentAmount = depositReceipt.shares * _getPricePerShare() / 1e6;
+        profit = currentAmount > depositReceipt.depositAmount ? (currentAmount - depositReceipt.depositAmount) * 1e6 / depositReceipt.depositAmount : 0;
+        loss = currentAmount < depositReceipt.depositAmount ? (depositReceipt.depositAmount - currentAmount) * 1e6 / depositReceipt.depositAmount : 0;
+        return (profit, loss);
+    }
+
+    /**
+     * @notice get profit and loss of user
+     */
+    function getDepositAmount() external view returns(uint256) {
+        return depositReceipts[msg.sender].depositAmount;
     }
 
     /**
@@ -241,7 +251,7 @@ contract RockOnyxUSDTVault is
     }
 
     /**
-     * @notice close round, collect profit and calculate PPS 
+     * @notice close round, collect profit and calculate PPS    
      */
     function closeRound() external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
