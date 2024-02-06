@@ -148,17 +148,30 @@ contract RockOnyxEthLiquidityStrategy is
     }
 
     function acquireWithdrawalFundsEthLP(uint256 amount) internal returns (uint256){
-        if(ethLPState.unAllocatedBalance > amount){
+        if(ethLPState.unAllocatedBalance >= amount){
             ethLPState.unAllocatedBalance -= amount;
             return amount;
         }
 
-        uint256 amountToAcquire = amount - ethLPState.unAllocatedBalance;
+        uint256 pendingEthAmount = IERC20(weth).balanceOf(address(this));
+        uint256 pendingWstEthAmount = IERC20(wstEth).balanceOf(address(this));
+        // console.log("pending ETH %s, pending wstETH %s", pendingEthAmount, pendingWstEthAmount);
+
+        uint256 pendingEthInUsdc = (pendingEthAmount > 0) ? pendingEthAmount * _getEthPrice() / 1e18 : 0;
+        uint256 pendingWstEthInUsdc = (pendingWstEthAmount > 0) ? pendingWstEthAmount * _getWstEthPrice() / 1e18 : 0;
+        
+        // console.log("pendingEthInUsdc %s, pendingWstEthInUsdc %s", pendingEthInUsdc, pendingWstEthInUsdc);
+
+        uint256 amountToAcquire = amount - ethLPState.unAllocatedBalance - pendingEthInUsdc - pendingWstEthInUsdc;
+        // console.log("amountToAcquire %s", amountToAcquire);
         ethLPState.unAllocatedBalance = 0;
         uint128 liquidity = _amountToPoolLiquidity(amountToAcquire);
-        (uint256 wstEthAmount, uint256 wethAmount) = _decreaseEthLPLiquidity(liquidity);
-        wethAmount += _ethLPSwapTo(wstEth, wstEthAmount, weth);
-        return _ethLPSwapTo(weth, wethAmount, usd);
+        (uint256 acquiredWstEthAmount, uint256 acquiredWethAmount) = _decreaseEthLPLiquidity(liquidity);
+        // console.log("acquiredWstEthAmount %s, acquiredWethAmount %s", acquiredWstEthAmount, acquiredWethAmount);
+
+        uint256 wethAmount = _ethLPSwapTo(wstEth, acquiredWstEthAmount + (pendingWstEthAmount > 0 ? pendingWstEthAmount : 0), weth);
+        // console.log("wethAmount %s", wethAmount);
+        return _ethLPSwapTo(weth, wethAmount + acquiredWethAmount + (pendingEthAmount > 0 ? pendingEthAmount : 0), usd);
     }
 
     function claimReward(address[] calldata users, address[] calldata tokens, uint256[] calldata amounts, bytes32[][] calldata proofs) external nonReentrant {

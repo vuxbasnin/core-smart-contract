@@ -306,7 +306,9 @@ contract RockOnyxUSDTVault is
         uint256 withdrawUsdOptionsAmount = (withdrawAmountIncluceFees * 20) / 100;
         
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsEthLP(withdrawEthLPAmount);
+        console.log("vaultState.withdrawPoolAmount %s", vaultState.withdrawPoolAmount);
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdLP(withdrawUsdLPAmount);
+        console.log("vaultState.withdrawPoolAmount 2 %s", vaultState.withdrawPoolAmount);
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdOptions(withdrawUsdOptionsAmount);
     }
 
