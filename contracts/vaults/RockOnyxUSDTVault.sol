@@ -236,7 +236,7 @@ contract RockOnyxUSDTVault is
             roundPricePerShares[currentRound-1],
             vaultParams.decimals
         );
-
+        
         require(
             vaultState.withdrawPoolAmount > withdrawAmount,
             "EXCEED_WITHDRAW_POOL_CAPACITY"
@@ -310,6 +310,7 @@ contract RockOnyxUSDTVault is
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdLP(withdrawUsdLPAmount);
         console.log("vaultState.withdrawPoolAmount 2 %s", vaultState.withdrawPoolAmount);
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdOptions(withdrawUsdOptionsAmount);
+        console.log("vaultState.withdrawPoolAmount 3 %s", vaultState.withdrawPoolAmount);
     }
 
     /**

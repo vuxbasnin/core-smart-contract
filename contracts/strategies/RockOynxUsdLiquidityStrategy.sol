@@ -163,17 +163,21 @@ contract RockOynxUsdLiquidityStrategy is
             return amount;
         }
 
-        uint256 pendingUSDCEAmount = IERC20(usdce).balanceOf(address(this));
-        uint256 pendingUSDCeInUsdc = (pendingUSDCEAmount > 0) ? pendingUSDCEAmount * _getUsdcePrice() / 1e6 : 0;
-        console.log("pendingUSDCeInUsdc %s", pendingUSDCeInUsdc);
+        console.log("amount %s", amount);
+        console.log("usdLPState.unAllocatedUsdceBalance %s", usdLPState.unAllocatedUsdceBalance);
+        console.log("usdLPState.unAllocatedUsdcBalance %s", usdLPState.unAllocatedUsdcBalance);
 
-        uint256 amountToAcquire = amount - usdLPState.unAllocatedUsdcBalance - pendingUSDCeInUsdc;
+        uint256 amountToAcquire = amount - usdLPState.unAllocatedUsdcBalance - usdLPState.unAllocatedUsdceBalance;
         console.log("amountToAcquire %s", amountToAcquire);
         usdLPState.unAllocatedUsdcBalance = 0;
         uint128 liquidity = _amountToUsdPoolLiquidity(amountToAcquire);
         (uint256 usdcAmount, uint256 usdceAmount) = _decreaseUsdLPLiquidity(liquidity);
         console.log("usdcAmount %s, usdceAmount %s", usdcAmount, usdceAmount);
-        return usdcAmount + _usdLPSwapTo(usdce, usdceAmount + pendingUSDCEAmount, usdc);
+        uint256 swappedUsdc = _usdLPSwapTo(usdce, usdceAmount + usdLPState.unAllocatedUsdceBalance, usdc);
+        console.log("swappedUsdc %s", swappedUsdc);
+        uint256 totalUsdc = usdcAmount + usdLPState.unAllocatedUsdcBalance + swappedUsdc;
+        console.log("totalUsdc %s", totalUsdc);
+        return totalUsdc;
     }
 
     function getTotalUsdLPAssets() internal view returns (uint256) {

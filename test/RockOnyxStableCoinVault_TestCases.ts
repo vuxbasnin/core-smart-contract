@@ -369,10 +369,10 @@ describe("RockOnyxStableCoinVault", function () {
       liquidityAmount
     );
 
-    console.log('-------------deposit to vendor on aevo---------------');
-    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
-      value: ethers.parseEther("0.001753"),
-    });
+    // console.log('-------------deposit to vendor on aevo---------------');
+    // await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
+    //   value: ethers.parseEther("0.001753"),
+    // });
 
     let usdceBalance = await usdce.balanceOf(await rockOnyxUSDTVaultContract.getAddress());
     console.log("Vault usdce amount after mint %s", ethers.formatUnits(usdceBalance, 6));
@@ -388,6 +388,15 @@ describe("RockOnyxStableCoinVault", function () {
       .connect(admin)
       .closeRound();
     await closeRoundTx.wait();
+
+    // const withdrawAmount = 21 * 1e6;
+    // await usdce
+    //   .connect(optionsReceiver)
+    //   .approve(await rockOnyxUSDTVaultContract.getAddress(), withdrawAmount);
+
+    // await rockOnyxUSDTVaultContract
+    //   .connect(optionsReceiver)
+    //   .handlePostWithdrawalFromVendor(withdrawAmount);
 
     console.log('-------------accquire withdrawal funds for the round---------------');
     const acquireWithdrawalFundsTx = await rockOnyxUSDTVaultContract
