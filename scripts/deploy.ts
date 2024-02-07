@@ -12,6 +12,7 @@ import {
   WSTETH_ADDRESS,
   WETH_ADDRESS,
   AEVO_TRADER_ADDRESS,
+  ARB_ADDRESS
 } from "../constants";
 
 const chainId: CHAINID = network.config.chainId ?? 0;
@@ -21,6 +22,7 @@ const usdcAddress = USDC_ADDRESS[chainId] ?? "";
 const usdceAddress = USDCE_ADDRESS[chainId] ?? "";
 const wstethAddress = WSTETH_ADDRESS[chainId] ?? "";
 const wethAddress = WETH_ADDRESS[chainId] ?? "";
+const arbAddress = ARB_ADDRESS[chainId];
 const nonfungiblePositionManager = NonfungiblePositionManager[chainId] ?? "";
 let deployer: Signer;
 
@@ -110,6 +112,7 @@ async function main() {
     usdceAddress,
     wethAddress,
     wstethAddress,
+    arbAddress,
     {
       gasLimit: GAS_LIMIT,
     }
