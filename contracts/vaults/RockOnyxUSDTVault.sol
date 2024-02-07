@@ -74,7 +74,7 @@ contract RockOnyxUSDTVault is
         vaultParams = VaultParams(
             6,
             _usdc,
-            10_000_000,
+            5_000_000,
             1_000_000 * 1e6,
             10,
             1
@@ -432,6 +432,10 @@ contract RockOnyxUSDTVault is
             getTotalEthLPAssets() +
             getTotalUsdLPAssets() +
             getTotalOptionsAmount();
+    }
+
+    function allocatedRatio() external view return (uint256 ethLPRatio, uint256 usdLPRatio, uint256 optionsRatio) {
+        return (allocateRatio.ethLPRatio, allocateRatio.usdLPRatio, 1 - allocateRatio.ethLPRatio - allocateRatio.usdLPRatio);
     }
 
     function emergencyShutdown(
