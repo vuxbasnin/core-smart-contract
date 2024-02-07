@@ -16,7 +16,8 @@ import {
   AEVO_CONNECTOR_ADDRESS,
   USDC_IMPERSONATED_SIGNER_ADDRESS,
   USDCE_IMPERSONATED_SIGNER_ADDRESS,
-  NFT_POSITION_ADDRESS
+  NFT_POSITION_ADDRESS,
+  ANGLE_REWARD_ADDRESS
 } from "../constants";
 import {
   Signer,
@@ -61,6 +62,7 @@ describe("RockOnyxStableCoinVault", function () {
   let aevoOptionsContract: Contracts.AevoOptions;
 
   const nftPositionAddress = NFT_POSITION_ADDRESS[chainId];
+  const rewardAddress = ANGLE_REWARD_ADDRESS[chainId];
   const usdcImpersonatedSigner = USDC_IMPERSONATED_SIGNER_ADDRESS[chainId];
   const usdceImpersonatedSigner = USDCE_IMPERSONATED_SIGNER_ADDRESS[chainId];
   const nonfungiblePositionManager = NonfungiblePositionManager[chainId];
@@ -122,6 +124,7 @@ describe("RockOnyxStableCoinVault", function () {
     rockOnyxUSDTVaultContract = await rockOnyxUSDTVault.deploy(
       usdcAddress,
       await camelotLiquidityContract.getAddress(),
+      rewardAddress,
       nftPositionAddress,
       await camelotSwapContract.getAddress(),
       await aevoOptionsContract.getAddress(),
@@ -169,7 +172,7 @@ describe("RockOnyxStableCoinVault", function () {
     )[index];
   }
 
-  before(async function () {
+  beforeEach(async function () {
     [admin, optionsReceiver, user1, user2, user3, user4] = await ethers.getSigners();
 
     nftPosition = await ethers.getContractAt("IERC721", nftPositionAddress);
@@ -238,7 +241,7 @@ describe("RockOnyxStableCoinVault", function () {
     await transferUsdceForUser(usdceSigner, optionsReceiver, 1000 * 1e6);
   });
 
-  it.skip("deposit to rockOnyxUSDTVault, WETH in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
+  it("deposit to rockOnyxUSDTVault, WETH in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
     console.log('-------------deposit to rockOnyxUSDTVault---------------');
     await deposit(user1, 10 * 1e6);
     await deposit(user2, 100 * 1e6);
@@ -252,8 +255,8 @@ describe("RockOnyxStableCoinVault", function () {
       .mintEthLPPosition(2000, 2101, 5000, 4);
     await mintEthLPPositionTx.wait();
 
-    let wethBalance = await weth.balanceOf(await rockOnyxUSDTVaultContract.getAddress());
-    console.log("Vault WETH amount after mint %s", ethers.formatUnits(wethBalance, 18));
+    totalValueLock = await logAndReturnTotalValueLock();
+    expect(totalValueLock).to.approximately(110 * 1e6, PRECISION);
 
     console.log('-------------Users initial withdrawals---------------');
     const initiateWithdrawalTx1 = await rockOnyxUSDTVaultContract
@@ -273,8 +276,8 @@ describe("RockOnyxStableCoinVault", function () {
       .acquireWithdrawalFunds();
     await acquireWithdrawalFundsTx.wait();
 
-    let totalValueLock2 = await logAndReturnTotalValueLock();
-    expect(totalValueLock2).to.approximately(8.5*1e6, PRECISION);
+    totalValueLock = await logAndReturnTotalValueLock();
+    expect(totalValueLock).to.approximately(10*1e6, PRECISION);
 
     console.log('-------------complete withdrawals---------------');
     let user2Balance = await usdc.connect(user2).balanceOf(user2);
@@ -288,7 +291,7 @@ describe("RockOnyxStableCoinVault", function () {
     expect(user1BalanceAfterWithdraw).to.approximately(user2Balance + BigInt(100*1e6), PRECISION);
   });
 
-  it.skip("deposit to rockOnyxUSDTVault, wstETH in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
+  it("deposit to rockOnyxUSDTVault, wstETH in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
     console.log('-------------deposit to rockOnyxUSDTVault---------------');
     await deposit(user1, 10 * 1e6);
     await deposit(user2, 100 * 1e6);
@@ -337,8 +340,6 @@ describe("RockOnyxStableCoinVault", function () {
     let user1BalanceAfterWithdraw = await usdc.connect(user2).balanceOf(user2);
     expect(user1BalanceAfterWithdraw).to.approximately(user2Balance + BigInt(100*1e6), PRECISION);
   });
-
-  
 
   it("deposit to rockOnyxUSDTVault, USDCe in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
     console.log('-------------deposit to rockOnyxUSDTVault---------------');
