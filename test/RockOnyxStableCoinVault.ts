@@ -16,7 +16,8 @@ import {
   AEVO_CONNECTOR_ADDRESS,
   USDC_IMPERSONATED_SIGNER_ADDRESS,
   USDCE_IMPERSONATED_SIGNER_ADDRESS,
-  NFT_POSITION_ADDRESS
+  NFT_POSITION_ADDRESS,
+  ANGLE_REWARD_ADDRESS
 } from "../constants";
 import {
   Signer,
@@ -60,6 +61,7 @@ describe("RockOnyxStableCoinVault", function () {
 
   let aevoOptionsContract: Contracts.AevoOptions;
 
+  const rewardAddress = ANGLE_REWARD_ADDRESS[chainId];
   const nftPositionAddress = NFT_POSITION_ADDRESS[chainId];
   const usdcImpersonatedSigner = USDC_IMPERSONATED_SIGNER_ADDRESS[chainId];
   const usdceImpersonatedSigner = USDCE_IMPERSONATED_SIGNER_ADDRESS[chainId];
@@ -122,6 +124,7 @@ describe("RockOnyxStableCoinVault", function () {
     rockOnyxUSDTVaultContract = await rockOnyxUSDTVault.deploy(
       usdcAddress,
       await camelotLiquidityContract.getAddress(),
+      rewardAddress,
       nftPositionAddress,
       await camelotSwapContract.getAddress(),
       await aevoOptionsContract.getAddress(),
@@ -486,33 +489,50 @@ describe("RockOnyxStableCoinVault", function () {
   // Tx https://arbiscan.io/tx/0xc30f0c7ec499b362c9a9562826b6dfbb79fb02333a97668364fbb9b09aa55317
   it.skip("claim reward on Camelot - 164508868, should claim successfully", async function () {
     console.log('-------------claim reward on Camelot---------------');
+    // const contractAdmin = await ethers.getImpersonatedSigner("0x20f89bA1B0Fc1e83f9aEf0a134095Cd63F7e8CC7");
+    // rockOnyxUSDTVaultContract = await ethers.getContractAt("RockOnyxUSDTVault", "0xb4415d533ba381d8057ae23c281ab329ab7a6778");
 
-    const contractAddress = "0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae";
-    const users =["0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa"];
-    const tokens =["0x912CE59144191C1204E64559FE8253a0e49E6548"];
-    const amounts =[11361011451200000000n];
-    const proofs =[[
-      "0x3115d1ad3005914f754795374c4430e4f2c3e9422e3574847f105f06070a976a",
-      "0x95d8f9d53dc2be323a776d9eda689a30e90e23d67cb7f114cad56a73d4c24f68",
-      "0xc286bdb1cf1f5e86b3c75eb86753ca1b7e19c44d58e9d686d12504d6a28592a4",
-      "0xf5bf6f9245340ad779b0d9710f2457e722c4b7f138560f794dd9b028e009871e",
-      "0x3695961dd784a483ef8a495a67eec2d857f39126e37f5195a056888fbabe66c7",
-      "0x9c52f6866548b2f69cdaf0810c4bd25cbd76d8d2b9b858e7b2c0e6bf8832f3a9",
-      "0x98aec2617efc005e170bf95703f29218a4d39bb0fb26a4df18d7cea70cd6f335",
-      "0x0916a0c1aab37be18fbf328131d7b6b1c5f415f641a61a91caf74b8fbb50069a",
-      "0x6ec76053f1092a11e4845705d3bf0d3f885b059f89cbe2c48d9b3035c9b0aa64",
-      "0x2a05f262949e9f08204578c28ffd86ea95a2793401917a0ccc46904c55c53af9",
-      "0x14da3531b199ec6541b091e04b5cdc1a2a9db89b78bc2c1f936432fa38b29694",
-      "0xd3bd55277356e8d463f37a2e58d819c26c0784eddac5fdc2b37a244c953a1228",
-      "0x8334e31052417eae35fdb6878a58946986c3f5c9fdecd5204d1ef2f6767b01ff",
-      "0xe78c60fa97312b2b55a2534492749f85cdb1c947ff936adb3269f406ad6ddac8",
-      "0xc145f4af2d116dce319360302277931742e17f5488b5c318f3468a858c25c676"
-    ]];
+    const contractAdmin = admin;
+    console.log("contractAdmin: ", await contractAdmin.getAddress());
+    console.log("rockOnyxUSDTVaultContract: ", await rockOnyxUSDTVaultContract.getAddress());
 
+    interface TransactionData {
+      [token: string]: {
+        proof?: any; // Define the type for proof
+        claim: any; // Define the type for claim
+      };
+    }
+
+    let transactionData : TransactionData;
+    try {
+      const { data } = await axios.get(
+        `https://api.angle.money/v1/merkl?chainId=42161&user=0xb4415d533ba381d8057ae23c281ab329ab7a6778`,
+        {
+          timeout: 5000,
+        }
+      );
+      
+      transactionData  = data[chainId].transactionData;
+    } catch (error) {
+      throw new Error("Angle API not responding");
+    }
+    const tokens = Object.keys(transactionData).filter(
+      (k) => transactionData[k].proof !== undefined
+    );
+    const claims = tokens.map((t) => transactionData[t].claim);
+    const proofs = tokens.map((t) => transactionData[t].proof);  
+    const users = tokens.map((t) => "0xb4415d533ba381d8057ae23c281ab329ab7a6778");
+
+    console.log(users);
+    console.log(tokens);
+    console.log(claims);
+    console.log(proofs);
+    console.log(await arb.balanceOf("0xb4415d533ba381d8057ae23c281ab329ab7a6778"));
     const claimlTx = await rockOnyxUSDTVaultContract
-      .connect(admin)
-      .claimReward(users, tokens, amounts, proofs);
+      .connect(contractAdmin)
+      .claimReward(users, tokens, claims, proofs as string[][]);
     await claimlTx.wait();
+    console.log(await arb.balanceOf("0xb4415d533ba381d8057ae23c281ab329ab7a6778"));
   });
 
   // Tx https://arbiscan.io/tx/0xc30f0c7ec499b362c9a9562826b6dfbb79fb02333a97668364fbb9b09aa55317
@@ -544,16 +564,22 @@ describe("RockOnyxStableCoinVault", function () {
     const tokens = Object.keys(transactionData).filter(
       (k) => transactionData[k].proof !== undefined
     );
-  
+
+    const users = tokens.map((t) => "0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa");
     const claims = tokens.map((t) => transactionData[t].claim);
     const proofs = tokens.map((t) => transactionData[t].proof);  
 
     const contractAddress = "0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae";
     reward = await ethers.getContractAt("IRewardVendor", contractAddress);
 
+    console.log(users);
+    console.log(tokens);
+    console.log(claims);
+    console.log(proofs);
+    
     console.log(await arb.balanceOf(user1aa));
     await reward.connect(user1aa).claim(
-      tokens.map((t) => user1aa.getAddress()),
+      users,
       tokens,
       claims,
       proofs as string[][]

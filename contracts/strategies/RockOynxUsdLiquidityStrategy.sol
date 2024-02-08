@@ -105,6 +105,11 @@ contract RockOynxUsdLiquidityStrategy is
             address(usdLPProvider),
             usdLPState.tokenId
         );
+
+        if(usdLPState.unAllocatedUsdceBalance > 0){
+            usdLPState.unAllocatedUsdcBalance += _usdLPSwapTo(usdce, usdLPState.unAllocatedUsdceBalance, usdc);
+            usdLPState.unAllocatedUsdceBalance = 0;
+        }
     }
 
     function increaseUsdLPLiquidity(uint16 ratio, uint8 decimals) external nonReentrant {
@@ -135,15 +140,24 @@ contract RockOynxUsdLiquidityStrategy is
         usdLPState.unAllocatedUsdceBalance -= amount1;
 
         usdLPState.liquidity += liquidity;
+
+        if(usdLPState.unAllocatedUsdceBalance > 0){
+            usdLPState.unAllocatedUsdcBalance += _usdLPSwapTo(usdce, usdLPState.unAllocatedUsdceBalance, usdc);
+            usdLPState.unAllocatedUsdceBalance = 0;
+        }
     }
 
     function decreaseUsdLPLiquidity(uint128 liquidity) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        (uint256 amount0, uint256 amount1) = _decreaseUsdLPLiquidity(liquidity);
+        if(liquidity == 0){
+            liquidity = usdLPState.liquidity;
+        }
 
-        usdLPState.unAllocatedUsdcBalance += amount0;
-        usdLPState.unAllocatedUsdceBalance += amount1;
+        (uint256 usdcAmount, uint256 usdceAmount) = _decreaseUsdLPLiquidity(liquidity);
+
+        uint256 swapUsdcAmount = usdceAmount > 0 ? _usdLPSwapTo(usdce, usdceAmount, usdc) : 0; 
+        usdLPState.unAllocatedUsdcBalance += usdcAmount + swapUsdcAmount;
     }
 
     function closeUsdLPRound() internal  {
@@ -163,21 +177,15 @@ contract RockOynxUsdLiquidityStrategy is
             return amount;
         }
 
-        console.log("amount %s", amount);
-        console.log("usdLPState.unAllocatedUsdceBalance %s", usdLPState.unAllocatedUsdceBalance);
-        console.log("usdLPState.unAllocatedUsdcBalance %s", usdLPState.unAllocatedUsdcBalance);
-
-        uint256 amountToAcquire = amount - usdLPState.unAllocatedUsdcBalance - usdLPState.unAllocatedUsdceBalance;
-        console.log("amountToAcquire %s", amountToAcquire);
+        uint256 unAllocatedBalance = usdLPState.unAllocatedUsdcBalance;
+        uint256 amountToAcquire = amount - usdLPState.unAllocatedUsdcBalance;
         usdLPState.unAllocatedUsdcBalance = 0;
+
         uint128 liquidity = _amountToUsdPoolLiquidity(amountToAcquire);
-        (uint256 usdcAmount, uint256 usdceAmount) = _decreaseUsdLPLiquidity(liquidity);
-        console.log("usdcAmount %s, usdceAmount %s", usdcAmount, usdceAmount);
-        uint256 swappedUsdc = _usdLPSwapTo(usdce, usdceAmount + usdLPState.unAllocatedUsdceBalance, usdc);
-        console.log("swappedUsdc %s", swappedUsdc);
-        uint256 totalUsdc = usdcAmount + usdLPState.unAllocatedUsdcBalance + swappedUsdc;
-        console.log("totalUsdc %s", totalUsdc);
-        return totalUsdc;
+        (uint256 acquireUsdcAmount, uint256 acquireUsdceAmount) = _decreaseUsdLPLiquidity(liquidity);
+        uint256 usdcAmount = acquireUsdceAmount > 0 ? _usdLPSwapTo(usdce, acquireUsdceAmount, usdc) : 0;
+       
+        return unAllocatedBalance + acquireUsdcAmount + usdcAmount;
     }
 
     function getTotalUsdLPAssets() internal view returns (uint256) {
@@ -243,7 +251,6 @@ contract RockOynxUsdLiquidityStrategy is
 
     function _rebalanceUsdLPAssets(uint16 ratio, uint8 decimals) private {
         uint256 unAllocatedUsdcToSwap = usdLPState.unAllocatedUsdcBalance * ratio / 10 ** decimals;
-
         usdLPState.unAllocatedUsdcBalance -= unAllocatedUsdcToSwap;
         usdLPState.unAllocatedUsdceBalance += _usdLPSwapTo(usdc, unAllocatedUsdcToSwap, usdce);
     }
