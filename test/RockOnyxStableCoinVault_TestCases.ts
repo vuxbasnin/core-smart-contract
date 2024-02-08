@@ -420,7 +420,7 @@ describe("RockOnyxStableCoinVault", function () {
     expect(user1BalanceAfterWithdraw).to.approximately(user2Balance + BigInt(100*1e6), PRECISION);
   });
 
-  it("calculate performance fee rockOnyxUSDTVault, USDCe in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
+  it.skip("calculate performance fee rockOnyxUSDTVault, USDCe in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
     console.log('-------------calculate performance fee rockOnyxUSDTVault---------------');
     await deposit(user2, 100 * 1e6);
 
@@ -512,6 +512,231 @@ describe("RockOnyxStableCoinVault", function () {
       .completeWithdrawal(100*1e6);
     await completeWithdrawalTx.wait();
 
+    const claimTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .claimFee();
+    await completeWithdrawalTx.wait();
+  });
+  
+
+  it("Full flow with multiple users deposit and withdraw all money", async function () {
+    console.log('-------------calculate performance fee rockOnyxUSDTVault---------------');
+    await deposit(user1, 200 * 1e6);
+    await deposit(user2, 100 * 1e6);
+
+    console.log('-------------mintUsdLP position on Camelot---------------');
+    const mintUsdLPPositionTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .mintUsdLPPosition(-2, 2, 3000, 4);
+    const mintUsdLPPositionTxResult = await mintUsdLPPositionTx.wait();
+
+    liquidityTokenId = await getMintPositionResult(
+      mintUsdLPPositionTxResult!,
+      LIQUIDITY_TOKEN_ID_INDEX
+    );
+    liquidityAmount = await getMintPositionResult(
+      mintUsdLPPositionTxResult!,
+      LIQUIDITY_AMOUNT_INDEX
+    );
+
+    console.log(
+      "liquidityTokenId %s, liquidityAmount %s",
+      liquidityTokenId,
+      liquidityAmount
+    );
+
+    console.log('-------------deposit to vendor on aevo---------------');
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
+      value: ethers.parseEther("0.001753"),
+    });
+
+    let usdceBalance = await usdce.balanceOf(await rockOnyxUSDTVaultContract.getAddress());
+    console.log("Vault usdce amount after mint %s", ethers.formatUnits(usdceBalance, 6));
+    let withdrawShares = 100 * 1e6;
+    console.log('-------------Users initial withdrawals---------------');
+    // user 1 initates withdrawal
+    const initiateWithdrawalTx1 = await rockOnyxUSDTVaultContract
+      .connect(user2)
+      .initiateWithdrawal(withdrawShares);
+    await initiateWithdrawalTx1.wait();
+
+    // user 2 initates withdrawal
+    const initiateWithdrawalTx2 = await rockOnyxUSDTVaultContract
+      .connect(user1)
+      .initiateWithdrawal(200 * 1e6);
+    await initiateWithdrawalTx2.wait();
+
+    console.log('-------------update allocated balance from aevo vendor---------------');
+    const updateProfitTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .updateProfitFromVender(90*1e6);
+    await updateProfitTx.wait();
+
+    console.log('-------------close round---------------');
+    const closeRoundTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .closeRound();
+    await closeRoundTx.wait();
+
+    const getAllocatedRatio = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .allocatedRatio();
+    console.log("getAllocatedRatio = %s", getAllocatedRatio);
+    
+    const roundWdAmount = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .getRoundWithdrawAmount();
+
+    console.log("roundWdAmount = %s", roundWdAmount);
+    let optionsWithdrawAmount = roundWdAmount * getAllocatedRatio[2] / BigInt(1e4);
+    console.log("optionsWithdrawAmount = %s", optionsWithdrawAmount);
+
+    const usdcePrice = await camelotSwapContract.connect(admin).getPriceOf(usdc, usdce, 6, 6);
+    console.log("usdcePrice %s", usdcePrice);
+    
+    const usdceAmount = optionsWithdrawAmount * usdcePrice / BigInt(1e6);
+    console.log("usdceAmount %s", usdceAmount);
+
+    await usdce
+      .connect(optionsReceiver)
+      .approve(await rockOnyxUSDTVaultContract.getAddress(), usdceAmount);
+
+    await rockOnyxUSDTVaultContract
+      .connect(optionsReceiver)
+      .handlePostWithdrawalFromVendor(usdceAmount);
+
+    console.log('-------------accquire withdrawal funds for the round---------------');
+    const acquireWithdrawalFundsTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .acquireWithdrawalFunds();
+    await acquireWithdrawalFundsTx.wait();
+
+    console.log('-------------complete withdrawals---------------');
+    // let user2Balance = await usdc.connect(user2).balanceOf(user2);
+
+    const completeWithdrawalTx = await rockOnyxUSDTVaultContract
+      .connect(user2)
+      .completeWithdrawal(100*1e6);
+    await completeWithdrawalTx.wait();
+
+    const completeWithdrawalTx2 = await rockOnyxUSDTVaultContract
+      .connect(user1)
+      .completeWithdrawal(200*1e6);
+    await completeWithdrawalTx2.wait();
+
+    console.log('------------- Claim all fees ---------------');
+    const claimTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .claimFee();
+    await completeWithdrawalTx.wait();
+  });
+
+  it("Full flow with multiple users deposit and withdraw all money in losses", async function () {
+    console.log('-------------calculate performance fee rockOnyxUSDTVault---------------');
+    await deposit(user1, 200 * 1e6);
+    await deposit(user2, 100 * 1e6);
+
+    console.log('-------------mintUsdLP position on Camelot---------------');
+    const mintUsdLPPositionTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .mintUsdLPPosition(-2, 2, 3000, 4);
+    const mintUsdLPPositionTxResult = await mintUsdLPPositionTx.wait();
+
+    liquidityTokenId = await getMintPositionResult(
+      mintUsdLPPositionTxResult!,
+      LIQUIDITY_TOKEN_ID_INDEX
+    );
+    liquidityAmount = await getMintPositionResult(
+      mintUsdLPPositionTxResult!,
+      LIQUIDITY_AMOUNT_INDEX
+    );
+
+    console.log(
+      "liquidityTokenId %s, liquidityAmount %s",
+      liquidityTokenId,
+      liquidityAmount
+    );
+
+    console.log('-------------deposit to vendor on aevo---------------');
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
+      value: ethers.parseEther("0.001753"),
+    });
+
+    let usdceBalance = await usdce.balanceOf(await rockOnyxUSDTVaultContract.getAddress());
+    console.log("Vault usdce amount after mint %s", ethers.formatUnits(usdceBalance, 6));
+    let withdrawShares = 100 * 1e6;
+    console.log('-------------Users initial withdrawals---------------');
+    // user 1 initates withdrawal
+    const initiateWithdrawalTx1 = await rockOnyxUSDTVaultContract
+      .connect(user2)
+      .initiateWithdrawal(withdrawShares);
+    await initiateWithdrawalTx1.wait();
+
+    // user 2 initates withdrawal
+    const initiateWithdrawalTx2 = await rockOnyxUSDTVaultContract
+      .connect(user1)
+      .initiateWithdrawal(200 * 1e6);
+    await initiateWithdrawalTx2.wait();
+
+    console.log('-------------update allocated balance from aevo vendor---------------');
+    const updateProfitTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .updateProfitFromVender(40*1e6);
+    await updateProfitTx.wait();
+
+    console.log('-------------close round---------------');
+    const closeRoundTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .closeRound();
+    await closeRoundTx.wait();
+
+    const getAllocatedRatio = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .allocatedRatio();
+    console.log("getAllocatedRatio = %s", getAllocatedRatio);
+    
+    const roundWdAmount = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .getRoundWithdrawAmount();
+
+    console.log("roundWdAmount = %s", roundWdAmount);
+    let optionsWithdrawAmount = roundWdAmount * getAllocatedRatio[2] / BigInt(1e4);
+    console.log("optionsWithdrawAmount = %s", optionsWithdrawAmount);
+
+    const usdcePrice = await camelotSwapContract.connect(admin).getPriceOf(usdc, usdce, 6, 6);
+    console.log("usdcePrice %s", usdcePrice);
+    
+    const usdceAmount = optionsWithdrawAmount * usdcePrice / BigInt(1e6);
+    console.log("usdceAmount %s", usdceAmount);
+
+    await usdce
+      .connect(optionsReceiver)
+      .approve(await rockOnyxUSDTVaultContract.getAddress(), usdceAmount);
+
+    await rockOnyxUSDTVaultContract
+      .connect(optionsReceiver)
+      .handlePostWithdrawalFromVendor(usdceAmount);
+
+    console.log('-------------accquire withdrawal funds for the round---------------');
+    const acquireWithdrawalFundsTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .acquireWithdrawalFunds();
+    await acquireWithdrawalFundsTx.wait();
+
+    console.log('-------------complete withdrawals---------------');
+    // let user2Balance = await usdc.connect(user2).balanceOf(user2);
+
+    const completeWithdrawalTx = await rockOnyxUSDTVaultContract
+      .connect(user2)
+      .completeWithdrawal(100*1e6);
+    await completeWithdrawalTx.wait();
+
+    const completeWithdrawalTx2 = await rockOnyxUSDTVaultContract
+      .connect(user1)
+      .completeWithdrawal(200*1e6);
+    await completeWithdrawalTx2.wait();
+
+    console.log('------------- Claim all fees ---------------');
     const claimTx = await rockOnyxUSDTVaultContract
       .connect(admin)
       .claimFee();

@@ -139,7 +139,15 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     function closeOptionsRound() internal {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        optionsState.allocatedUsdceBalance += optionsState.unsettledProfit - optionsState.unsettledLoss;
+        console.log("optionsState.unsettledProfit %s", optionsState.unsettledProfit);
+        console.log("optionsState.unsettledLoss %s", optionsState.unsettledLoss);
+        if (optionsState.unsettledProfit > 0) {
+            optionsState.allocatedUsdceBalance += optionsState.unsettledProfit;    
+        }
+        
+        if (optionsState.unsettledLoss > 0) {
+            optionsState.allocatedUsdceBalance -= optionsState.unsettledLoss;
+        }
         console.log("optionsState.allocatedBalance %s", optionsState.allocatedUsdceBalance);
         console.log("optionsState.unallocatedBalance %s", optionsState.unAllocatedUsdcBalance);
     }
