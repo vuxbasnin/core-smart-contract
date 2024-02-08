@@ -194,7 +194,6 @@ contract RockOnyxUSDTVault is
                     withdrawals[msg.sender].shares == 0, "INVALID_WITHDRAW_STATE");
 
         withdrawals[msg.sender].shares += shares;
-        depositReceipt.depositAmount -= depositReceipt.depositAmount * shares / depositReceipt.shares;
         depositReceipt.shares -= shares;
         roundWithdrawalShares[currentRound] += shares;
     }
@@ -204,7 +203,13 @@ contract RockOnyxUSDTVault is
      */
     function getPnL() public view returns(uint256 profit, uint256 loss) {
         DepositReceipt storage depositReceipt = depositReceipts[msg.sender];
-        uint256 currentAmount = depositReceipt.shares * _getPricePerShare() / 1e6;
+        uint256 shares = withdrawals[msg.sender].shares + depositReceipt.shares;
+        uint256 currentAmount = shares * _getPricePerShare() / 1e6;
+
+        console.log("shares %s", shares);
+        console.log("_getPricePerShare %s", _getPricePerShare());
+        console.log("currentAmount %s", currentAmount);
+        console.log("depositReceipt.depositAmount %s", depositReceipt.depositAmount);
         profit = currentAmount > depositReceipt.depositAmount ? (currentAmount - depositReceipt.depositAmount) * 1e6 / depositReceipt.depositAmount : 0;
         loss = currentAmount < depositReceipt.depositAmount ? (depositReceipt.depositAmount - currentAmount) * 1e6 / depositReceipt.depositAmount : 0;
         return (profit, loss);
@@ -230,9 +235,8 @@ contract RockOnyxUSDTVault is
      */
     function completeWithdrawal(uint256 shares) external nonReentrant {
         require(withdrawals[msg.sender].shares >= shares, "INVALID_SHARES");
-
         DepositReceipt storage depositReceipt = depositReceipts[msg.sender];
-
+        
         uint256 withdrawAmount = ShareMath.sharesToAsset(
             shares,
             roundPricePerShares[currentRound-1],
@@ -244,14 +248,18 @@ contract RockOnyxUSDTVault is
             "EXCEED_WITHDRAW_POOL_CAPACITY"
         );
 
-        uint256 currentAmount = depositReceipt.shares * _getPricePerShare() / 1e6;
-        (uint256 profit,) = getPnL();
-        uint256 performanceFee = profit > 0 ? profit * withdrawAmount / currentAmount : 0;
+        (uint256 profit, uint256 loss) = getPnL();
+        console.log("profit %s", profit);
+        console.log("loss %s", loss);
+        uint256 performanceFee = profit > 0 ? profit * withdrawAmount : 0;
+
+        console.log("performanceFee %s", performanceFee);
 
         vaultState.performanceFeeAmount += performanceFee;
         withdrawals[msg.sender].shares -= shares;
         vaultState.withdrawPoolAmount -= (withdrawAmount - performanceFee);
-        
+        depositReceipt.depositAmount -= depositReceipt.depositAmount * shares / depositReceipt.shares;
+
         IERC20(vaultParams.asset).safeTransfer(msg.sender, withdrawAmount - performanceFee);
 
         emit Withdrawn(msg.sender, withdrawAmount, withdrawals[msg.sender].shares);
@@ -266,7 +274,8 @@ contract RockOnyxUSDTVault is
             vaultState.withdrawPoolAmount > vaultState.performanceFeeAmount + vaultState.managementFeeAmount,
             "EXCEED_WITHDRAW_POOL_CAPACITY"
         );
-
+        
+        vaultState.withdrawPoolAmount -= vaultState.performanceFeeAmount + vaultState.managementFeeAmount;
         IERC20(vaultParams.asset).safeTransfer(msg.sender, vaultState.performanceFeeAmount + vaultState.managementFeeAmount);
     }
 
@@ -283,6 +292,7 @@ contract RockOnyxUSDTVault is
         vaultState.currentRoundFeeAmount = getManagementFee();
 
         roundPricePerShares[currentRound] = _caculateRoundPPS(vaultState.currentRoundFeeAmount);
+        recalculateAllocateRatio();
         emit RoundClosed(currentRound , _totalValueLocked(), vaultState.currentRoundFeeAmount);
 
         currentRound++;
@@ -303,12 +313,20 @@ contract RockOnyxUSDTVault is
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         uint256 withdrawAmount = roundWithdrawalShares[currentRound - 1] * roundPricePerShares[currentRound - 1] / 1e6;
+        console.log("withdrawAmount %s", withdrawAmount);
         uint256 withdrawAmountWithSlippageAndImpact = (withdrawAmount * (1e5 + MAX_SLIPPAGE + PRICE_IMPACT)) / 1e5 + NETWORK_COST;
         uint256 withdrawAmountIncludeFee = withdrawAmountWithSlippageAndImpact + vaultState.currentRoundFeeAmount;
-
+        console.log("withdrawAmountIncludeFee %s", withdrawAmountIncludeFee);
+        
+        console.log("ethLPRatio %s", allocateRatio.ethLPRatio);
+        console.log("usdLPRatio %s", allocateRatio.usdLPRatio);
+        
         uint256 withdrawEthLPAmount = withdrawAmountIncludeFee * allocateRatio.ethLPRatio / 10 ** allocateRatio.decimals;
+        console.log("withdrawEthLPAmount %s", withdrawEthLPAmount);
         uint256 withdrawUsdLPAmount = withdrawAmountIncludeFee * allocateRatio.usdLPRatio / 10 ** allocateRatio.decimals;
+        console.log("withdrawUsdLPAmount %s", withdrawUsdLPAmount);
         uint256 withdrawUsdOptionsAmount = withdrawAmountIncludeFee - withdrawEthLPAmount - withdrawUsdLPAmount;
+        console.log("withdrawUsdOptionsAmount %s", withdrawUsdOptionsAmount);
 
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsEthLP(withdrawEthLPAmount);
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdLP(withdrawUsdLPAmount);
