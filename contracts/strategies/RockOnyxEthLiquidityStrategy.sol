@@ -67,7 +67,6 @@ contract RockOnyxEthLiquidityStrategy is
 
     function depositToEthLiquidityStrategy(uint256 amount) internal {
         ethLPState.unAllocatedBalance += amount;
-        console.log("ethLPState.unAllocatedBalance %s", ethLPState.unAllocatedBalance);
     }
 
     function mintEthLPPosition(
@@ -114,7 +113,6 @@ contract RockOnyxEthLiquidityStrategy is
         }
 
        ethLPState.unAllocatedBalance += _ethLPSwapTo(weth, IERC20(weth).balanceOf(address(this)), usd);
-       console.log("mintEthLPPosition unAllocatedBalance %s", ethLPState.unAllocatedBalance);
     }
     
     function increaseEthLPLiquidity(uint16 ratio, uint8 decimals) external nonReentrant {
@@ -171,8 +169,6 @@ contract RockOnyxEthLiquidityStrategy is
     }
 
     function acquireWithdrawalFundsEthLP(uint256 amount) internal returns (uint256){
-        console.log("wd amount %s", amount);
-        console.log("unAllocatedBalance %s", ethLPState.unAllocatedBalance);
         if(ethLPState.unAllocatedBalance >= amount){
             ethLPState.unAllocatedBalance -= amount;
             return amount;
@@ -274,7 +270,6 @@ contract RockOnyxEthLiquidityStrategy is
     function _getLiquidAsset() private view returns(uint256){
         int24 tick = ethSwapProxy.getPoolCurrentTickOf(wstEth, weth);
         (uint256 wstethAmount, uint256 wethAmount) = LiquidityAmounts.getAmountsForLiquidityByTick(tick, ethLPState.lowerTick, ethLPState.upperTick, ethLPState.liquidity);
-        console.log("wstethAmount %s wstethAmount %s",wstethAmount, wethAmount);
         return (wstethAmount * _getWstEthPrice() + wethAmount * _getEthPrice()) / 1e18 ;
     }
 

@@ -21,8 +21,8 @@ struct VaultState {
 }
 
 struct OptionsStrategyState {
-    uint256 allocatedBalance;
-    uint256 unAllocatedBalance;
+    uint256 allocatedUsdceBalance;
+    uint256 unAllocatedUsdcBalance;
     uint256 unsettledProfit;
     uint256 unsettledLoss;
 }
@@ -57,5 +57,6 @@ struct UsdLPState {
 struct AllocateRatio{
     uint256 ethLPRatio;
     uint256 usdLPRatio;
+    uint256 optionsRatio;
     uint8 decimals;
 }
