@@ -80,7 +80,9 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         uint256 amountToWithdrawInOptionsAsset = (withdrawUsdOptionsAmount * 1e6) / swapProxy.getPriceOf(vaultAssetAddress, optionsAssetAddress, 6, 6);
-        
+        console.log("amountToWithdrawInOptionsAsset %s", amountToWithdrawInOptionsAsset);
+        console.log("optionsState.unAllocatedBalance  %s", optionsState.unAllocatedBalance);
+
         require(optionsState.unAllocatedBalance >= amountToWithdrawInOptionsAsset, "INSUFFICIENT_UNALLOCATED_BALANCE");
         IERC20(optionsAssetAddress).approve(address(swapProxy), amountToWithdrawInOptionsAsset);
 
@@ -136,6 +138,8 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         optionsState.allocatedBalance = optionsState.allocatedBalance + optionsState.unsettledProfit - optionsState.unsettledLoss;
+        console.log("optionsState.allocatedBalance %s", optionsState.allocatedBalance);
+        console.log("optionsState.unallocatedBalance %s", optionsState.unAllocatedBalance);
     }
 
     function updateProfitFromVender(uint256 balance) external nonReentrant {
