@@ -452,11 +452,11 @@ describe("RockOnyxStableCoinVault", function () {
 
     let usdceBalance = await usdce.balanceOf(await rockOnyxUSDTVaultContract.getAddress());
     console.log("Vault usdce amount after mint %s", ethers.formatUnits(usdceBalance, 6));
-    let withdrawAmount = 100 * 1e6;
+    let withdrawShares = 100 * 1e6;
     console.log('-------------Users initial withdrawals---------------');
     const initiateWithdrawalTx1 = await rockOnyxUSDTVaultContract
       .connect(user2)
-      .initiateWithdrawal(withdrawAmount);
+      .initiateWithdrawal(withdrawShares);
     await initiateWithdrawalTx1.wait();
 
     console.log('-------------update allocated balance from aevo vendor---------------');
@@ -474,18 +474,29 @@ describe("RockOnyxStableCoinVault", function () {
     const getAllocatedRatio = await rockOnyxUSDTVaultContract
       .connect(admin)
       .allocatedRatio();
-
     console.log("getAllocatedRatio = %s", getAllocatedRatio);
-    let optionsWithdrawAmount = BigInt(withdrawAmount) * getAllocatedRatio[2] / BigInt(1e4);
+    
+    const roundWdAmount = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .getRoundWithdrawAmount();
+
+    console.log("roundWdAmount = %s", roundWdAmount);
+    let optionsWithdrawAmount = roundWdAmount * getAllocatedRatio[2] / BigInt(1e4);
     console.log("optionsWithdrawAmount = %s", optionsWithdrawAmount);
+
+    const usdcePrice = await camelotSwapContract.connect(admin).getPriceOf(usdc, usdce, 6, 6);
+    console.log("usdcePrice %s", usdcePrice);
+    
+    const usdceAmount = optionsWithdrawAmount * usdcePrice / BigInt(1e6);
+    console.log("usdceAmount %s", usdceAmount);
 
     await usdce
       .connect(optionsReceiver)
-      .approve(await rockOnyxUSDTVaultContract.getAddress(), optionsWithdrawAmount);
+      .approve(await rockOnyxUSDTVaultContract.getAddress(), usdceAmount);
 
     await rockOnyxUSDTVaultContract
       .connect(optionsReceiver)
-      .handlePostWithdrawalFromVendor(optionsWithdrawAmount);
+      .handlePostWithdrawalFromVendor(usdceAmount);
 
     console.log('-------------accquire withdrawal funds for the round---------------');
     const acquireWithdrawalFundsTx = await rockOnyxUSDTVaultContract
@@ -499,6 +510,11 @@ describe("RockOnyxStableCoinVault", function () {
     const completeWithdrawalTx = await rockOnyxUSDTVaultContract
       .connect(user2)
       .completeWithdrawal(100*1e6);
+    await completeWithdrawalTx.wait();
+
+    const claimTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .claimFee();
     await completeWithdrawalTx.wait();
   });
 });

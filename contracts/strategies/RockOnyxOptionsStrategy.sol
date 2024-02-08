@@ -58,18 +58,7 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     }
 
     function depositToOptionsStrategy(uint256 amountIn) internal {
-        // Ensure the contract has enough allowance to perform the swap
-        IERC20(vaultAssetAddress).approve(address(swapProxy), amountIn);
-
-        // Perform the swap from vaultAsset to optionsAsset
-        uint256 swappedAmount = swapProxy.swapTo(
-            address(this),
-            vaultAssetAddress,
-            amountIn,
-            optionsAssetAddress
-        );
-        
-        optionsState.unAllocatedBalance += swappedAmount;
+        optionsState.unAllocatedUsdcBalance += amountIn;
     }
 
     /**
@@ -79,26 +68,14 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     function acquireWithdrawalFundsUsdOptions(uint256 withdrawUsdOptionsAmount) internal returns (uint256) {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        uint256 amountToWithdrawInOptionsAsset = (withdrawUsdOptionsAmount * 1e6) / swapProxy.getPriceOf(vaultAssetAddress, optionsAssetAddress, 6, 6);
-        console.log("amountToWithdrawInOptionsAsset %s", amountToWithdrawInOptionsAsset);
-        console.log("optionsState.unAllocatedBalance  %s", optionsState.unAllocatedBalance);
+        if(optionsState.unAllocatedUsdcBalance > withdrawUsdOptionsAmount){
+            optionsState.unAllocatedUsdcBalance -= withdrawUsdOptionsAmount;
+            return withdrawUsdOptionsAmount;    
+        }
 
-        require(optionsState.unAllocatedBalance >= amountToWithdrawInOptionsAsset, "INSUFFICIENT_UNALLOCATED_BALANCE");
-        IERC20(optionsAssetAddress).approve(address(swapProxy), amountToWithdrawInOptionsAsset);
-
-        uint256 withdrawalAmountInVaultAsset = swapProxy.swapTo(
-            address(this),
-            optionsAssetAddress,
-            amountToWithdrawInOptionsAsset,
-            vaultAssetAddress
-        );
-        
-        // Verify the swap result
-        require(withdrawalAmountInVaultAsset > 0, "SWAP_FAILED");
-
-        optionsState.unAllocatedBalance -= amountToWithdrawInOptionsAsset;
-        
-        return withdrawalAmountInVaultAsset;
+        uint256 unAllocatedUsdcBalance = optionsState.unAllocatedUsdcBalance;
+        optionsState.unAllocatedUsdcBalance = 0;
+        return unAllocatedUsdcBalance;
     }
 
     /**
@@ -107,17 +84,28 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     function depositToVendor() external payable nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        IERC20(optionsAssetAddress).approve(address(optionsVendor), optionsState.unAllocatedBalance);
+        IERC20(vaultAssetAddress).approve(address(swapProxy), optionsState.unAllocatedUsdcBalance);
+
+        // Perform the swap from vaultAsset to optionsAsset
+        uint256 swappedAmount = swapProxy.swapTo(
+            address(this),
+            vaultAssetAddress,
+            optionsState.unAllocatedUsdcBalance,
+            optionsAssetAddress
+        );
+
+        optionsState.unAllocatedUsdcBalance = 0;
+
+        IERC20(optionsAssetAddress).approve(address(optionsVendor), swappedAmount);
 
         optionsVendor.depositToVendor{value: msg.value}(
             optionsReceiver,
-            optionsState.unAllocatedBalance            
+            swappedAmount            
         );
 
-        emit OptionsVendorDeposited(address(optionsVendor), optionsReceiver, optionsState.unAllocatedBalance);
+        emit OptionsVendorDeposited(address(optionsVendor), optionsReceiver, swappedAmount);
 
-        optionsState.allocatedBalance += optionsState.unAllocatedBalance;
-        optionsState.unAllocatedBalance = 0;
+        optionsState.allocatedUsdceBalance += swappedAmount;
     }
 
     function handlePostWithdrawalFromVendor(
@@ -128,33 +116,47 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
 
         IERC20(optionsAssetAddress).safeTransferFrom(msg.sender, address(this), amount);
 
-        emit OptionsBalanceChanged(optionsState.unAllocatedBalance, optionsState.unAllocatedBalance + amount);
+        emit OptionsBalanceChanged(optionsState.unAllocatedUsdcBalance, optionsState.unAllocatedUsdcBalance + amount);
 
-        optionsState.unAllocatedBalance += amount;
-        optionsState.allocatedBalance -= amount;
+        IERC20(optionsAssetAddress).approve(address(swapProxy), amount);
+
+        // Perform the swap from vaultAsset to optionsAsset
+        uint256 swappedAmount = swapProxy.swapTo(
+            address(this),
+            optionsAssetAddress,
+            amount,
+            vaultAssetAddress
+        );
+
+        optionsState.unAllocatedUsdcBalance += swappedAmount;
+        optionsState.allocatedUsdceBalance -= amount;
+
+        console.log("amount %s", amount);
+        console.log("optionsState.unAllocatedBalance %s", optionsState.unAllocatedUsdcBalance);
+        console.log("optionsState.allocatedBalance %s", optionsState.allocatedUsdceBalance);
     }
 
     function closeOptionsRound() internal {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        optionsState.allocatedBalance = optionsState.allocatedBalance + optionsState.unsettledProfit - optionsState.unsettledLoss;
-        console.log("optionsState.allocatedBalance %s", optionsState.allocatedBalance);
-        console.log("optionsState.unallocatedBalance %s", optionsState.unAllocatedBalance);
+        optionsState.allocatedUsdceBalance += optionsState.unsettledProfit - optionsState.unsettledLoss;
+        console.log("optionsState.allocatedBalance %s", optionsState.allocatedUsdceBalance);
+        console.log("optionsState.unallocatedBalance %s", optionsState.unAllocatedUsdcBalance);
     }
 
     function updateProfitFromVender(uint256 balance) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        optionsState.unsettledProfit = balance > optionsState.allocatedBalance ? balance - optionsState.allocatedBalance : 0;
-        optionsState.unsettledLoss = balance < optionsState.allocatedBalance ? optionsState.allocatedBalance - balance : 0;
+        optionsState.unsettledProfit = balance > optionsState.allocatedUsdceBalance ? balance - optionsState.allocatedUsdceBalance : 0;
+        optionsState.unsettledLoss = balance < optionsState.allocatedUsdceBalance ? optionsState.allocatedUsdceBalance - balance : 0;
     }
 
     function getTotalOptionsAmount() internal view returns (uint256) {
         // console.log('getTotalOptionsAmount ', 
-        //     ((optionsState.allocatedBalance + optionsState.unAllocatedBalance) *
-        //     swapProxy.getPriceOf(optionsAssetAddress, vaultAssetAddress, 6, 6)) / 1e6);
+        //     optionsState.unAllocatedUsdcBalance +
+        //    (optionsState.allocatedUsdceBalance * swapProxy.getPriceOf(optionsAssetAddress, vaultAssetAddress, 6, 6)) / 1e6);
         return 
-            ((optionsState.allocatedBalance + optionsState.unAllocatedBalance) *
-            swapProxy.getPriceOf(optionsAssetAddress, vaultAssetAddress, 6, 6)) / 1e6;
+            optionsState.unAllocatedUsdcBalance +
+            (optionsState.allocatedUsdceBalance * swapProxy.getPriceOf(optionsAssetAddress, vaultAssetAddress, 6, 6)) / 1e6;
     }
 }

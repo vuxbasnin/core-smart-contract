@@ -171,7 +171,6 @@ contract RockOnyxEthLiquidityStrategy is
     }
 
     function acquireWithdrawalFundsEthLP(uint256 amount) internal returns (uint256){
-        console.log("wd amount %s", amount);
         console.log("unAllocatedBalance %s", ethLPState.unAllocatedBalance);
         if(ethLPState.unAllocatedBalance >= amount){
             ethLPState.unAllocatedBalance -= amount;
