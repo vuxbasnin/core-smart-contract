@@ -434,8 +434,8 @@ contract RockOnyxUSDTVault is
             getTotalOptionsAmount();
     }
 
-    function allocatedRatio() external view return (uint256 ethLPRatio, uint256 usdLPRatio, uint256 optionsRatio) {
-        return (allocateRatio.ethLPRatio, allocateRatio.usdLPRatio, 1 - allocateRatio.ethLPRatio - allocateRatio.usdLPRatio);
+    function allocatedRatio() external view returns (uint256 ethLPRatio, uint256 usdLPRatio, uint256 optionsRatio) {
+        return (allocateRatio.ethLPRatio, allocateRatio.usdLPRatio, 10**allocateRatio.decimals - allocateRatio.ethLPRatio - allocateRatio.usdLPRatio);
     }
 
     function emergencyShutdown(
