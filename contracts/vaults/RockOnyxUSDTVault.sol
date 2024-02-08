@@ -72,7 +72,7 @@ contract RockOnyxUSDTVault is
         vaultParams = VaultParams(
             6,
             _usdc,
-            1_000_000,
+            5_000_000,
             1_000_000 * 1e6,
             10,
             1
