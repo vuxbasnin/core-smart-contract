@@ -432,6 +432,16 @@ describe("RockOnyxStableCoinVault", function () {
       .getPnL();
   });
 
+  it("get user allocation ratios, should get successfully", async function () {
+    console.log('-------------deposit to rockOnyxUSDTVault---------------');
+    
+    const getAllocatedRatio = await rockOnyxUSDTVaultContract
+      .connect(user1)
+      .allocatedRatio();
+
+    console.log("getAllocatedRatio = %s", getAllocatedRatio);
+  });
+
   it("handle settle covered calls, should handle successfully", async function () {
     console.log('-------------handle settle covered calls---------------');
     const settleCoveredCallsTx = await rockOnyxUSDTVaultContract
