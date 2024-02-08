@@ -130,17 +130,11 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
 
         optionsState.unAllocatedUsdcBalance += swappedAmount;
         optionsState.allocatedUsdceBalance -= amount;
-
-        console.log("amount %s", amount);
-        console.log("optionsState.unAllocatedBalance %s", optionsState.unAllocatedUsdcBalance);
-        console.log("optionsState.allocatedBalance %s", optionsState.allocatedUsdceBalance);
     }
 
     function closeOptionsRound() internal {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        console.log("optionsState.unsettledProfit %s", optionsState.unsettledProfit);
-        console.log("optionsState.unsettledLoss %s", optionsState.unsettledLoss);
         if (optionsState.unsettledProfit > 0) {
             optionsState.allocatedUsdceBalance += optionsState.unsettledProfit;    
         }
@@ -148,8 +142,6 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         if (optionsState.unsettledLoss > 0) {
             optionsState.allocatedUsdceBalance -= optionsState.unsettledLoss;
         }
-        console.log("optionsState.allocatedBalance %s", optionsState.allocatedUsdceBalance);
-        console.log("optionsState.unallocatedBalance %s", optionsState.unAllocatedUsdcBalance);
     }
 
     function updateProfitFromVender(uint256 balance) external nonReentrant {

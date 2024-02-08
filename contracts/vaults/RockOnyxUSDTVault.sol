@@ -72,7 +72,7 @@ contract RockOnyxUSDTVault is
         vaultParams = VaultParams(
             6,
             _usdc,
-            5_000_000,
+            1_000_000,
             1_000_000 * 1e6,
             10,
             1
@@ -174,13 +174,10 @@ contract RockOnyxUSDTVault is
      */
     function recalculateAllocateRatio() private {
         uint256 totalEthLPAssets = getTotalEthLPAssets();
-        console.log("totalEthLPAssets %s", totalEthLPAssets);
 
         uint256 totalUsdLPAssets = getTotalUsdLPAssets();
-        console.log("totalUsdLPAssets %s", totalUsdLPAssets);
 
         uint256 totalOptionsAmount = getTotalOptionsAmount();
-        console.log("totalOptionsAmount %s", totalOptionsAmount);
         
         uint256 tvl = totalEthLPAssets + totalUsdLPAssets + totalOptionsAmount;
         allocateRatio.ethLPRatio = totalEthLPAssets * 10 ** allocateRatio.decimals / tvl;
@@ -211,10 +208,6 @@ contract RockOnyxUSDTVault is
         uint256 shares = withdrawals[msg.sender].shares + depositReceipt.shares;
         uint256 currentAmount = shares * _getPricePerShare() / 1e6;
 
-        console.log("shares %s", shares);
-        console.log("_getPricePerShare %s", _getPricePerShare());
-        console.log("currentAmount %s", currentAmount);
-        console.log("depositReceipt.depositAmount %s", depositReceipt.depositAmount);
         profit = currentAmount > depositReceipt.depositAmount ? (currentAmount - depositReceipt.depositAmount) * 1e6 / depositReceipt.depositAmount : 0;
         loss = currentAmount < depositReceipt.depositAmount ? (depositReceipt.depositAmount - currentAmount) * 1e6 / depositReceipt.depositAmount : 0;
         return (profit, loss);
@@ -254,8 +247,6 @@ contract RockOnyxUSDTVault is
         );
 
         (uint256 profit, uint256 loss) = getPnL();
-        console.log("profit %s", profit);
-        console.log("loss %s", loss);
 
         uint256 performanceFee = profit > 0 ? 
             (profit * depositReceipt.depositAmount) * (withdrawals[msg.sender].shares / withdrawals[msg.sender].shares + depositReceipt.shares) * vaultParams.performanceFeeRate / 1e8 : 0;
@@ -267,14 +258,8 @@ contract RockOnyxUSDTVault is
         depositReceipt.depositAmount -= shares * depositReceipt.depositAmount / (depositReceipt.shares + withdrawals[msg.sender].shares);
         withdrawals[msg.sender].shares -= shares;
 
-        console.log("withdrawAmount %s", withdrawAmount);
-        console.log("performanceFee %s", performanceFee);
-
-        console.log("user wd amount: %s", withdrawAmount);
-
         IERC20(vaultParams.asset).safeTransfer(msg.sender, withdrawAmount);
         
-        console.log("success %s", performanceFee);
         emit Withdrawn(msg.sender, withdrawAmount, withdrawals[msg.sender].shares);
     }
 
@@ -337,17 +322,10 @@ contract RockOnyxUSDTVault is
 
         uint256 withdrawAmount = roundWithdrawalShares[currentRound - 1] * roundPricePerShares[currentRound - 1] / 1e6;
         uint256 withdrawAmountIncludeFee = withdrawAmount + vaultState.currentRoundFeeAmount;
-        console.log("withdrawAmountIncludeFee %s", withdrawAmountIncludeFee);
-
-        console.log("ethLPRatio %s", allocateRatio.ethLPRatio);
-        console.log("usdLPRatio %s", allocateRatio.usdLPRatio);
-        console.log("optionsRatio %s", allocateRatio.optionsRatio);
         
         uint256 withdrawEthLPAmount = withdrawAmountIncludeFee * allocateRatio.ethLPRatio / 10 ** allocateRatio.decimals;
         uint256 withdrawUsdLPAmount = withdrawAmountIncludeFee * allocateRatio.usdLPRatio / 10 ** allocateRatio.decimals;
         uint256 withdrawOptionsAmount = withdrawAmountIncludeFee * allocateRatio.optionsRatio / 10 ** allocateRatio.decimals;
-        console.log("allocateRatio.optionsRatio", allocateRatio.optionsRatio);
-        console.log("withdrawOptionsAmount", withdrawOptionsAmount);
        
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsEthLP(withdrawEthLPAmount);
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdLP(withdrawUsdLPAmount);
