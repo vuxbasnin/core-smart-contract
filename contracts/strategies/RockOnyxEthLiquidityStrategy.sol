@@ -112,7 +112,7 @@ contract RockOnyxEthLiquidityStrategy is
             _ethLPSwapTo(wstEth, IERC20(wstEth).balanceOf(address(this)), weth);
         }
 
-       ethLPState.unAllocatedBalance += _ethLPSwapTo(weth, IERC20(weth).balanceOf(address(this)), usd);
+        ethLPState.unAllocatedBalance += _ethLPSwapTo(weth, IERC20(weth).balanceOf(address(this)), usd);
     }
     
     function increaseEthLPLiquidity(uint16 ratio, uint8 decimals) external nonReentrant {
@@ -145,7 +145,7 @@ contract RockOnyxEthLiquidityStrategy is
             _ethLPSwapTo(wstEth, IERC20(wstEth).balanceOf(address(this)), weth);
         }
 
-        _ethLPSwapTo(weth, IERC20(weth).balanceOf(address(this)), usd);
+        ethLPState.unAllocatedBalance += _ethLPSwapTo(weth, IERC20(weth).balanceOf(address(this)), usd);
     }
 
     function decreaseEthLPLiquidity(uint128 liquidity) external nonReentrant {
@@ -284,5 +284,11 @@ contract RockOnyxEthLiquidityStrategy is
         _ethLPSwapTo(usd, amountToSwap, weth);
         uint256 ethAmountToSwap = IERC20(weth).balanceOf(address(this)) * ratio / 10 ** decimals;
         _ethLPSwapTo(weth, ethAmountToSwap, wstEth);
+    }
+
+    function getEthLPState() external view returns (EthLPState memory) {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        return ethLPState;
     }
 }
