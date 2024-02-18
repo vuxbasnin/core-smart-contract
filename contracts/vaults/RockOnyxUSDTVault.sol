@@ -174,11 +174,8 @@ contract RockOnyxUSDTVault is
      */
     function recalculateAllocateRatio() private {
         uint256 totalEthLPAssets = getTotalEthLPAssets();
-
         uint256 totalUsdLPAssets = getTotalUsdLPAssets();
-
         uint256 totalOptionsAmount = getTotalOptionsAmount();
-        
         uint256 tvl = totalEthLPAssets + totalUsdLPAssets + totalOptionsAmount;
         allocateRatio.ethLPRatio = totalEthLPAssets * 10 ** allocateRatio.decimals / tvl;
         allocateRatio.usdLPRatio = totalUsdLPAssets * 10 ** allocateRatio.decimals / tvl;

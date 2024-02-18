@@ -12,7 +12,8 @@ import {
   WSTETH_ADDRESS,
   WETH_ADDRESS,
   AEVO_TRADER_ADDRESS,
-  ARB_ADDRESS
+  ARB_ADDRESS,
+  ANGLE_REWARD_ADDRESS
 } from "../constants";
 
 const chainId: CHAINID = network.config.chainId ?? 0;
@@ -24,9 +25,10 @@ const wstethAddress = WSTETH_ADDRESS[chainId] ?? "";
 const wethAddress = WETH_ADDRESS[chainId] ?? "";
 const arbAddress = ARB_ADDRESS[chainId];
 const nonfungiblePositionManager = NonfungiblePositionManager[chainId] ?? "";
+const rewardAddress = ANGLE_REWARD_ADDRESS[chainId];
 let deployer: Signer;
 
-const GAS_LIMIT = 50988531;
+const GAS_LIMIT = 100988531;
 
 async function deployLiquidityContract() {
   const factory = await ethers.getContractFactory("CamelotLiquidity");
@@ -105,6 +107,7 @@ async function main() {
   const rockOnyxUSDTVault = await RockOnyxUSDTVaultFactory.deploy(
     usdcAddress,
     camelotLiquidityAddress,
+    rewardAddress,
     nonfungiblePositionManager,
     camelotSwapAddress,
     aevoProxyAddress,
@@ -112,10 +115,10 @@ async function main() {
     usdceAddress,
     wethAddress,
     wstethAddress,
-    arbAddress,
-    {
-      gasLimit: GAS_LIMIT,
-    }
+    arbAddress
+    // {
+    //   gasLimit: GAS_LIMIT,
+    // }
   );
 
   console.log(

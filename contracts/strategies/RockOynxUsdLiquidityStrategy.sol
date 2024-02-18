@@ -254,4 +254,10 @@ contract RockOynxUsdLiquidityStrategy is
         usdLPState.unAllocatedUsdcBalance -= unAllocatedUsdcToSwap;
         usdLPState.unAllocatedUsdceBalance += _usdLPSwapTo(usdc, unAllocatedUsdcToSwap, usdce);
     }
+
+    function getUsdLPState() external view returns (UsdLPState memory) {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        return usdLPState;
+    }
 }
