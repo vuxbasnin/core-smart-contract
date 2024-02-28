@@ -55,10 +55,21 @@ contract RockOynxUsdLiquidityStrategy is
         usdce = _usdce;
     }
 
+    /**
+     * @dev Deposit an amount into the USD liquidity strategy.
+     * @param _amount The amount to deposit into the liquidity strategy.
+     */
     function depositToUsdLiquidityStrategy(uint256 _amount) internal {
         usdLPState.unAllocatedUsdcBalance += _amount;
     }
 
+    /**
+     * @dev Mint a USD liquidity position within the liquidity provider system.
+     * @param lowerTick The lower tick of the price range for liquidity provision.
+     * @param upperTick The upper tick of the price range for liquidity provision.
+     * @param ratio Ratio used for rebalancing liquidity assets.
+     * @param decimals Decimals used for rebalancing liquidity assets.
+     */
     function mintUsdLPPosition(
         int24 lowerTick,
         int24 upperTick,
@@ -112,6 +123,11 @@ contract RockOynxUsdLiquidityStrategy is
         }
     }
 
+    /**
+     * @dev Increases liquidity in the USD liquidity position within the liquidity provider system.
+     * @param ratio Ratio used for rebalancing liquidity assets.
+     * @param decimals Decimals used for rebalancing liquidity assets.
+     */
     function increaseUsdLPLiquidity(uint16 ratio, uint8 decimals) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
         require(usdLPState.tokenId > 0, "POSITION_HAS_NOT_OPEN");
@@ -147,6 +163,10 @@ contract RockOynxUsdLiquidityStrategy is
         }
     }
 
+    /**
+     * @dev Decreases liquidity in the USD liquidity position within the liquidity provider system.
+     * @param liquidity Amount of liquidity to decrease.
+     */
     function decreaseUsdLPLiquidity(uint128 liquidity) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
@@ -160,6 +180,9 @@ contract RockOynxUsdLiquidityStrategy is
         usdLPState.unAllocatedUsdcBalance += usdcAmount + swapUsdcAmount;
     }
 
+    /**
+     * @dev Closes the current USD liquidity provision round by collecting fees.
+     */
     function closeUsdLPRound() internal  {
         if(usdLPState.tokenId == 0) return;
         
@@ -171,6 +194,11 @@ contract RockOynxUsdLiquidityStrategy is
         usdLPState.unAllocatedUsdceBalance += amount1;
     }
 
+    /**
+     * @dev Acquires withdrawal funds for the USD liquidity position.
+     * @param amount Amount of funds to acquire.
+     * @return The acquired amount of funds.
+     */
     function acquireWithdrawalFundsUsdLP(uint256 amount) internal returns (uint256){
         if(usdLPState.unAllocatedUsdcBalance > amount){
             usdLPState.unAllocatedUsdcBalance -= amount;
@@ -188,6 +216,10 @@ contract RockOynxUsdLiquidityStrategy is
         return unAllocatedBalance + acquireUsdcAmount + usdcAmount;
     }
 
+    /**
+     * @dev Calculates the total assets in the USD liquidity position.
+     * @return The total value of assets in the USD liquidity position.
+     */
     function getTotalUsdLPAssets() internal view returns (uint256) {
         if(usdLPState.liquidity == 0)
             return 
@@ -198,15 +230,18 @@ contract RockOynxUsdLiquidityStrategy is
         (uint256 usdcAmount, uint256 usdceAmount) = 
             LiquidityAmounts.getAmountsForLiquidityByTick(tick, usdLPState.lowerTick, usdLPState.upperTick, usdLPState.liquidity);
         
-        // console.log("getTotalUsdLPAssets %s", 
-        //     usdLPState.unAllocatedUsdcBalance + usdcAmount +
-        //     (usdLPState.unAllocatedUsdceBalance + usdceAmount) * _getUsdcePrice() / 1e6);
-
         return 
             usdLPState.unAllocatedUsdcBalance + usdcAmount +
             (usdLPState.unAllocatedUsdceBalance + usdceAmount) * _getUsdcePrice() / 1e6;
     }
 
+    /**
+     * @dev Swaps an amount of one token for another in the USD liquidity position.
+     * @param tokenIn Address of the input token.
+     * @param amountIn Amount of input token to swap.
+     * @param tokenOut Address of the output token.
+     * @return amountOut of output token received after the swap.
+     */
     function _usdLPSwapTo(
         address tokenIn,
         uint256 amountIn,
@@ -216,11 +251,21 @@ contract RockOynxUsdLiquidityStrategy is
         return usdSwapProxy.swapTo(address(this), tokenIn, amountIn, tokenOut);
     }
 
+    /**
+     * @dev Retrieves the price of USD Coin Equivalent (USDCE) token.
+     * @return The price of USDCE in USD Coin (USDC).
+     */
     function _getUsdcePrice() private view returns (uint256) {
         uint256 usdc2Usdce = usdSwapProxy.getPriceOf(usdc, usdce, 6, 6);
         return 1e12 / usdc2Usdce;
     }
 
+    /**
+     * @dev Decreases liquidity in the USD liquidity position.
+     * @param liquidity Amount of liquidity to decrease.
+     * @return amount0 of tokens received after the decrease in liquidity.
+     * @return amount1 of tokens received after the decrease in liquidity.
+     */
     function _decreaseUsdLPLiquidity(uint128 liquidity) private  returns (uint256 amount0, uint256 amount1){
         usdLPProvider.decreaseLiquidityCurrentRange(
             usdLPState.tokenId,
@@ -236,6 +281,10 @@ contract RockOynxUsdLiquidityStrategy is
         return (amount0, amount1);
     }
 
+    /**
+     * @dev Retrieves the liquid assets in the USD liquidity position.
+     * @return The value of liquid assets in the USD liquidity position.
+     */
     function _getLiquidityUsdPoolAsset() private view returns(uint256){
         int24 tick = usdSwapProxy.getPoolCurrentTickOf(usdc, usdce);
         (uint256 usdcAmount, uint256 usdceAmount) = LiquidityAmounts.getAmountsForLiquidityByTick(tick, usdLPState.lowerTick, usdLPState.upperTick, usdLPState.liquidity);
@@ -245,16 +294,30 @@ contract RockOynxUsdLiquidityStrategy is
         return liquidityAssets;
     }
 
+    /**
+     * @dev Converts an amount of tokens to USD pool liquidity.
+     * @param amount Amount of tokens to convert.
+     * @return The corresponding pool liquidity amount.
+     */
     function _amountToUsdPoolLiquidity(uint256 amount) private view returns (uint128) {
          return uint128(amount * usdLPState.liquidity / _getLiquidityUsdPoolAsset());
     }
 
+    /**
+     * @dev Rebalances assets in the USD liquidity position.
+     * @param ratio Ratio used for rebalancing.
+     * @param decimals Decimals used for ratio.
+     */
     function _rebalanceUsdLPAssets(uint16 ratio, uint8 decimals) private {
         uint256 unAllocatedUsdcToSwap = usdLPState.unAllocatedUsdcBalance * ratio / 10 ** decimals;
         usdLPState.unAllocatedUsdcBalance -= unAllocatedUsdcToSwap;
         usdLPState.unAllocatedUsdceBalance += _usdLPSwapTo(usdc, unAllocatedUsdcToSwap, usdce);
     }
 
+    /**
+     * @dev Retrieves the current state of the USD liquidity position.
+     * @return The current state of the USD liquidity position.
+     */
     function getUsdLPState() external view returns (UsdLPState memory) {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 

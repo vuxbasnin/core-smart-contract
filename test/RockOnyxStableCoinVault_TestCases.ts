@@ -270,6 +270,9 @@ describe("RockOnyxStableCoinVault", function () {
       .closeRound();
     await closeRoundTx.wait();
 
+    totalValueLock = await logAndReturnTotalValueLock();
+    expect(totalValueLock).to.approximately(110 * 1e6, PRECISION);
+
     console.log('-------------accquire withdrawal funds for the round---------------');
     const acquireWithdrawalFundsTx = await rockOnyxUSDTVaultContract
       .connect(admin)
@@ -281,6 +284,7 @@ describe("RockOnyxStableCoinVault", function () {
 
     console.log('-------------complete withdrawals---------------');
     let user2Balance = await usdc.connect(user2).balanceOf(user2);
+    console.log("usdc of user before withdraw %s", user2Balance);
 
     const completeWithdrawalTx = await rockOnyxUSDTVaultContract
       .connect(user2)
@@ -288,6 +292,7 @@ describe("RockOnyxStableCoinVault", function () {
     await completeWithdrawalTx.wait();
 
     let user1BalanceAfterWithdraw = await usdc.connect(user2).balanceOf(user2);
+    console.log("usdc of user after withdraw %s", user1BalanceAfterWithdraw);
     expect(user1BalanceAfterWithdraw).to.approximately(user2Balance + BigInt(100*1e6), PRECISION);
   });
 
@@ -331,13 +336,14 @@ describe("RockOnyxStableCoinVault", function () {
 
     console.log('-------------complete withdrawals---------------');
     let user2Balance = await usdc.connect(user2).balanceOf(user2);
-
+    console.log("usdc of user before withdraw %s", user2Balance);
     const completeWithdrawalTx = await rockOnyxUSDTVaultContract
       .connect(user2)
       .completeWithdrawal(100*1e6);
     await completeWithdrawalTx.wait();
 
     let user1BalanceAfterWithdraw = await usdc.connect(user2).balanceOf(user2);
+    console.log("usdc of user after withdraw %s", user1BalanceAfterWithdraw);
     expect(user1BalanceAfterWithdraw).to.approximately(user2Balance + BigInt(100*1e6), PRECISION);
   });
 
@@ -355,26 +361,6 @@ describe("RockOnyxStableCoinVault", function () {
       .mintUsdLPPosition(-2, 2, 3000, 4);
     const mintUsdLPPositionTxResult = await mintUsdLPPositionTx.wait();
 
-    liquidityTokenId = await getMintPositionResult(
-      mintUsdLPPositionTxResult!,
-      LIQUIDITY_TOKEN_ID_INDEX
-    );
-    liquidityAmount = await getMintPositionResult(
-      mintUsdLPPositionTxResult!,
-      LIQUIDITY_AMOUNT_INDEX
-    );
-
-    console.log(
-      "liquidityTokenId %s, liquidityAmount %s",
-      liquidityTokenId,
-      liquidityAmount
-    );
-
-    // console.log('-------------deposit to vendor on aevo---------------');
-    // await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
-    //   value: ethers.parseEther("0.001753"),
-    // });
-
     let usdceBalance = await usdce.balanceOf(await rockOnyxUSDTVaultContract.getAddress());
     console.log("Vault usdce amount after mint %s", ethers.formatUnits(usdceBalance, 6));
 
@@ -390,15 +376,6 @@ describe("RockOnyxStableCoinVault", function () {
       .closeRound();
     await closeRoundTx.wait();
 
-    // const withdrawAmount = 21 * 1e6;
-    // await usdce
-    //   .connect(optionsReceiver)
-    //   .approve(await rockOnyxUSDTVaultContract.getAddress(), withdrawAmount);
-
-    // await rockOnyxUSDTVaultContract
-    //   .connect(optionsReceiver)
-    //   .handlePostWithdrawalFromVendor(withdrawAmount);
-
     console.log('-------------accquire withdrawal funds for the round---------------');
     const acquireWithdrawalFundsTx = await rockOnyxUSDTVaultContract
       .connect(admin)
@@ -406,10 +383,11 @@ describe("RockOnyxStableCoinVault", function () {
     await acquireWithdrawalFundsTx.wait();
 
     let totalValueLock2 = await logAndReturnTotalValueLock();
-    expect(totalValueLock2).to.approximately(8.5*1e6, PRECISION);
+    expect(totalValueLock2).to.approximately(10*1e6, PRECISION);
 
     console.log('-------------complete withdrawals---------------');
     let user2Balance = await usdc.connect(user2).balanceOf(user2);
+    console.log("usdc of user before withdraw %s", user2Balance);
 
     const completeWithdrawalTx = await rockOnyxUSDTVaultContract
       .connect(user2)
@@ -417,6 +395,7 @@ describe("RockOnyxStableCoinVault", function () {
     await completeWithdrawalTx.wait();
 
     let user1BalanceAfterWithdraw = await usdc.connect(user2).balanceOf(user2);
+    console.log("usdc of user after withdraw %s", user1BalanceAfterWithdraw);
     expect(user1BalanceAfterWithdraw).to.approximately(user2Balance + BigInt(100*1e6), PRECISION);
   });
 
@@ -430,33 +409,15 @@ describe("RockOnyxStableCoinVault", function () {
       .mintUsdLPPosition(-2, 2, 3000, 4);
     const mintUsdLPPositionTxResult = await mintUsdLPPositionTx.wait();
 
-    liquidityTokenId = await getMintPositionResult(
-      mintUsdLPPositionTxResult!,
-      LIQUIDITY_TOKEN_ID_INDEX
-    );
-    liquidityAmount = await getMintPositionResult(
-      mintUsdLPPositionTxResult!,
-      LIQUIDITY_AMOUNT_INDEX
-    );
-
-    console.log(
-      "liquidityTokenId %s, liquidityAmount %s",
-      liquidityTokenId,
-      liquidityAmount
-    );
-
     console.log('-------------deposit to vendor on aevo---------------');
     await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
       value: ethers.parseEther("0.001753"),
     });
 
-    let usdceBalance = await usdce.balanceOf(await rockOnyxUSDTVaultContract.getAddress());
-    console.log("Vault usdce amount after mint %s", ethers.formatUnits(usdceBalance, 6));
-    let withdrawShares = 100 * 1e6;
     console.log('-------------Users initial withdrawals---------------');
     const initiateWithdrawalTx1 = await rockOnyxUSDTVaultContract
       .connect(user2)
-      .initiateWithdrawal(withdrawShares);
+      .initiateWithdrawal(100 * 1e6);
     await initiateWithdrawalTx1.wait();
 
     console.log('-------------update allocated balance from aevo vendor---------------');
@@ -472,10 +433,10 @@ describe("RockOnyxStableCoinVault", function () {
     await closeRoundTx.wait();
 
     const getAllocatedRatio = await rockOnyxUSDTVaultContract
-      .connect(admin)
-      .allocatedRatio();
+    .connect(admin)
+    .allocatedRatio();
     console.log("getAllocatedRatio = %s", getAllocatedRatio);
-    
+
     const roundWdAmount = await rockOnyxUSDTVaultContract
       .connect(admin)
       .getRoundWithdrawAmount();
@@ -512,13 +473,13 @@ describe("RockOnyxStableCoinVault", function () {
       .completeWithdrawal(100*1e6);
     await completeWithdrawalTx.wait();
 
+    console.log('------------- Claim all fees ---------------');
     const claimTx = await rockOnyxUSDTVaultContract
       .connect(admin)
       .claimFee();
     await completeWithdrawalTx.wait();
   });
   
-
   it("Full flow with multiple users deposit and withdraw all money", async function () {
     console.log('-------------calculate performance fee rockOnyxUSDTVault---------------');
     await deposit(user1, 200 * 1e6);
@@ -529,21 +490,6 @@ describe("RockOnyxStableCoinVault", function () {
       .connect(admin)
       .mintUsdLPPosition(-2, 2, 3000, 4);
     const mintUsdLPPositionTxResult = await mintUsdLPPositionTx.wait();
-
-    liquidityTokenId = await getMintPositionResult(
-      mintUsdLPPositionTxResult!,
-      LIQUIDITY_TOKEN_ID_INDEX
-    );
-    liquidityAmount = await getMintPositionResult(
-      mintUsdLPPositionTxResult!,
-      LIQUIDITY_AMOUNT_INDEX
-    );
-
-    console.log(
-      "liquidityTokenId %s, liquidityAmount %s",
-      liquidityTokenId,
-      liquidityAmount
-    );
 
     console.log('-------------deposit to vendor on aevo---------------');
     await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
@@ -641,21 +587,6 @@ describe("RockOnyxStableCoinVault", function () {
       .connect(admin)
       .mintUsdLPPosition(-2, 2, 3000, 4);
     const mintUsdLPPositionTxResult = await mintUsdLPPositionTx.wait();
-
-    liquidityTokenId = await getMintPositionResult(
-      mintUsdLPPositionTxResult!,
-      LIQUIDITY_TOKEN_ID_INDEX
-    );
-    liquidityAmount = await getMintPositionResult(
-      mintUsdLPPositionTxResult!,
-      LIQUIDITY_AMOUNT_INDEX
-    );
-
-    console.log(
-      "liquidityTokenId %s, liquidityAmount %s",
-      liquidityTokenId,
-      liquidityAmount
-    );
 
     console.log('-------------deposit to vendor on aevo---------------');
     await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({

@@ -57,6 +57,10 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         _grantRole(ROCK_ONYX_OPTIONS_TRADER_ROLE, optionsReceiver);
     }
 
+    /**
+     * @dev Deposit an amount into the options strategy.
+     * @param amountIn The amount to deposit into the options strategy.
+     */
     function depositToOptionsStrategy(uint256 amountIn) internal {
         optionsState.unAllocatedUsdcBalance += amountIn;
     }
@@ -108,6 +112,10 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         optionsState.allocatedUsdceBalance += swappedAmount;
     }
 
+    /**
+     * @dev Handles withdrawal from the vendor.
+     * @param amount The amount to be withdrawn.
+     */
     function handlePostWithdrawalFromVendor(
         uint256 amount
     ) external nonReentrant {
@@ -132,6 +140,9 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         optionsState.allocatedUsdceBalance -= amount;
     }
 
+    /**
+     * @dev Closes the current options round, adjusting balances based on settled profits and losses.
+     */
     function closeOptionsRound() internal {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
@@ -144,6 +155,10 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         }
     }
 
+    /**
+     * @dev Updates profit and loss balances from the vendor.
+     * @param balance The updated balance from the vendor.
+     */
     function updateProfitFromVender(uint256 balance) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
@@ -151,10 +166,11 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         optionsState.unsettledLoss = balance < optionsState.allocatedUsdceBalance ? optionsState.allocatedUsdceBalance - balance : 0;
     }
 
+    /**
+     * @dev Calculates the total options amount based on allocated and unallocated balances.
+     * @return The total options amount.
+     */
     function getTotalOptionsAmount() internal view returns (uint256) {
-        // console.log('getTotalOptionsAmount ', 
-        //     optionsState.unAllocatedUsdcBalance +
-        //    (optionsState.allocatedUsdceBalance * swapProxy.getPriceOf(optionsAssetAddress, vaultAssetAddress, 6, 6)) / 1e6);
         return 
             optionsState.unAllocatedUsdcBalance +
             (optionsState.allocatedUsdceBalance * swapProxy.getPriceOf(optionsAssetAddress, vaultAssetAddress, 6, 6)) / 1e6;
