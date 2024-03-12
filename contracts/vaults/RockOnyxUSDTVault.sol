@@ -24,13 +24,13 @@ contract RockOnyxUSDTVault is
 
     uint256 currentRound;
     uint256 currentRoundWithdrawalAmount;
-    mapping(address => DepositReceipt) public depositReceipts;
-    mapping(uint256 => uint256) public roundWithdrawalShares;
-    mapping(uint256 => uint256) public roundPricePerShares;
-    mapping(address => Withdrawal) public withdrawals;
-    VaultParams public vaultParams;
-    VaultState public vaultState;
-    AllocateRatio public allocateRatio;
+    mapping(address => DepositReceipt) private depositReceipts;
+    mapping(uint256 => uint256) private roundWithdrawalShares;
+    mapping(uint256 => uint256) private roundPricePerShares;
+    mapping(address => Withdrawal) private withdrawals;
+    VaultParams private vaultParams;
+    VaultState private vaultState;
+    AllocateRatio private allocateRatio;
 
     /************************************************
      *  EVENTS
@@ -193,6 +193,7 @@ contract RockOnyxUSDTVault is
                     withdrawals[msg.sender].shares == 0, "INVALID_WITHDRAW_STATE");
 
         withdrawals[msg.sender].shares += shares;
+        withdrawals[msg.sender].round = currentRound;
         depositReceipt.shares -= shares;
         roundWithdrawalShares[currentRound] += shares;
     }
@@ -236,20 +237,32 @@ contract RockOnyxUSDTVault is
 
         uint256 withdrawAmount = ShareMath.sharesToAsset(
             shares,
-            roundPricePerShares[currentRound-1],
+            roundPricePerShares[withdrawals[msg.sender].round],
             vaultParams.decimals
         );
         
         (uint256 profit,) = getPnL();
 
         uint256 performanceFee = profit > 0 ? 
-            (profit * depositReceipt.depositAmount) * (withdrawals[msg.sender].shares / withdrawals[msg.sender].shares + depositReceipt.shares) * vaultParams.performanceFeeRate / 1e8 : 0;
+            (profit * depositReceipt.depositAmount) * (1e6 + depositReceipt.shares) * vaultParams.performanceFeeRate / 1e20 : 0;
 
+        console.log('performanceFee %s', performanceFee);
+        
         vaultState.performanceFeeAmount += performanceFee;
+        console.log('performanceFeeAmount %s', vaultState.performanceFeeAmount);
+
         withdrawAmount -= (performanceFee + NETWORK_COST);
+        console.log('withdrawAmount %s', withdrawAmount);
+
+        console.log('vaultState.withdrawPoolAmount %s', vaultState.withdrawPoolAmount);
         vaultState.withdrawPoolAmount -=  withdrawAmount;
+        console.log('vaultState.withdrawPoolAmount %s', vaultState.withdrawPoolAmount);
+
         depositReceipt.depositAmount -= shares * depositReceipt.depositAmount / (depositReceipt.shares + withdrawals[msg.sender].shares);
+        console.log('depositReceipt.depositAmount %s', depositReceipt.depositAmount);
+
         withdrawals[msg.sender].shares -= shares;
+        console.log(' withdrawals[msg.sender].shares %s',  withdrawals[msg.sender].shares);
 
         IERC20(vaultParams.asset).safeTransfer(msg.sender, withdrawAmount);
         
@@ -280,17 +293,24 @@ contract RockOnyxUSDTVault is
      */
     function closeRound() external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        
+        console.log('tvl %s',  _totalValueLocked());
+
         closeEthLPRound();
+        console.log('closeEthLPRound tvl %s',  _totalValueLocked());
         closeUsdLPRound();
+        console.log('closeUsdLPRound tvl %s',  _totalValueLocked());
         closeOptionsRound();
+        console.log('closeOptionsRound tvl %s',  _totalValueLocked());
 
         vaultState.currentRoundFeeAmount = getManagementFee();
-
+        
         roundPricePerShares[currentRound] = _caculateRoundPPS(vaultState.currentRoundFeeAmount);
+        vaultState.totalShares -= roundWithdrawalShares[currentRound];
+
+        console.log("roundPricePerShares[currentRound] %s", roundPricePerShares[currentRound]);
         recalculateAllocateRatio();
         emit RoundClosed(currentRound , _totalValueLocked(), vaultState.currentRoundFeeAmount);
-
+        console.log('tvl %s',  _totalValueLocked());
         currentRound++;
     }
 
@@ -315,16 +335,29 @@ contract RockOnyxUSDTVault is
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         uint256 withdrawAmount = roundWithdrawalShares[currentRound - 1] * roundPricePerShares[currentRound - 1] / 1e6;
+        console.log('roundPricePerShares[currentRound - 1] %s',  roundPricePerShares[currentRound - 1]);
+        console.log('roundWithdrawalShares[currentRound - 1] %s',  roundWithdrawalShares[currentRound - 1]);
+        console.log('withdrawAmount %s',  withdrawAmount);
+
         uint256 withdrawAmountIncludeFee = withdrawAmount + vaultState.currentRoundFeeAmount;
+        console.log('withdrawAmountIncludeFee %s',  withdrawAmountIncludeFee);
+
         uint256 withdrawEthLPAmount = withdrawAmountIncludeFee * allocateRatio.ethLPRatio / 10 ** allocateRatio.decimals;
+        console.log('withdrawEthLPAmount %s',  withdrawAmountIncludeFee);
         uint256 withdrawUsdLPAmount = withdrawAmountIncludeFee * allocateRatio.usdLPRatio / 10 ** allocateRatio.decimals;
+        console.log('withdrawUsdLPAmount %s',  withdrawUsdLPAmount);
         uint256 withdrawOptionsAmount = withdrawAmountIncludeFee * allocateRatio.optionsRatio / 10 ** allocateRatio.decimals;
-       
+        console.log('withdrawOptionsAmount %s',  withdrawOptionsAmount);
 
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsEthLP(withdrawEthLPAmount);
+        console.log('withdrawPoolAmount %s',  vaultState.withdrawPoolAmount);
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdLP(withdrawUsdLPAmount);
+        console.log('withdrawPoolAmount %s',  vaultState.withdrawPoolAmount);
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdOptions(withdrawOptionsAmount);
+        console.log('withdrawPoolAmount %s',  vaultState.withdrawPoolAmount);
         vaultState.managementFeeAmount += vaultState.currentRoundFeeAmount;
+
+        console.log('tvl %s',  _totalValueLocked());
     }
 
     /**
@@ -426,6 +459,9 @@ contract RockOnyxUSDTVault is
      * @param totalFee is total current round vault fee
      */
     function _caculateRoundPPS(uint256 totalFee) private view returns (uint256) {
+        console.log("vaultState.totalShares %s", vaultState.totalShares);
+        console.log("_totalValueLocked %s", _totalValueLocked());
+        console.log("totalFee %s", totalFee);
         return
             ShareMath.pricePerShare(
                 vaultState.totalShares,
