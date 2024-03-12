@@ -253,7 +253,7 @@ contract RockOnyxEthLiquidityStrategy is
             return
                 ethLPState.unAllocatedBalance +
                 (IERC20(arb).balanceOf(address(this)) * _getArbPrice() +
-                IERC20(wstEth).balanceOf(address(this)) * _getWstEthPrice()  +
+                IERC20(wstEth).balanceOf(address(this)) * _getWstEthPrice() +
                 IERC20(weth).balanceOf(address(this)) * _getEthPrice()) / 1e18;
 
         int24 tick = ethSwapProxy.getPoolCurrentTickOf(wstEth, weth);

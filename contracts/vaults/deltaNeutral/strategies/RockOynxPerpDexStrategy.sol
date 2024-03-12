@@ -1,44 +1,42 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-import "../interfaces/IAevo.sol";
+import "../../../interfaces/IAevo.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "hardhat/console.sol";
-import "../extensions/RockOnyxAccessControl.sol";
-import "../interfaces/IOptionsVendorProxy.sol";
-import "../interfaces/ISwapProxy.sol";
+import "../../../extensions/RockOnyxAccessControl.sol";
+import "../../../interfaces/IOptionsVendorProxy.sol";
+import "../../../interfaces/ISwapProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "../structs/RockOnyxStructs.sol";
+import "../structs/DeltaNeutralStruct.sol";
 
-contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
+contract RockOynxPerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     address internal optionsAssetAddress;
     address internal vaultAssetAddress;
     address internal optionsReceiver;
     IOptionsVendorProxy internal optionsVendor;
-    OptionsStrategyState internal optionsState;
+    PerpDexState internal perpDexState;
     ISwapProxy private swapProxy;
 
     /************************************************
      *  EVENTS
      ***********************************************/
-    event OptionsVendorDeposited(
+    event PerpDexVendorDeposited(
         address connector,
         address receiver,
         uint256 depositAmount
     );
 
-    event OptionsVendorWithdrawed(uint256 amount);
-
-    event OptionsBalanceChanged(uint256 oldBalance, uint256 newBlanace);
+    event PerpDexBalanceChanged(uint256 oldBalance, uint256 newBlanace);
 
     constructor() {
-        optionsState = OptionsStrategyState(0, 0, 0, 0);
+        perpDexState = PerpDexState(0, 0, 0);
     }
 
-    function options_Initialize(
+    function perpDex_Initialize(
         address _vendorAddress,
         address _optionsReceiver,
         address _optionsAssetAddress,
@@ -61,24 +59,24 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
      * @dev Deposit an amount into the options strategy.
      * @param amountIn The amount to deposit into the options strategy.
      */
-    function depositToOptionsStrategy(uint256 amountIn) internal {
-        optionsState.unAllocatedUsdcBalance += amountIn;
+    function depositToPerpDexStrategy(uint256 amountIn) internal {
+        perpDexState.unAllocatedBalance += amountIn;
     }
 
     /**
      * @notice Acquires withdrawal funds in USDC options
-     * @param withdrawUsdOptionsAmount The requested withdrawal amount in USDC
+     * @param withdrawUsdPerpDexAmount The requested withdrawal amount in USDC
      */
-    function acquireWithdrawalFundsUsdOptions(uint256 withdrawUsdOptionsAmount) internal returns (uint256) {
+    function acquireWithdrawalFundsUsdPerpDex(uint256 withdrawUsdPerpDexAmount) internal returns (uint256) {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        if(optionsState.unAllocatedUsdcBalance > withdrawUsdOptionsAmount){
-            optionsState.unAllocatedUsdcBalance -= withdrawUsdOptionsAmount;
-            return withdrawUsdOptionsAmount;    
+        if(perpDexState.unAllocatedBalance > withdrawUsdPerpDexAmount){
+            perpDexState.unAllocatedBalance -= withdrawUsdPerpDexAmount;
+            return withdrawUsdPerpDexAmount;    
         }
 
-        uint256 unAllocatedUsdcBalance = optionsState.unAllocatedUsdcBalance;
-        optionsState.unAllocatedUsdcBalance = 0;
+        uint256 unAllocatedUsdcBalance = perpDexState.unAllocatedBalance;
+        perpDexState.unAllocatedBalance = 0;
         return unAllocatedUsdcBalance;
     }
 
@@ -88,17 +86,17 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     function depositToVendor() external payable nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        IERC20(vaultAssetAddress).approve(address(swapProxy), optionsState.unAllocatedUsdcBalance);
+        IERC20(vaultAssetAddress).approve(address(swapProxy), perpDexState.unAllocatedBalance);
 
         // Perform the swap from vaultAsset to optionsAsset
         uint256 swappedAmount = swapProxy.swapTo(
             address(this),
             vaultAssetAddress,
-            optionsState.unAllocatedUsdcBalance,
+            perpDexState.unAllocatedBalance,
             optionsAssetAddress
         );
 
-        optionsState.unAllocatedUsdcBalance = 0;
+        perpDexState.unAllocatedBalance = 0;
 
         IERC20(optionsAssetAddress).approve(address(optionsVendor), swappedAmount);
 
@@ -107,9 +105,9 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
             swappedAmount            
         );
 
-        emit OptionsVendorDeposited(address(optionsVendor), optionsReceiver, swappedAmount);
+        emit PerpDexVendorDeposited(address(optionsVendor), optionsReceiver, swappedAmount);
 
-        optionsState.allocatedUsdceBalance += swappedAmount;
+        perpDexState.unAllocatedBalance += swappedAmount;
     }
 
     /**
@@ -124,7 +122,7 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
 
         IERC20(optionsAssetAddress).safeTransferFrom(msg.sender, address(this), amount);
 
-        emit OptionsBalanceChanged(optionsState.unAllocatedUsdcBalance, optionsState.unAllocatedUsdcBalance + amount);
+        emit PerpDexBalanceChanged(perpDexState.unAllocatedBalance, perpDexState.unAllocatedBalance + amount);
 
         IERC20(optionsAssetAddress).approve(address(swapProxy), amount);
 
@@ -136,24 +134,21 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
             vaultAssetAddress
         );
 
-        optionsState.unAllocatedUsdcBalance += swappedAmount;
-        optionsState.allocatedUsdceBalance -= amount;
+        perpDexState.unAllocatedBalance += swappedAmount;
+        perpDexState.unAllocatedBalance -= amount;
     }
 
     /**
      * @dev Closes the current options round, adjusting balances based on settled profits and losses.
      */
-    function closeOptionsRound() internal {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
-
-        if (optionsState.unsettledProfit > 0) {
-            optionsState.allocatedUsdceBalance += optionsState.unsettledProfit;
-            optionsState.unsettledProfit = 0;    
+    function closePerpDexRound() internal {
+        
+        if (perpDexState.unsettledProfit > 0) {
+            perpDexState.unAllocatedBalance += perpDexState.unsettledProfit;    
         }
         
-        if (optionsState.unsettledLoss > 0) {
-            optionsState.allocatedUsdceBalance -= optionsState.unsettledLoss;
-            optionsState.unsettledLoss = 0;
+        if (perpDexState.unsettledLoss > 0) {
+            perpDexState.unAllocatedBalance -= perpDexState.unsettledLoss;
         }
     }
 
@@ -164,17 +159,16 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     function updateProfitFromVender(uint256 balance) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        optionsState.unsettledProfit = balance > optionsState.allocatedUsdceBalance ? balance - optionsState.allocatedUsdceBalance : 0;
-        optionsState.unsettledLoss = balance < optionsState.allocatedUsdceBalance ? optionsState.allocatedUsdceBalance - balance : 0;
+       
     }
 
     /**
      * @dev Calculates the total options amount based on allocated and unallocated balances.
      * @return The total options amount.
      */
-    function getTotalOptionsAmount() internal view returns (uint256) {
+    function getTotalPerpDexAmount() internal view returns (uint256) {
         return 
-            optionsState.unAllocatedUsdcBalance +
-            (optionsState.allocatedUsdceBalance * swapProxy.getPriceOf(optionsAssetAddress, vaultAssetAddress, 6, 6)) / 1e6;
+            perpDexState.unAllocatedBalance +
+            (perpDexState.unAllocatedBalance * swapProxy.getPriceOf(optionsAssetAddress, vaultAssetAddress, 6, 6)) / 1e6;
     }
 }

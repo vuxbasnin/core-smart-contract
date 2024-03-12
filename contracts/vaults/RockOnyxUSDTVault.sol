@@ -24,13 +24,13 @@ contract RockOnyxUSDTVault is
 
     uint256 currentRound;
     uint256 currentRoundWithdrawalAmount;
-    mapping(address => DepositReceipt) public depositReceipts;
-    mapping(uint256 => uint256) public roundWithdrawalShares;
-    mapping(uint256 => uint256) public roundPricePerShares;
-    mapping(address => Withdrawal) public withdrawals;
-    VaultParams public vaultParams;
-    VaultState public vaultState;
-    AllocateRatio public allocateRatio;
+    mapping(address => DepositReceipt) private depositReceipts;
+    mapping(uint256 => uint256) private roundWithdrawalShares;
+    mapping(uint256 => uint256) private roundPricePerShares;
+    mapping(address => Withdrawal) private withdrawals;
+    VaultParams private vaultParams;
+    VaultState private vaultState;
+    AllocateRatio private allocateRatio;
 
     /************************************************
      *  EVENTS
@@ -193,6 +193,7 @@ contract RockOnyxUSDTVault is
                     withdrawals[msg.sender].shares == 0, "INVALID_WITHDRAW_STATE");
 
         withdrawals[msg.sender].shares += shares;
+        withdrawals[msg.sender].round = currentRound;
         depositReceipt.shares -= shares;
         roundWithdrawalShares[currentRound] += shares;
     }
@@ -236,19 +237,22 @@ contract RockOnyxUSDTVault is
 
         uint256 withdrawAmount = ShareMath.sharesToAsset(
             shares,
-            roundPricePerShares[currentRound-1],
+            roundPricePerShares[withdrawals[msg.sender].round],
             vaultParams.decimals
         );
         
         (uint256 profit,) = getPnL();
 
         uint256 performanceFee = profit > 0 ? 
-            (profit * depositReceipt.depositAmount) * (withdrawals[msg.sender].shares / withdrawals[msg.sender].shares + depositReceipt.shares) * vaultParams.performanceFeeRate / 1e8 : 0;
+            (profit * depositReceipt.depositAmount) * (1e6 + depositReceipt.shares) * vaultParams.performanceFeeRate / 1e20 : 0;
 
         vaultState.performanceFeeAmount += performanceFee;
+
         withdrawAmount -= (performanceFee + NETWORK_COST);
         vaultState.withdrawPoolAmount -=  withdrawAmount;
+
         depositReceipt.depositAmount -= shares * depositReceipt.depositAmount / (depositReceipt.shares + withdrawals[msg.sender].shares);
+
         withdrawals[msg.sender].shares -= shares;
 
         IERC20(vaultParams.asset).safeTransfer(msg.sender, withdrawAmount);
@@ -280,17 +284,18 @@ contract RockOnyxUSDTVault is
      */
     function closeRound() external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        
+
         closeEthLPRound();
         closeUsdLPRound();
         closeOptionsRound();
 
         vaultState.currentRoundFeeAmount = getManagementFee();
-
+        
         roundPricePerShares[currentRound] = _caculateRoundPPS(vaultState.currentRoundFeeAmount);
+        vaultState.totalShares -= roundWithdrawalShares[currentRound];
+
         recalculateAllocateRatio();
         emit RoundClosed(currentRound , _totalValueLocked(), vaultState.currentRoundFeeAmount);
-
         currentRound++;
     }
 
@@ -315,11 +320,12 @@ contract RockOnyxUSDTVault is
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         uint256 withdrawAmount = roundWithdrawalShares[currentRound - 1] * roundPricePerShares[currentRound - 1] / 1e6;
+
         uint256 withdrawAmountIncludeFee = withdrawAmount + vaultState.currentRoundFeeAmount;
+
         uint256 withdrawEthLPAmount = withdrawAmountIncludeFee * allocateRatio.ethLPRatio / 10 ** allocateRatio.decimals;
         uint256 withdrawUsdLPAmount = withdrawAmountIncludeFee * allocateRatio.usdLPRatio / 10 ** allocateRatio.decimals;
         uint256 withdrawOptionsAmount = withdrawAmountIncludeFee * allocateRatio.optionsRatio / 10 ** allocateRatio.decimals;
-       
 
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsEthLP(withdrawEthLPAmount);
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdLP(withdrawUsdLPAmount);
