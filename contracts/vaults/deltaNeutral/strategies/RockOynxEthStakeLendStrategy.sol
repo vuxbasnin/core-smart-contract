@@ -59,20 +59,29 @@ contract RockOynxEthStakeLendStrategy is
         ethStakeLendState.unAllocatedBalance += amount;
     }
 
-    function buyAndStakeEth(uint256 amount) internal {
-        require(amount <= ethStakeLendState.unAllocatedBalance, "INVALID_REACH_UNALLOCATED_BALANCE");
+    function openPosition(uint256 usdAmount) internal returns(uint256 returnAmount, uint256 price){
+        require(usdAmount <= ethStakeLendState.unAllocatedBalance, "INVALID_REACH_UNALLOCATED_BALANCE");
 
-        ethStakeLendState.unAllocatedBalance -= amount;
-        uint256 wethAmount = _ethStakeLendSwapTo(usd, amount, weth);
+        price = _getEthPrice();
+        ethStakeLendState.unAllocatedBalance -= usdAmount;
+        uint256 wethAmount = _ethStakeLendSwapTo(usd, usdAmount, weth);
         _ethStakeLendSwapTo(weth, wethAmount, wstEth);
+
+        return (wethAmount, price);
     }
 
-    function unStakeAndSellEth(uint256 ethAmount) internal {
-        uint256 wstEthAmount = ethAmount * _getWstEthPrice();
+    function closePosition(uint256 ethAmount) internal returns(uint256 returnAmount, uint256 price){
+        uint256 wstEthEthPrice = ethSwapProxy.getPriceOf(wstEth, weth, 18, 18);
+        uint256 wstEthAmount = ethAmount * wstEthEthPrice;
+
         require(wstEthAmount <= IERC20(wstEth).balanceOf(address(this)), "INVALID_REACH_WSTETH_AMOUNT");
 
+        price = _getEthPrice();
         uint256 wethAmount = _ethStakeLendSwapTo(wstEth, wstEthAmount, weth);
-        ethStakeLendState.unAllocatedBalance += _ethStakeLendSwapTo(weth, wethAmount, usd);
+        uint256 usdAmount = _ethStakeLendSwapTo(weth, wethAmount, usd);
+        ethStakeLendState.unAllocatedBalance += usdAmount;
+
+        return (usdAmount, price);
     }
 
     function acquireWithdrawalFundsEthStakeLend(uint256 amount) internal returns (uint256){
