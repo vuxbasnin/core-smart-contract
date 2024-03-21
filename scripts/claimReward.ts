@@ -46,7 +46,6 @@ async function main() {
     const proofs = tokens.map((t) => transactionData[t].proof);  
     const users = tokens.map((t) => "0x01cdc1dc16c677dfd4cfde4478aaa494954657a0");
 
-    console.log(users);
     console.log(tokens);
     console.log(claims);
     console.log(proofs);

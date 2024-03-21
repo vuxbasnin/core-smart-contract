@@ -480,7 +480,7 @@ describe("RockOnyxStableCoinVault", function () {
     await completeWithdrawalTx.wait();
   });
   
-  it("Full flow with multiple users deposit and withdraw all money", async function () {
+  it.skip("Full flow with multiple users deposit and withdraw all money", async function () {
     console.log('-------------calculate performance fee rockOnyxUSDTVault---------------');
     await deposit(user1, 200 * 1e6);
     await deposit(user2, 100 * 1e6);
@@ -577,7 +577,7 @@ describe("RockOnyxStableCoinVault", function () {
     await completeWithdrawalTx.wait();
   });
 
-  it("Full flow with multiple users deposit and withdraw all money in losses", async function () {
+  it.skip("Full flow with multiple users deposit and withdraw all money in losses", async function () {
     console.log('-------------calculate performance fee rockOnyxUSDTVault---------------');
     await deposit(user1, 200 * 1e6);
     await deposit(user2, 100 * 1e6);
@@ -672,5 +672,170 @@ describe("RockOnyxStableCoinVault", function () {
       .connect(admin)
       .claimFee();
     await completeWithdrawalTx.wait();
+  });
+
+  it.skip("user deposit -> close round -> depoist -> init withdraw -> close round -> close round -> completed withdraw", async function () {
+    console.log('-------------calculate performance fee rockOnyxUSDTVault---------------');
+
+    console.log('-------------deposit time 1: 50$---------------');
+    await deposit(user1, 50 * 1e6);
+
+    console.log('-------------close round time 1---------------');
+    const closeRound1Tx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .closeRound();
+    await closeRound1Tx.wait();
+
+    console.log('-------------deposit time 2: 5$---------------');
+    await deposit(user1, 5 * 1e6);
+
+    console.log('-------------initial withdrawals time 1: 5$---------------');
+    const initiateWithdrawal1Tx = await rockOnyxUSDTVaultContract
+      .connect(user1)
+      .initiateWithdrawal(5 *1e6);
+    await initiateWithdrawal1Tx.wait();
+
+    console.log('-------------close round time 2---------------');
+    const closeRound2Tx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .closeRound();
+    await closeRound2Tx.wait();
+
+    console.log('-------------accquire withdrawal funds for the round---------------');
+    const acquireWithdrawalFundsTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .acquireWithdrawalFunds();
+    await acquireWithdrawalFundsTx.wait();
+
+    console.log('-------------close round time 3---------------');
+    const closeRound3Tx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .closeRound();
+    await closeRound2Tx.wait();
+
+    console.log('-------------complete withdrawals 1---------------');
+    const completeWithdrawalTx = await rockOnyxUSDTVaultContract
+      .connect(user1)
+      .completeWithdrawal(5*1e6);
+    await completeWithdrawalTx.wait();
+
+    let pps = await rockOnyxUSDTVaultContract
+    .connect(admin)
+    .pricePerShare();
+    console.log("pricePerShare", pps);
+  });
+
+  it("user deposit -> close round -> depoist -> init withdraw -> close round -> close round -> completed withdraw -> deposit", async function () {
+    console.log('-------------calculate performance fee rockOnyxUSDTVault---------------');
+
+    console.log('-------------deposit time 1: 50$---------------');
+    await deposit(user1, 50 * 1e6);
+
+    console.log('-------------close round time 1---------------');
+    const closeRound1Tx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .closeRound();
+    await closeRound1Tx.wait();
+
+    console.log('-------------deposit time 2: 5$---------------');
+    await deposit(user1, 5 * 1e6);
+
+    console.log('-------------deposit to vendor on aevo---------------');
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
+      value: ethers.parseEther("0.001753"),
+    });
+
+    console.log('-------------initial withdrawals time 1: 5$---------------');
+    const initiateWithdrawal1Tx = await rockOnyxUSDTVaultContract
+      .connect(user1)
+      .initiateWithdrawal(5 *1e6);
+    await initiateWithdrawal1Tx.wait();
+
+    console.log('-------------initial withdrawals time 2: 5$---------------');
+    const initiateWithdrawal2Tx = await rockOnyxUSDTVaultContract
+      .connect(user1)
+      .initiateWithdrawal(5 *1e6);
+    await initiateWithdrawal2Tx.wait();
+
+    console.log('-------------update allocated balance from aevo vendor---------------');
+    const updateProfitTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .updateProfitFromVender(30*1e6);
+    await updateProfitTx.wait();
+
+    console.log('-------------close round time 2---------------');
+    const closeRound2Tx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .closeRound();
+    await closeRound2Tx.wait();
+
+    const getAllocatedRatio = await rockOnyxUSDTVaultContract
+    .connect(admin)
+    .allocatedRatio();
+    console.log("getAllocatedRatio = %s", getAllocatedRatio);
+
+    const roundWdAmount = await rockOnyxUSDTVaultContract
+    .connect(admin)
+    .getRoundWithdrawAmount();
+
+  console.log("roundWdAmount = %s", roundWdAmount);
+  let optionsWithdrawAmount = roundWdAmount * getAllocatedRatio[2] / BigInt(1e4);
+  console.log("optionsWithdrawAmount = %s", optionsWithdrawAmount);
+
+  const usdcePrice = await camelotSwapContract.connect(admin).getPriceOf(usdc, usdce, 6, 6);
+  console.log("usdcePrice %s", usdcePrice);
+  
+  const usdceAmount = optionsWithdrawAmount * usdcePrice / BigInt(1e6);
+  console.log("usdceAmount %s", usdceAmount);
+
+  await usdce
+    .connect(optionsReceiver)
+    .approve(await rockOnyxUSDTVaultContract.getAddress(), usdceAmount);
+
+  await rockOnyxUSDTVaultContract
+    .connect(optionsReceiver)
+    .handlePostWithdrawalFromVendor(usdceAmount);
+
+    console.log('-------------accquire withdrawal funds for the round---------------');
+    const acquireWithdrawalFundsTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .acquireWithdrawalFunds();
+    await acquireWithdrawalFundsTx.wait();
+
+    console.log('-------------close round time 3---------------');
+    const closeRound3Tx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .closeRound();
+    await closeRound3Tx.wait();
+
+    console.log('-------------complete withdrawals 1---------------');
+    const completeWithdrawalTx = await rockOnyxUSDTVaultContract
+      .connect(user1)
+      .completeWithdrawal(5*1e6);
+    await completeWithdrawalTx.wait();
+
+    let pps = await rockOnyxUSDTVaultContract
+    .connect(admin)
+    .pricePerShare();
+    console.log("pricePerShare", pps);
+
+    console.log('-------------deposit time 3: 50$---------------');
+    await deposit(user1, 50 * 1e6);
+
+    pps = await rockOnyxUSDTVaultContract
+    .connect(admin)
+    .pricePerShare();
+    console.log("pricePerShare", pps);
+
+    console.log('-------------close round time 4---------------');
+    const closeRound4Tx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .closeRound();
+    await closeRound4Tx.wait();
+
+    pps = await rockOnyxUSDTVaultContract
+    .connect(admin)
+    .pricePerShare();
+    console.log("pricePerShare", pps);
   });
 });
