@@ -34,6 +34,10 @@ struct DepositReceipt {
 
 struct Withdrawal {
     uint256 shares;
+    uint256 pps;
+    uint256 withdrawAmount;
+    uint256 profit;
+    uint256 performanceFee;
     uint256 round;
 }
 
