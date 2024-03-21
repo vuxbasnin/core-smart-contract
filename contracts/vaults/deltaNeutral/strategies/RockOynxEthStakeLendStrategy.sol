@@ -51,6 +51,41 @@ contract RockOynxEthStakeLendStrategy is
         wstEth = _wstEth;
     }
 
+    function openPosition(uint256 usdAmount) external returns(uint256 wethAmount, uint256 price) {
+        require(usdAmount <= ethStakeLendState.unAllocatedBalance, "INVALID_REACH_UNALLOCATED_BALANCE");
+
+        price = _getEthPrice();
+        ethStakeLendState.unAllocatedBalance -= usdAmount;
+        wethAmount = _ethStakeLendSwapTo(usd, usdAmount, weth);
+        _ethStakeLendSwapTo(weth, wethAmount, wstEth);
+
+        return (wethAmount, price);
+    }
+
+    function closePosition(uint256 ethAmount) external returns(uint256 usdAmount, uint256 price) {
+        uint256 wstEthEthPrice = ethSwapProxy.getPriceOf(wstEth, weth, 18, 18);
+        uint256 wstEthAmount = ethAmount * wstEthEthPrice;
+
+        require(wstEthAmount <= IERC20(wstEth).balanceOf(address(this)), "INVALID_REACH_WSTETH_AMOUNT");
+
+        price = _getEthPrice();
+        uint256 wethAmount = _ethStakeLendSwapTo(wstEth, wstEthAmount, weth);
+        usdAmount = _ethStakeLendSwapTo(weth, wethAmount, usd);
+        ethStakeLendState.unAllocatedBalance += usdAmount;
+
+        return (usdAmount, price);
+    }
+
+    /**
+     * @dev Retrieves the current state of the Ethereum liquidity position.
+     * @return The current state of the Ethereum liquidity position.
+     */
+    function getEthStakeLendState() external view returns (EthStakeLendState memory) {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        return ethStakeLendState;
+    }
+
     /**
      * @dev Deposit an amount into the Ethereum Stake & Lend strategy.
      * @param amount The amount to deposit into the Ethereum Stake & Lend strategy.
@@ -59,23 +94,7 @@ contract RockOynxEthStakeLendStrategy is
         ethStakeLendState.unAllocatedBalance += amount;
     }
 
-    function buyAndStakeEth(uint256 amount) internal {
-        require(amount <= ethStakeLendState.unAllocatedBalance, "INVALID_REACH_UNALLOCATED_BALANCE");
-
-        ethStakeLendState.unAllocatedBalance -= amount;
-        uint256 wethAmount = _ethStakeLendSwapTo(usd, amount, weth);
-        _ethStakeLendSwapTo(weth, wethAmount, wstEth);
-    }
-
-    function unStakeAndSellEth(uint256 ethAmount) internal {
-        uint256 wstEthAmount = ethAmount * _getWstEthPrice();
-        require(wstEthAmount <= IERC20(wstEth).balanceOf(address(this)), "INVALID_REACH_WSTETH_AMOUNT");
-
-        uint256 wethAmount = _ethStakeLendSwapTo(wstEth, wstEthAmount, weth);
-        ethStakeLendState.unAllocatedBalance += _ethStakeLendSwapTo(weth, wethAmount, usd);
-    }
-
-    function acquireWithdrawalFundsEthStakeLend(uint256 amount) internal returns (uint256){
+    function handleFundsFromEthStakeLend(uint256 amount) internal returns (uint256) {
         uint256 unAllocatedBalance = ethStakeLendState.unAllocatedBalance;
         if(ethStakeLendState.unAllocatedBalance >= amount){
             ethStakeLendState.unAllocatedBalance -= amount;
@@ -84,7 +103,7 @@ contract RockOynxEthStakeLendStrategy is
 
         ethStakeLendState.unAllocatedBalance = 0;
         uint256 amountToAcquire = amount - unAllocatedBalance;
-        uint256 wstEthAmount = amountToAcquire / _getWstEthPrice();
+        uint256 wstEthAmount = amountToAcquire * 1e18 / _getWstEthPrice();
         uint256 wethAmount = _ethStakeLendSwapTo(wstEth, wstEthAmount, weth);
         return unAllocatedBalance + _ethStakeLendSwapTo(weth, wethAmount, usd);
     }
@@ -94,7 +113,7 @@ contract RockOynxEthStakeLendStrategy is
      * @return The total value of assets in the Ethereum liquidity position.
      */
     function getTotalEthStakeLendAssets() internal view returns (uint256) { 
-        return 
+        return
             ethStakeLendState.unAllocatedBalance +
             IERC20(wstEth).balanceOf(address(this)) * _getWstEthPrice() / 1e18;
     }
@@ -114,16 +133,6 @@ contract RockOynxEthStakeLendStrategy is
     function _getWstEthPrice() private view returns (uint256) {
         uint256 wstEthEthPrice = ethSwapProxy.getPriceOf(wstEth, weth, 18, 18);
         return wstEthEthPrice * _getEthPrice() / 1e18;
-    }
-
-    /**
-     * @dev Retrieves the current state of the Ethereum liquidity position.
-     * @return The current state of the Ethereum liquidity position.
-     */
-    function getEthStakeLendState() external view returns (EthStakeLendState memory) {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
-
-        return ethStakeLendState;
     }
 
     /**

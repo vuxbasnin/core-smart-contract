@@ -5,37 +5,38 @@ import "../../interfaces/IAevo.sol";
 import "../../interfaces/IOptionsVendorProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "../RockOnyxAccessControl.sol";
-import "../../lib/BaseProxy.sol";
+import "hardhat/console.sol";
 
-contract AevoOptions is IOptionsVendorProxy, BaseProxy {
-    IAevo internal AEVO;
-    uint256 internal gasLimit;
-    address public immutable asset;
-    address internal connector;
+contract Aevo is IOptionsVendorProxy, ReentrancyGuard {
+    IAevo private AEVO;
+    uint256 private gasLimit;
+    address private immutable asset;
+    address private connector;
 
     constructor(address _asset, address aevoAddress, address _connector) {
         AEVO = IAevo(aevoAddress);
         connector = _connector;
-        gasLimit = 1000000;
+        gasLimit = 650000;
         asset = _asset;
     }
 
     function depositToVendor(
         address receiver,
         uint256 amount
-    ) external payable nonReentrant {
+    ) external payable {
         require(amount > 0, "INVALID_DEPOSIT_AMOUNT");
-
         IERC20(asset).transferFrom(msg.sender, address(this), amount);
-
         IERC20(asset).approve(address(AEVO), amount);
+
+        bytes memory data = "";
 
         AEVO.depositToAppChain{value: msg.value}(
             receiver,
+            asset,
             amount,
             gasLimit,
-            connector
+            connector,
+            data
         );
     }
 }

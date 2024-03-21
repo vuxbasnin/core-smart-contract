@@ -10,4 +10,13 @@ interface IAevo {
         uint256 msgGasLimit,
         address connector
     ) external payable;
+
+    function depositToAppChain(
+        address receiver,
+        address asset,
+        uint256 amount,
+        uint256 msgGasLimit,
+        address connector,
+        bytes memory data
+    ) external payable;
 }
