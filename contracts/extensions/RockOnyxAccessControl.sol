@@ -13,13 +13,22 @@ contract RockOnyxAccessControl is AccessControl{
 
     mapping(bytes32 => string) private errors;
 
+    bool internal paused;
+
     constructor() {
         errors[LIDO_STAKE_ROLE] = "LIDO_STAKE_ROLE_ERROR";
         errors[ROCK_ONYX_ADMIN_ROLE] = "ROCK_ONYX_ADMIN_ROLE_ERROR";
         errors[ROCK_ONYX_OPTIONS_TRADER_ROLE] = "ROCK_ONYX_OPTIONS_TRADER_ROLE_ERROR";
+        paused = false;
     }
 
-     function _auth(bytes32 _role) internal view {
+    function _auth(bytes32 _role) internal view {
         require(hasRole(_role, msg.sender), errors[_role]);
+    }
+
+    function setPaused(bool _paused) external {
+        require(hasRole(ROCK_ONYX_ADMIN_ROLE, msg.sender), errors[ROCK_ONYX_ADMIN_ROLE]);
+
+        paused = _paused;
     }
 }

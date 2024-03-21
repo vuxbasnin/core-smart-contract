@@ -134,6 +134,7 @@ contract RockOnyxUSDTVault is
      * @param amount is the amount of `asset` deposited
      */
     function deposit(uint256 amount) external nonReentrant {
+        require(paused == false, "VAULT_HAS_BEEN_PAUSED");
         require(amount >= vaultParams.minimumSupply, "INVALID_DEPOSIT_AMOUNT");
         require( _totalValueLocked() + amount <= vaultParams.cap, "EXCEED_CAP");
 

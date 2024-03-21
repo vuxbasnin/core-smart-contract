@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "../structs/RockOnyxStructs.sol";
-
 library ShareMath {
 
     uint256 internal constant PLACEHOLDER_UINT = 1;
