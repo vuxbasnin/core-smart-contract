@@ -2,7 +2,7 @@ const { ethers, network } = require("hardhat");
 import { expect } from "chai";
 import axios from "axios";
 
-import * as Contracts from "../typechain-types";
+import * as Contracts from "../../typechain-types";
 import {
   CHAINID,
   WETH_ADDRESS,
@@ -18,7 +18,7 @@ import {
   USDCE_IMPERSONATED_SIGNER_ADDRESS,
   NFT_POSITION_ADDRESS,
   ANGLE_REWARD_ADDRESS
-} from "../constants";
+} from "../../constants";
 import {
   Signer,
   BigNumberish,
@@ -59,7 +59,7 @@ describe("RockOnyxStableCoinVault", function () {
   const LIQUIDITY_AMOUNT_INDEX = 1;
   const PRECISION = 2*1e6;
 
-  let aevoOptionsContract: Contracts.AevoOptions;
+  let aevoContract: Contracts.Aevo;
 
   const rewardAddress = ANGLE_REWARD_ADDRESS[chainId];
   const nftPositionAddress = NFT_POSITION_ADDRESS[chainId];
@@ -102,17 +102,17 @@ describe("RockOnyxStableCoinVault", function () {
   }
 
   async function deployAevoContract() {
-    const factory = await ethers.getContractFactory("AevoOptions");
-    aevoOptionsContract = await factory.deploy(
-      usdceAddress,
+    const factory = await ethers.getContractFactory("Aevo");
+    aevoContract = await factory.deploy(
+      usdcAddress,
       aevoAddress,
       aevoConnectorAddress
     );
-    await aevoOptionsContract.waitForDeployment();
+    await aevoContract.waitForDeployment();
 
     console.log(
       "Deployed AEVO contract at address %s",
-      await aevoOptionsContract.getAddress()
+      await aevoContract.getAddress()
     );
   }
 
@@ -127,7 +127,7 @@ describe("RockOnyxStableCoinVault", function () {
       rewardAddress,
       nftPositionAddress,
       await camelotSwapContract.getAddress(),
-      await aevoOptionsContract.getAddress(),
+      await aevoContract.getAddress(),
       await optionsReceiver.getAddress(),
       usdceAddress,
       wethAddress,
@@ -208,17 +208,6 @@ describe("RockOnyxStableCoinVault", function () {
     await transferTx.wait();
   }
 
-  async function transferUsdceForUser(
-    from: Signer,
-    to: Signer,
-    amount: number
-  ) {
-    const transferTx = await usdce
-      .connect(from)
-      .transfer(to, amount);
-    await transferTx.wait();
-  }
-
   async function logAndReturnTotalValueLock() {
     const totalValueLocked = await rockOnyxUSDTVaultContract
       .connect(admin)
@@ -238,7 +227,7 @@ describe("RockOnyxStableCoinVault", function () {
     await transferUsdcForUser(usdcSigner, user3, 1000*1e6);
     await transferUsdcForUser(usdcSigner, user4, 1000*1e6);
 
-    await transferUsdceForUser(usdceSigner, optionsReceiver, 1000*1e6);
+    await transferUsdcForUser(usdceSigner, optionsReceiver, 1000*1e6);
   });
 
   it("deposit to rockOnyxUSDTVault, should deposit successfully", async function () {
@@ -373,7 +362,7 @@ describe("RockOnyxStableCoinVault", function () {
     console.log('-------------handle withdrawal from aevo vendor---------------');
     
     const withdrawAmount = 50 * 1e6;
-    await usdce
+    await usdc
       .connect(optionsReceiver)
       .approve(await rockOnyxUSDTVaultContract.getAddress(), withdrawAmount);
 
@@ -453,7 +442,7 @@ describe("RockOnyxStableCoinVault", function () {
     expect(totalValueLock).to.approximately(498*1e6, PRECISION);
   });
 
-  it.skip("handle settle covered puts, should handle successfully", async function () {
+  it("handle settle covered puts, should handle successfully", async function () {
     console.log('-------------handle settle covered puts---------------');
     const settleCoveredPutsTx = await rockOnyxUSDTVaultContract
       .connect(admin)
@@ -464,7 +453,7 @@ describe("RockOnyxStableCoinVault", function () {
     expect(totalValueLock).to.approximately(498*1e6, PRECISION);
   });
 
-  it.skip("convert reward to usdc, should convert successfully", async function () {
+  it("convert reward to usdc, should convert successfully", async function () {
     console.log('-------------convert reward to usdc---------------');
 
     const arbSigner = await ethers.getImpersonatedSigner("0x2e383d51d72507e8c8e803f1a7d6651cbe65b151");
@@ -487,7 +476,7 @@ describe("RockOnyxStableCoinVault", function () {
   });
 
   // Tx https://arbiscan.io/tx/0xc30f0c7ec499b362c9a9562826b6dfbb79fb02333a97668364fbb9b09aa55317
-  it.skip("claim reward on Camelot - 164508868, should claim successfully", async function () {
+  it("claim reward on Camelot - 164508868, should claim successfully", async function () {
     console.log('-------------claim reward on Camelot---------------');
     // const contractAdmin = await ethers.getImpersonatedSigner("0x20f89bA1B0Fc1e83f9aEf0a134095Cd63F7e8CC7");
     // rockOnyxUSDTVaultContract = await ethers.getContractAt("RockOnyxUSDTVault", "0xb4415d533ba381d8057ae23c281ab329ab7a6778");
@@ -536,7 +525,7 @@ describe("RockOnyxStableCoinVault", function () {
   });
 
   // Tx https://arbiscan.io/tx/0xc30f0c7ec499b362c9a9562826b6dfbb79fb02333a97668364fbb9b09aa55317
-  it.skip("test user claim reward on Camelot - 164508868, should claim successfully", async function () {
+  it("test user claim reward on Camelot - 164508868, should claim successfully", async function () {
     console.log('-------------user claim reward on Camelot---------------');
 
     const user1aa = await ethers.getImpersonatedSigner("0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa");
@@ -588,7 +577,7 @@ describe("RockOnyxStableCoinVault", function () {
   });
 
   // Tx https://arbiscan.io/tx/0xc30f0c7ec499b362c9a9562826b6dfbb79fb02333a97668364fbb9b09aa55317
-  it.skip("mintEthLP position on Camelot - 182290590, should mint successfully", async function () {
+  it("mintEthLP position on Camelot - 182290590, should mint successfully", async function () {
     console.log('-------------user claim reward on Camelot---------------');
     const contractAdmin = await ethers.getImpersonatedSigner("0x20f89bA1B0Fc1e83f9aEf0a134095Cd63F7e8CC7");
     rockOnyxUSDTVaultContract = await ethers.getContractAt("RockOnyxUSDTVault", "0x01cdc1dc16c677dfd4cfde4478aaa494954657a0");

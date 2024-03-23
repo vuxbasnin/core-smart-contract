@@ -1,5 +1,5 @@
 import { ethers } from "hardhat";
-import * as Contracts from "../typechain-types";
+import * as Contracts from "../../typechain-types";
 import { Signer } from "ethers";
 
 export async function transferIERC20FundForUser(

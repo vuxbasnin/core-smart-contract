@@ -3,11 +3,11 @@ pragma solidity ^0.8.19;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "../extensions/RockOnyxAccessControl.sol";
-import "../lib/ShareMath.sol";
-import "../strategies/RockOnyxEthLiquidityStrategy.sol";
-import "../strategies/RockOnyxOptionsStrategy.sol";
-import "../strategies/RockOynxUsdLiquidityStrategy.sol";
+import "../../extensions/RockOnyxAccessControl.sol";
+import "../../lib/ShareMath.sol";
+import "./strategies/RockOnyxEthLiquidityStrategy.sol";
+import "./strategies/RockOnyxOptionsStrategy.sol";
+import "./strategies/RockOynxUsdLiquidityStrategy.sol";
 import "hardhat/console.sol";
 
 contract RockOnyxUSDTVault is
@@ -83,9 +83,7 @@ contract RockOnyxUSDTVault is
         options_Initialize(
             _optionsVendorProxy,
             _optionsReceiver,
-            _usdce,
-            _usdc,
-            _swapProxy
+            _usdc
         );
         ethLP_Initialize(
             _vendorLiquidityProxy,

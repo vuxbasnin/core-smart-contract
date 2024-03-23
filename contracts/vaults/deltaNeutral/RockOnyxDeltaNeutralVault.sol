@@ -16,26 +16,21 @@ contract RockOnyxDeltaNeutralVault is
     RockOynxPerpDexStrategy
 {
     uint256 private constant NETWORK_COST = 1e6;
-    using SafeERC20 for IERC20;
     using ShareMath for uint256;
-    using LiquidityAmounts for uint256;
+    using SafeERC20 for IERC20;
 
-    mapping(address => DepositReceipt) public depositReceipts;
-    uint256 public withdrawalAmount;
-    mapping(address => Withdrawal) public withdrawals;
-    VaultParams public vaultParams;
-    VaultState public vaultState;
-    DeltaNeutralAllocateRatio public allocateRatio;
+    mapping(address => DepositReceipt) private depositReceipts;
+    uint256 private withdrawalAmount;
+    mapping(address => Withdrawal) private withdrawals;
+    VaultParams private vaultParams;
+    VaultState private vaultState;
+    DeltaNeutralAllocateRatio private allocateRatio;
 
     /************************************************
      *  EVENTS
      ***********************************************/
     event Deposited(address indexed account, uint256 amount, uint256 shares);
-    event InitiateWithdrawal(
-        address indexed account,
-        uint256 amount,
-        uint256 shares
-    );
+    event InitiateWithdrawal(address indexed account, uint256 amount, uint256 shares);
     event Withdrawn(address indexed account, uint256 amount, uint256 shares);
     event FeeRatesUpdated(uint256 performanceFee, uint256 managementFee);
     event RequestFunds(uint256 ethStakeLendAmount, uint256 perpDexAmount);
@@ -165,7 +160,7 @@ contract RockOnyxDeltaNeutralVault is
         uint256 perpDexFeeAmount = performanceFeeAmount * allocateRatio.perpDexRatio;
 
         ethStakeLendPerformanceFeeAmount = handleFundsFromEthStakeLend(ethStakeLendPerformanceFeeAmount);
-        // perpDexFeeAmount = handleFundsFromEthStakeLend(perpDexFeeAmount);
+        perpDexFeeAmount = handleFundsFromPerpDex(perpDexFeeAmount);
 
         performanceFeeAmount = ethStakeLendPerformanceFeeAmount + perpDexFeeAmount;
         vaultState.performanceFeeAmount += performanceFeeAmount;
@@ -186,9 +181,9 @@ contract RockOnyxDeltaNeutralVault is
     }
 
     /**
-     * @notice get available withdrawl amount of user
+     * @notice get withdrawl shares of user
      */
-    function getAvailableWithdrawlShares() external view returns(uint256) {
+    function getUserWithdrawlShares() external view returns(uint256) {
         return withdrawals[msg.sender].shares;
     }
 
@@ -316,32 +311,37 @@ contract RockOnyxDeltaNeutralVault is
         depositToPerpDexStrategy(depositToPerpDexAmount);
     }
 
-    /** 
-     * @notice recalculate allocate ratio vault
-     */
-    function recalculateAllocateRatio() private {
+    function rebalanceAsset(uint256 amount) external nonReentrant {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        if(getTotalEthStakeLendAssets() > getTotalPerpDexAssets()){
+            rebalanceAssetToPerpDex(amount);
+            return;
+        }
+
+        rebalanceAssetToEthStakeLend(amount);
     }
 
     /**
      * @notice Allow admin to settle the covered calls mechanism
      * @param amount the amount in ETH we should sell 
      */
-    function settleCoveredCalls(uint256 amount) external nonReentrant {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
+    function rebalanceAssetToPerpDex(uint256 amount) private {
         require(amount <= getTotalEthStakeLendAssets(), "INVALID_ETHSTAKELEND_POSITION_SIZE");
 
-        
+        uint256 depositToPerpDexAmount = handleFundsFromEthStakeLend(amount);
+        depositToPerpDexStrategy(depositToPerpDexAmount);
     }
 
     /**
      * @notice Allow admin to settle the covered puts mechanism
      * @param amount the amount in usd we should buy eth 
      */
-    function settleCoveredPuts(uint256 amount) external nonReentrant{
-        _auth(ROCK_ONYX_ADMIN_ROLE);
+    function rebalanceAssetToEthStakeLend(uint256 amount) private {
         require(amount <= getTotalPerpDexAssets(), "INVALID_PERPDEX_POSITION_SIZE");
 
-
+        uint256 depositToEthStakeLendAmount = handleFundsFromPerpDex(amount);
+        depositToPerpDexStrategy(depositToEthStakeLendAmount);
     }
 
     /**
