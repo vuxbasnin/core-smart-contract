@@ -59,17 +59,19 @@ contract RockOynxPerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
      * @notice submit amount to deposit to Vendor
      */
     function depositToVendor() external payable nonReentrant {
-        IERC20(perpDexStrategyUsdc).approve(address(perpDexVendor), perpDexState.unAllocatedBalance);
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        uint256 amount = perpDexState.unAllocatedBalance;
+        perpDexState.unAllocatedBalance -= amount;
+        IERC20(perpDexStrategyUsdc).approve(address(perpDexVendor), amount);
 
         perpDexVendor.depositToVendor{value: msg.value}(
             optionsReceiver,
             perpDexState.unAllocatedBalance
         );
 
-        emit PerpDexVendorDeposited(address(perpDexVendor), optionsReceiver, perpDexState.unAllocatedBalance);
-
         perpDexState.perpDexBalance += perpDexState.unAllocatedBalance;
-        perpDexState.unAllocatedBalance = 0;
+        emit PerpDexVendorDeposited(address(perpDexVendor), optionsReceiver, amount);
     }
 
     function syncDerpDexBalanceFromVender(uint256 balance) external nonReentrant {

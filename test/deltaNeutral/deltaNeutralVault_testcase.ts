@@ -138,15 +138,6 @@ describe("RockOnyxDeltaNeutralVault", function () {
     await transferTx.wait();
   }
 
-  async function transferUsdceForUser(
-    from: Signer,
-    to: Signer,
-    amount: number
-  ) {
-    const transferTx = await usdce.connect(from).transfer(to, amount);
-    await transferTx.wait();
-  }
-
   async function logAndReturnTotalValueLock() {
     const totalValueLocked = await rockOnyxDeltaNeutralVaultContract
       .connect(admin)
