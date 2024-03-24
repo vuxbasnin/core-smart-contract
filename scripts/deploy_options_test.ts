@@ -1,8 +1,22 @@
-import { ethers } from "hardhat";
-const aevoAddress = "0x80d40e32FAD8bE8da5C6A42B8aF1E181984D137c";
-const usdceAddress = "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8";
-const aevoReceiver = "0x1A8dC40895883B270564939bD9922EBfeE8857e4";
-const aevoConnectorAddress = "0x69Adf49285c25d9f840c577A0e3cb134caF944D3";
+import { ethers, network } from "hardhat";
+
+import {
+  CHAINID,
+  USDC_ADDRESS,
+  AEVO_ADDRESS,
+  AEVO_CONNECTOR_ADDRESS,
+  USDCE_ADDRESS,
+  AEVO_TRADER_ADDRESS,
+} from "../constants";
+
+const chainId: CHAINID = network.config.chainId ?? 0;
+
+const aevoAddress = AEVO_ADDRESS[chainId] ?? "";
+const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId] ?? "";
+const aevoReceiver = AEVO_TRADER_ADDRESS[chainId] ?? "";
+const usdcAddress = USDC_ADDRESS[chainId] ?? "";
+const usdceAddress = USDCE_ADDRESS[chainId] ?? "";
+
 const cap = ethers.parseUnits("1000000", 18); // Cap is 1,000,000 with 18 decimals
 
 async function deployAevoOptions(): Promise<string> {

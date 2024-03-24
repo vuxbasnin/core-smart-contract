@@ -23,9 +23,9 @@ const usdcAddress = USDC_ADDRESS[chainId] ?? "";
 const usdceAddress = USDCE_ADDRESS[chainId] ?? "";
 const wstethAddress = WSTETH_ADDRESS[chainId] ?? "";
 const wethAddress = WETH_ADDRESS[chainId] ?? "";
-const arbAddress = ARB_ADDRESS[chainId];
+const arbAddress = ARB_ADDRESS[chainId] ?? "";
 const nonfungiblePositionManager = NonfungiblePositionManager[chainId] ?? "";
-const rewardAddress = ANGLE_REWARD_ADDRESS[chainId];
+const rewardAddress = ANGLE_REWARD_ADDRESS[chainId] ?? "";
 let deployer: Signer;
 
 const GAS_LIMIT = 100988531;
@@ -116,9 +116,6 @@ async function main() {
     wethAddress,
     wstethAddress,
     arbAddress
-    // {
-    //   gasLimit: GAS_LIMIT,
-    // }
   );
 
   console.log(

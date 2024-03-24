@@ -29,7 +29,7 @@ async function main() {
     let transactionData : TransactionData;
     try {
       const { data } = await axios.get(
-        `https://api.angle.money/v1/merkl?chainId=42161&user=0x01cdc1dc16c677dfd4cfde4478aaa494954657a0`,
+        `https://api.angle.money/v2/merkl?chainIds[]=42161&user=0x01cdc1dc16c677dfd4cfde4478aaa494954657a0`,
         {
           timeout: 5000,
         }
