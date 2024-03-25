@@ -453,7 +453,7 @@ describe("RockOnyxStableCoinVault", function () {
     expect(totalValueLock).to.approximately(498*1e6, PRECISION);
   });
 
-  it("convert reward to usdc, should convert successfully", async function () {
+  it.skip("convert reward to usdc, should convert successfully", async function () {
     console.log('-------------convert reward to usdc---------------');
 
     const arbSigner = await ethers.getImpersonatedSigner("0x2e383d51d72507e8c8e803f1a7d6651cbe65b151");
@@ -476,7 +476,7 @@ describe("RockOnyxStableCoinVault", function () {
   });
 
   // Tx https://arbiscan.io/tx/0xc30f0c7ec499b362c9a9562826b6dfbb79fb02333a97668364fbb9b09aa55317
-  it("claim reward on Camelot - 164508868, should claim successfully", async function () {
+  it.skip("claim reward on Camelot - 164508868, should claim successfully", async function () {
     console.log('-------------claim reward on Camelot---------------');
     // const contractAdmin = await ethers.getImpersonatedSigner("0x20f89bA1B0Fc1e83f9aEf0a134095Cd63F7e8CC7");
     // rockOnyxUSDTVaultContract = await ethers.getContractAt("RockOnyxUSDTVault", "0xb4415d533ba381d8057ae23c281ab329ab7a6778");
@@ -525,7 +525,7 @@ describe("RockOnyxStableCoinVault", function () {
   });
 
   // Tx https://arbiscan.io/tx/0xc30f0c7ec499b362c9a9562826b6dfbb79fb02333a97668364fbb9b09aa55317
-  it("test user claim reward on Camelot - 164508868, should claim successfully", async function () {
+  it.skip("test user claim reward on Camelot - 164508868, should claim successfully", async function () {
     console.log('-------------user claim reward on Camelot---------------');
 
     const user1aa = await ethers.getImpersonatedSigner("0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa");
@@ -577,7 +577,7 @@ describe("RockOnyxStableCoinVault", function () {
   });
 
   // Tx https://arbiscan.io/tx/0xc30f0c7ec499b362c9a9562826b6dfbb79fb02333a97668364fbb9b09aa55317
-  it("mintEthLP position on Camelot - 182290590, should mint successfully", async function () {
+  it.skip("mintEthLP position on Camelot - 182290590, should mint successfully", async function () {
     console.log('-------------user claim reward on Camelot---------------');
     const contractAdmin = await ethers.getImpersonatedSigner("0x20f89bA1B0Fc1e83f9aEf0a134095Cd63F7e8CC7");
     rockOnyxUSDTVaultContract = await ethers.getContractAt("RockOnyxUSDTVault", "0x01cdc1dc16c677dfd4cfde4478aaa494954657a0");

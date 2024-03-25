@@ -112,7 +112,7 @@ contract RockOnyxDeltaNeutralVault is
         uint256 pps = _getPricePerShare();
         uint256 totalShareAmount = depositReceipt.shares * pps / 1e6;
         uint256 totalProfit = totalShareAmount <= depositReceipt.depositAmount ? 0 :
-            (totalShareAmount - depositReceipt.depositAmount) * 1e6 ;
+            (totalShareAmount - depositReceipt.depositAmount) * 1e6;
         uint256 withdrawProfit = totalProfit * shares / depositReceipt.shares;
         uint256 performanceFee = withdrawProfit > 0 ? withdrawProfit  * vaultParams.performanceFeeRate / 1e14 : 0;
 
