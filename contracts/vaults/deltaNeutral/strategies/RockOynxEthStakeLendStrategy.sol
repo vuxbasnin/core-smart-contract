@@ -54,6 +54,7 @@ contract RockOynxEthStakeLendStrategy is
     }
 
     function openPosition(uint256 usdAmount) external nonReentrant {
+        _auth(ROCK_ONYX_OPTIONS_TRADER_ROLE);
         require(usdAmount <= ethStakeLendState.unAllocatedBalance, "INVALID_REACH_UNALLOCATED_BALANCE");
 
         uint256 price = _getEthPrice();
@@ -67,6 +68,7 @@ contract RockOynxEthStakeLendStrategy is
     }
 
     function closePosition(uint256 usdAmount) external nonReentrant {
+        _auth(ROCK_ONYX_OPTIONS_TRADER_ROLE);
         uint256 wstEthEthPrice = ethSwapProxy.getPriceOf(wstEth, weth, 18, 18);
         console.log("1.wstEthEthPrice %s", wstEthEthPrice);
         uint256 ethToUsdPrice = _getEthPrice();
