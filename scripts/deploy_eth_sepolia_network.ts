@@ -29,7 +29,7 @@ async function deployMockAsset(
   const mockUSDC = (await MockERC20Factory.deploy(
     tokenName,
     tokenName
-  )) as Contracts.MockERC20;
+  )) as Contracts.MockStableCoin;
   const assetAddress = await mockUSDC.getAddress();
 
   console.log("Deployed %s at address %s", tokenName, assetAddress);
@@ -102,9 +102,6 @@ async function deployAevoContract() {
   const mockAevoFactory = await ethers.getContractFactory("MockAEVO");
   const aevoMockContract =
     (await mockAevoFactory.deploy()) as Contracts.MockAEVO;
-
-  console.log("Mock Aevo address %s", await aevoMockContract.getAddress());
-
   const factory = await ethers.getContractFactory("AevoOptions");
   const aevoOptionsContract = (await factory.deploy(
     usdceAddress,
@@ -143,16 +140,19 @@ async function main() {
   const RockOnyxUSDTVaultFactory = await ethers.getContractFactory(
     "RockOnyxUSDTVault"
   );
+
   const rockOnyxUSDTVault = await RockOnyxUSDTVaultFactory.deploy(
     usdcAddress,
     camelotLiquidityAddress,
+    "",
     nonfungiblePositionManager,
     camelotSwapAddress,
     aevoProxyAddress,
     await deployer.getAddress(),
     usdceAddress,
     wethAddress,
-    wstethAddress
+    wstethAddress,
+    ""
   );
 
   // const rockOnyxUSDTVault = await RockOnyxUSDTVaultFactory.deploy(

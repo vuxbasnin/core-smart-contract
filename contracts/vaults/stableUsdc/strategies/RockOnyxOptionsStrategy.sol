@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-import "../interfaces/IAevo.sol";
+import "../../../interfaces/IAevo.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "hardhat/console.sol";
-import "../extensions/RockOnyxAccessControl.sol";
-import "../interfaces/IOptionsVendorProxy.sol";
-import "../interfaces/ISwapProxy.sol";
+import "../../../extensions/RockOnyxAccessControl.sol";
+import "../../../interfaces/IOptionsVendorProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../structs/RockOnyxStructs.sol";
@@ -14,12 +13,10 @@ import "../structs/RockOnyxStructs.sol";
 contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    address internal optionsAssetAddress;
     address internal vaultAssetAddress;
     address internal optionsReceiver;
     IOptionsVendorProxy internal optionsVendor;
     OptionsStrategyState internal optionsState;
-    ISwapProxy private swapProxy;
 
     /************************************************
      *  EVENTS
@@ -41,16 +38,12 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     function options_Initialize(
         address _vendorAddress,
         address _optionsReceiver,
-        address _optionsAssetAddress,
-        address _vaultAssetAddress,
-        address _swapAddress
+        address _vaultAssetAddress
     ) internal {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         optionsVendor = IOptionsVendorProxy(_vendorAddress);
-        swapProxy = ISwapProxy(_swapAddress);
         optionsReceiver = _optionsReceiver;
-        optionsAssetAddress = _optionsAssetAddress;
         vaultAssetAddress = _vaultAssetAddress;
 
         _grantRole(ROCK_ONYX_OPTIONS_TRADER_ROLE, msg.sender);
@@ -88,28 +81,18 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     function depositToVendor() external payable nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        IERC20(vaultAssetAddress).approve(address(swapProxy), optionsState.unAllocatedUsdcBalance);
-
-        // Perform the swap from vaultAsset to optionsAsset
-        uint256 swappedAmount = swapProxy.swapTo(
-            address(this),
-            vaultAssetAddress,
-            optionsState.unAllocatedUsdcBalance,
-            optionsAssetAddress
-        );
-
-        optionsState.unAllocatedUsdcBalance = 0;
-
-        IERC20(optionsAssetAddress).approve(address(optionsVendor), swappedAmount);
+        uint256 amount = optionsState.unAllocatedUsdcBalance;
+        optionsState.unAllocatedUsdcBalance -= amount;
+        console.log('amount %s', amount);
+        IERC20(vaultAssetAddress).approve(address(optionsVendor), amount);
 
         optionsVendor.depositToVendor{value: msg.value}(
             optionsReceiver,
-            swappedAmount            
+            amount
         );
 
-        emit OptionsVendorDeposited(address(optionsVendor), optionsReceiver, swappedAmount);
-
-        optionsState.allocatedUsdceBalance += swappedAmount;
+        optionsState.allocatedUsdcBalance += amount;
+        emit OptionsVendorDeposited(address(optionsVendor), optionsReceiver, amount);
     }
 
     /**
@@ -122,22 +105,12 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         require(amount > 0, "INVALID_WITHDRAW_AMOUNT");
         _auth(ROCK_ONYX_OPTIONS_TRADER_ROLE);
 
-        IERC20(optionsAssetAddress).safeTransferFrom(msg.sender, address(this), amount);
+        IERC20(vaultAssetAddress).safeTransferFrom(msg.sender, address(this), amount);
+
+        optionsState.unAllocatedUsdcBalance += amount;
+        optionsState.allocatedUsdcBalance -= amount;
 
         emit OptionsBalanceChanged(optionsState.unAllocatedUsdcBalance, optionsState.unAllocatedUsdcBalance + amount);
-
-        IERC20(optionsAssetAddress).approve(address(swapProxy), amount);
-
-        // Perform the swap from vaultAsset to optionsAsset
-        uint256 swappedAmount = swapProxy.swapTo(
-            address(this),
-            optionsAssetAddress,
-            amount,
-            vaultAssetAddress
-        );
-
-        optionsState.unAllocatedUsdcBalance += swappedAmount;
-        optionsState.allocatedUsdceBalance -= amount;
     }
 
     /**
@@ -147,12 +120,12 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         if (optionsState.unsettledProfit > 0) {
-            optionsState.allocatedUsdceBalance += optionsState.unsettledProfit;
+            optionsState.allocatedUsdcBalance += optionsState.unsettledProfit;
             optionsState.unsettledProfit = 0;    
         }
         
         if (optionsState.unsettledLoss > 0) {
-            optionsState.allocatedUsdceBalance -= optionsState.unsettledLoss;
+            optionsState.allocatedUsdcBalance -= optionsState.unsettledLoss;
             optionsState.unsettledLoss = 0;
         }
     }
@@ -164,8 +137,8 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     function updateProfitFromVender(uint256 balance) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        optionsState.unsettledProfit = balance > optionsState.allocatedUsdceBalance ? balance - optionsState.allocatedUsdceBalance : 0;
-        optionsState.unsettledLoss = balance < optionsState.allocatedUsdceBalance ? optionsState.allocatedUsdceBalance - balance : 0;
+        optionsState.unsettledProfit = balance > optionsState.allocatedUsdcBalance ? balance - optionsState.allocatedUsdcBalance : 0;
+        optionsState.unsettledLoss = balance < optionsState.allocatedUsdcBalance ? optionsState.allocatedUsdcBalance - balance : 0;
     }
 
     /**
@@ -175,6 +148,6 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     function getTotalOptionsAmount() internal view returns (uint256) {
         return 
             optionsState.unAllocatedUsdcBalance +
-            (optionsState.allocatedUsdceBalance * swapProxy.getPriceOf(optionsAssetAddress, vaultAssetAddress, 6, 6)) / 1e6;
+            optionsState.allocatedUsdcBalance;
     }
 }

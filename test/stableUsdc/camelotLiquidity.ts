@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
 
-import * as Contracts from "../typechain-types";
+import * as Contracts from "../../typechain-types";
 import { Signer, AbiCoder, ContractTransactionReceipt } from "ethers";
 
 describe("camelot liquidity contract test", function () {

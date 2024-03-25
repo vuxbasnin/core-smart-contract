@@ -7,19 +7,12 @@ contract MockAEVO is IAevo {
     // Event for logging deposits
     event DepositToAppChain(
         address indexed receiver,
+        address asset,
         uint256 amount,
         uint256 msgGasLimit,
-        address connector
+        address connector,
+        bytes data
     );
-
-    function depositToAppChain(
-        address receiver,
-        uint256 amount,
-        uint256 msgGasLimit,
-        address connector
-    ) external payable override {
-        emit DepositToAppChain(receiver, amount, msgGasLimit, connector);
-    }
 
     function depositToAppChain(
         address receiver,
@@ -29,6 +22,6 @@ contract MockAEVO is IAevo {
         address connector,
         bytes memory data
     ) external payable override {
-        emit DepositToAppChain(receiver, amount, msgGasLimit, connector);
+        emit DepositToAppChain(receiver, asset, amount, msgGasLimit, connector, data);
     }
 }

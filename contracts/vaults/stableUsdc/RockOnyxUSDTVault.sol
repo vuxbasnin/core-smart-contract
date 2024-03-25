@@ -3,11 +3,11 @@ pragma solidity ^0.8.19;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "../extensions/RockOnyxAccessControl.sol";
-import "../lib/ShareMath.sol";
-import "../strategies/RockOnyxEthLiquidityStrategy.sol";
-import "../strategies/RockOnyxOptionsStrategy.sol";
-import "../strategies/RockOynxUsdLiquidityStrategy.sol";
+import "../../extensions/RockOnyxAccessControl.sol";
+import "../../lib/ShareMath.sol";
+import "./strategies/RockOnyxEthLiquidityStrategy.sol";
+import "./strategies/RockOnyxOptionsStrategy.sol";
+import "./strategies/RockOynxUsdLiquidityStrategy.sol";
 import "hardhat/console.sol";
 
 contract RockOnyxUSDTVault is
@@ -83,9 +83,7 @@ contract RockOnyxUSDTVault is
         options_Initialize(
             _optionsVendorProxy,
             _optionsReceiver,
-            _usdce,
-            _usdc,
-            _swapProxy
+            _usdc
         );
         ethLP_Initialize(
             _vendorLiquidityProxy,
@@ -241,19 +239,16 @@ contract RockOnyxUSDTVault is
             roundPricePerShares[withdrawals[msg.sender].round],
             vaultParams.decimals
         );
-        
+
         (uint256 profit,) = getPnL();
-
-        uint256 performanceFee = profit > 0 ? 
-            (profit * depositReceipt.depositAmount) * (1e6 + depositReceipt.shares) * vaultParams.performanceFeeRate / 1e20 : 0;
-
+        uint withdrawProfit = profit > 0 ? profit * withdrawals[msg.sender].shares / (withdrawals[msg.sender].shares + depositReceipt.shares) : 0;
+        uint256 performanceFee = withdrawProfit > 0 ? withdrawProfit * vaultParams.performanceFeeRate / 1e2 : 0;
+        
         vaultState.performanceFeeAmount += performanceFee;
-
         withdrawAmount -= (performanceFee + NETWORK_COST);
         vaultState.withdrawPoolAmount -=  withdrawAmount;
 
         depositReceipt.depositAmount -= shares * depositReceipt.depositAmount / (depositReceipt.shares + withdrawals[msg.sender].shares);
-
         withdrawals[msg.sender].shares -= shares;
 
         IERC20(vaultParams.asset).safeTransfer(msg.sender, withdrawAmount);

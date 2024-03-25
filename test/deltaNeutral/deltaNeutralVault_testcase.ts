@@ -9,8 +9,8 @@ import {
   USDC_ADDRESS,
   WSTETH_ADDRESS,
   SWAP_ROUTER_ADDRESS,
-  AEVO_V2_ADDRESS,
-  AEVO_CONNECTOR_V2_ADDRESS,
+  AEVO_ADDRESS,
+  AEVO_CONNECTOR_ADDRESS,
   USDC_IMPERSONATED_SIGNER_ADDRESS,
   USDCE_IMPERSONATED_SIGNER_ADDRESS,
 } from "../../constants";
@@ -59,8 +59,8 @@ describe("RockOnyxDeltaNeutralVault", function () {
   const wstethAddress = WSTETH_ADDRESS[chainId] || "";
   const wethAddress = WETH_ADDRESS[chainId] || "";
   const swapRouterAddress = SWAP_ROUTER_ADDRESS[chainId];
-  const aevoAddress = AEVO_V2_ADDRESS[chainId];
-  const aevoConnectorAddress = AEVO_CONNECTOR_V2_ADDRESS[chainId];
+  const aevoAddress = AEVO_ADDRESS[chainId];
+  const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId];
 
   let camelotSwapContract: Contracts.CamelotSwap;
 
@@ -135,15 +135,6 @@ describe("RockOnyxDeltaNeutralVault", function () {
 
   async function transferUsdcForUser(from: Signer, to: Signer, amount: number) {
     const transferTx = await usdc.connect(from).transfer(to, amount);
-    await transferTx.wait();
-  }
-
-  async function transferUsdceForUser(
-    from: Signer,
-    to: Signer,
-    amount: number
-  ) {
-    const transferTx = await usdce.connect(from).transfer(to, amount);
     await transferTx.wait();
   }
 

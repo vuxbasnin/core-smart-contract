@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import * as Contracts from "../typechain-types";
+import * as Contracts from "../../typechain-types";
 import { Signer } from "ethers";
 import { transferIERC20FundForUser } from "./TestHelper";
 
