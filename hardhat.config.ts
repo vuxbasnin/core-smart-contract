@@ -29,13 +29,13 @@ const config: HardhatUserConfig = {
     //   },
     //   chainId: 11155111
     // },
-    // arbitrum: {
-    //   url: "https://arbitrum-mainnet.infura.io/v3/85cde589ce754dafa0a57001c326104d",
-    //   accounts: [
-    //     `${PRIVATE_KEY}`,
-    //   ],
-    //   chainId: 42161
-    // },
+    arbitrum: {
+      url: "https://arbitrum-mainnet.infura.io/v3/85cde589ce754dafa0a57001c326104d",
+      accounts: [
+        `${PRIVATE_KEY}`,
+      ],
+      chainId: 42161
+    },
     sepolia: {
       url: "https://sepolia.infura.io/v3/85cde589ce754dafa0a57001c326104d",
       accounts: [
