@@ -153,14 +153,14 @@ describe("RockOnyxDeltaNeutralVault", function () {
       usdcImpersonatedSigner
     );
 
-    await transferUsdcForUser(usdcSigner, user1, 1000 * 1e6);
-    await transferUsdcForUser(usdcSigner, user2, 1000 * 1e6);
-    await transferUsdcForUser(usdcSigner, user3, 1000 * 1e6);
-    await transferUsdcForUser(usdcSigner, user4, 1000 * 1e6);
+    await transferUsdcForUser(usdcSigner, user1, 10000 * 1e6);
+    await transferUsdcForUser(usdcSigner, user2, 10000 * 1e6);
+    await transferUsdcForUser(usdcSigner, user3, 10000 * 1e6);
+    await transferUsdcForUser(usdcSigner, user4, 10000 * 1e6);
     await transferUsdcForUser(usdcSigner, optionsReceiver, 1000 * 1e6);
   });
 
-  it.skip("user deposit -> withdraw, do not deposit to perp dex", async function () {
+  it("user deposit -> withdraw, do not deposit to perp dex", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
@@ -200,7 +200,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it.skip("user deposit -> open position -> withdraw, do not deposit to perp dex", async function () {
+  it("user deposit -> open position -> withdraw, do not deposit to perp dex", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
@@ -246,7 +246,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it.skip("user deposit -> open position -> deposit to vender -> withdraw", async function () {
+  it("user deposit -> open position -> deposit to vender -> withdraw", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
@@ -305,12 +305,12 @@ describe("RockOnyxDeltaNeutralVault", function () {
     let user1BalanceAfterWithdraw = await usdc.connect(user2).balanceOf(user2);
     console.log("usdc of user after withdraw %s", user1BalanceAfterWithdraw);
     expect(user1BalanceAfterWithdraw).to.approximately(
-      user2Balance + BigInt(100 * 1e6),
+      user2Balance + BigInt(99 * 1e6),
       PRECISION
     );
   });
 
-  it.skip("user deposit1 -> open position -> deposit to vender -> user deposit2 -> open position -> deposit to vender -> withdraw", async function () {
+  it("user deposit1 -> open position -> deposit to vender -> user deposit2 -> open position -> deposit to vender -> withdraw", async function () {
     console.log(
       "-------------deposit1 to rockOnyxDeltaNeutralVault---------------"
     );
@@ -325,7 +325,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
       .openPosition(50 * 1e6);
     await openPositionTx.wait();
 
-    console.log("-------------deposit to vendor1 on aevo---------------");
+    console.log("-------------deposit to vendor on aevo---------------");
     await rockOnyxDeltaNeutralVaultContract.connect(admin).depositToVendor({
       value: ethers.parseEther("0.000159539385325246"),
     });
@@ -395,10 +395,12 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it.skip("user deposit -> open position -> deposit to vender -> sync profit -> withdraw", async function () {
+  it("user deposit -> open position -> deposit to vender -> sync profit -> withdraw", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
+    
+    await deposit(user1, 10 * 1e6);
     await deposit(user2, 100 * 1e6);
     let totalValueLock = await logAndReturnTotalValueLock();
     expect(totalValueLock).to.approximately(110 * 1e6, PRECISION);

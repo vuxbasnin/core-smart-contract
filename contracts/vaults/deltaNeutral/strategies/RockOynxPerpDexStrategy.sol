@@ -67,10 +67,10 @@ contract RockOynxPerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
 
         perpDexVendor.depositToVendor{value: msg.value}(
             optionsReceiver,
-            perpDexState.unAllocatedBalance
+            amount
         );
 
-        perpDexState.perpDexBalance += perpDexState.unAllocatedBalance;
+        perpDexState.perpDexBalance += amount;
         emit PerpDexVendorDeposited(address(perpDexVendor), optionsReceiver, amount);
     }
 
