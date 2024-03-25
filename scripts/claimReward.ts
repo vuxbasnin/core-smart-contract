@@ -7,6 +7,7 @@ import {
   ARB_ADDRESS} from "../constants";
 
 const chainId: CHAINID = network.config.chainId;
+const privateKey = process.env.PRIVATE_KEY || "";
 // const chainId: CHAINID = 42161;
 
 let rockOnyxUSDTVaultContract: Contracts.RockOnyxUSDTVault;
@@ -16,7 +17,8 @@ async function main() {
     console.log('-------------claim reward on Camelot---------------');
     const arbAddress = ARB_ADDRESS[chainId];
     arb = await ethers.getContractAt("IERC20", arbAddress);
-    const contractAdmin = await ethers.getImpersonatedSigner("0x20f89bA1B0Fc1e83f9aEf0a134095Cd63F7e8CC7");
+    // const contractAdmin = await ethers.getImpersonatedSigner("0x20f89bA1B0Fc1e83f9aEf0a134095Cd63F7e8CC7");
+    const contractAdmin = new ethers.Wallet(privateKey, ethers.provider);
     rockOnyxUSDTVaultContract = await ethers.getContractAt("RockOnyxUSDTVault", "0x01cdc1dc16c677dfd4cfde4478aaa494954657a0");
 
     interface TransactionData {
