@@ -28,7 +28,7 @@ contract RockOynxEthStakeLendStrategy is
     address wstEth;
 
     EthStakeLendState ethStakeLendState;
-    uint8 swapPercentBuffer;
+    uint8 slippage;
 
     /************************************************
      *  EVENTS
@@ -52,14 +52,21 @@ contract RockOynxEthStakeLendStrategy is
         usd = _usd;
         weth = _weth;
         wstEth = _wstEth;
-        swapPercentBuffer = 1;
+        slippage = 50;
+    }
+
+    // slippage decimals: 4 ---- ex: 50 mean 0.5%
+    function setSlippage(uint8 _slippage) external nonReentrant {
+        _auth(ROCK_ONYX_OPTIONS_TRADER_ROLE);
+
+        slippage = _slippage;
     }
 
     function openPosition(uint256 ethAmount) external nonReentrant {
         _auth(ROCK_ONYX_OPTIONS_TRADER_ROLE);
 
         uint256 ethPrice = _getEthPrice();
-        uint256 usdcAmount = ethAmount * ethPrice * (1e2 + swapPercentBuffer) / 1e20;
+        uint256 usdcAmount = ethAmount * ethPrice * (1e4 + slippage) / 1e22;
         require(usdcAmount <= ethStakeLendState.unAllocatedBalance, "INVALID_REACH_UNALLOCATED_BALANCE");
         ethStakeLendState.unAllocatedBalance -= usdcAmount;
         
@@ -74,11 +81,13 @@ contract RockOynxEthStakeLendStrategy is
 
         uint256 ethPrice = _getEthPrice();
         uint256 usdAmount = ethAmount * ethPrice;
-        uint256 wstEthEthPrice = _getWstEthPrice();
-        uint256 wstEthAmount = ethAmount * wstEthEthPrice * (1e2 + swapPercentBuffer) / 1e2;
+
+        uint256 wstEthEthPrice = ethSwapProxy.getPriceOf(wstEth, weth, 18, 18);
+        uint256 wstEthAmount = ethAmount * wstEthEthPrice * (1e4 + slippage) / 1e22;
+
         require(wstEthAmount <= IERC20(wstEth).balanceOf(address(this)), "INVALID_REACH_WSTETH_AMOUNT");
         
-        _ethStakeLendSwapToWithOutput(usd, ethAmount, weth, wstEthAmount);
+        _ethStakeLendSwapToWithOutput(wstEth, ethAmount, weth, wstEthAmount);
     
         uint256 receivedUsdAmount = _ethStakeLendSwapTo(weth, ethAmount, usd);
         ethStakeLendState.unAllocatedBalance += receivedUsdAmount;

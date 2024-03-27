@@ -200,7 +200,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it("user deposit -> open position -> withdraw, do not deposit to perp dex", async function () {
+  it("user deposit -> open position -> close position -> withdraw, do not deposit to perp dex", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
@@ -261,6 +261,12 @@ describe("RockOnyxDeltaNeutralVault", function () {
       .connect(admin)
       .openPosition(BigInt(0.01 * 1e18));
     await openPositionTx.wait();
+
+    console.log("-------------close position---------------");
+    const closePositionTx = await rockOnyxDeltaNeutralVaultContract
+      .connect(admin)
+      .closePosition(BigInt(0.005 * 1e18));
+    await closePositionTx.wait();
 
     console.log("-------------deposit to vendor on aevo---------------");
     await rockOnyxDeltaNeutralVaultContract.connect(admin).depositToVendor({
