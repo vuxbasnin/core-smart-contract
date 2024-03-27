@@ -51,7 +51,7 @@ async function main() {
 
   const optionsTrader = "0x0aDf03D895617a95F317892125Cd6fb9ca3b99c1";
 
-  await deployAevoContract();
+  // await deployAevoContract();
 
   const rockOnyxDeltaNeutralVault = await ethers.getContractFactory(
     "RockOnyxDeltaNeutralVault"
@@ -60,7 +60,8 @@ async function main() {
   rockOnyxDeltaNeutralVaultContract = await rockOnyxDeltaNeutralVault.deploy(
     usdcAddress,
     camelotSwapAddress,
-    await aevoContract.getAddress(),
+    // await aevoContract.getAddress(),
+    "0x3D75e9366Fe5A2f1B7481a4Fb05deC21f8038467",
     optionsTrader,
     wethAddress,
     wstethAddress
