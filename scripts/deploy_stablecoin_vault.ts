@@ -26,6 +26,8 @@ const wethAddress = WETH_ADDRESS[chainId] ?? "";
 const arbAddress = ARB_ADDRESS[chainId] ?? "";
 const nonfungiblePositionManager = NonfungiblePositionManager[chainId] ?? "";
 const rewardAddress = ANGLE_REWARD_ADDRESS[chainId] ?? "";
+const aevoAddress = AEVO_ADDRESS[chainId] ?? "";
+const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId] ?? "";
 let deployer: Signer;
 
 const GAS_LIMIT = 100988531;
@@ -67,23 +69,24 @@ async function deployCamelotSwapContract() {
   return await camelotSwapContract.getAddress();
 }
 
+let aevoContract: Contracts.Aevo;
+
 async function deployAevoContract() {
-  const aevoOptionsAddress = AEVO_ADDRESS[chainId] ?? "";
-  const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId] ?? "";
+  const factory = await ethers.getContractFactory("Aevo");
+  console.log(usdcAddress, aevoAddress, aevoConnectorAddress);
 
-  const factory = await ethers.getContractFactory("AevoOptions");
-  const aevoOptionsContract = (await factory.deploy(
-    usdceAddress,
-    aevoOptionsAddress,
-    aevoConnectorAddress,
-    {
-      gasLimit: GAS_LIMIT,
-    }
-  )) as Contracts.AevoOptions;
-  const aevoProxyAddress = await aevoOptionsContract.getAddress();
-  console.log("Deployed AEVO contract at address %s", aevoProxyAddress);
+  aevoContract = await factory.deploy(
+    usdcAddress,
+    aevoAddress,
+    aevoConnectorAddress
+  );
+  await aevoContract.waitForDeployment();
 
-  return aevoProxyAddress;
+  console.log(
+    "Deployed AEVO contract at address %s",
+    await aevoContract.getAddress()
+  );
+  return await aevoContract.getAddress();
 }
 
 async function main() {
@@ -99,7 +102,7 @@ async function main() {
 
   const camelotLiquidityAddress = "0x05AAe168AEB8516a068D9DED91F56f81C76706Eb";
   const camelotSwapAddress = "0x7EA2362e578212d7FDA082E0bBB5134f89EDc4DC";
-  const aevoProxyAddress = "0xd6d7a2557DE8d91AD6F22AbDAe32BCE226dAE68d";
+  const aevoProxyAddress = "0xE1D5Bfe0665177986D3CAB8c27A19827570710eE";
 
   const RockOnyxUSDTVaultFactory = await ethers.getContractFactory(
     "RockOnyxUSDTVault"
@@ -115,7 +118,8 @@ async function main() {
     usdceAddress,
     wethAddress,
     wstethAddress,
-    arbAddress
+    arbAddress,
+    BigInt(1.23363 * 1e6) 
   );
 
   console.log(

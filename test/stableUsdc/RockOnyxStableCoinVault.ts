@@ -132,7 +132,8 @@ describe("RockOnyxStableCoinVault", function () {
       usdceAddress,
       wethAddress,
       wstethAddress,
-      arbAddress
+      arbAddress,
+      BigInt(0 * 1e6)
     );
     await rockOnyxUSDTVaultContract.waitForDeployment();
 
