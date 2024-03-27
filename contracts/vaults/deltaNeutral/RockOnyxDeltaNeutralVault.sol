@@ -167,7 +167,7 @@ contract RockOnyxDeltaNeutralVault is
         _auth(ROCK_ONYX_OPTIONS_TRADER_ROLE);
 
         syncEthStakeLendBalance();
-        syncDerpDexBalance(perpDexbalance);
+        syncPerpDexBalance(perpDexbalance);
     }
 
     /**
