@@ -82,12 +82,14 @@ contract RockOynxEthStakeLendStrategy is
         uint256 ethPrice = _getEthPrice();
         uint256 usdAmount = ethAmount * ethPrice;
 
-        uint256 wstEthEthPrice = ethSwapProxy.getPriceOf(wstEth, weth, 18, 18);
+        uint256 wstEthEthPrice = 1e36 / ethSwapProxy.getPriceOf(wstEth, weth, 18, 18);
         uint256 wstEthAmount = ethAmount * wstEthEthPrice * (1e4 + slippage) / 1e22;
 
-        require(wstEthAmount <= IERC20(wstEth).balanceOf(address(this)), "INVALID_REACH_WSTETH_AMOUNT");
-        
-        _ethStakeLendSwapToWithOutput(wstEth, ethAmount, weth, wstEthAmount);
+        if(IERC20(wstEth).balanceOf(address(this)) < wstEthAmount){
+            ethAmount = _ethStakeLendSwapTo(wstEth, IERC20(wstEth).balanceOf(address(this)), weth);
+        }else{
+            _ethStakeLendSwapToWithOutput(wstEth, ethAmount, weth, wstEthAmount);    
+        }
     
         uint256 receivedUsdAmount = _ethStakeLendSwapTo(weth, ethAmount, usd);
         ethStakeLendState.unAllocatedBalance += receivedUsdAmount;
