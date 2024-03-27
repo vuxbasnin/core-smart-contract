@@ -38,6 +38,7 @@ struct PerpDexState {
 
 struct EthStakeLendState {
     uint256 unAllocatedBalance;
+    uint256 totalBalance;
 }
 
 struct DeltaNeutralAllocateRatio{

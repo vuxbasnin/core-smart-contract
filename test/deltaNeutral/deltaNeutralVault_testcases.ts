@@ -200,7 +200,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it("user deposit -> open position -> withdraw, do not deposit to perp dex", async function () {
+  it("user deposit -> open position -> close position -> withdraw, do not deposit to perp dex", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
@@ -213,7 +213,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     console.log("-------------open position---------------");
     const openPositionTx = await rockOnyxDeltaNeutralVaultContract
       .connect(admin)
-      .openPosition(50 * 1e6);
+      .openPosition(BigInt(0.01 * 1e18));
     await openPositionTx.wait();
 
     console.log("-------------Users initial withdrawals---------------");
@@ -259,8 +259,14 @@ describe("RockOnyxDeltaNeutralVault", function () {
     console.log("-------------open position---------------");
     const openPositionTx = await rockOnyxDeltaNeutralVaultContract
       .connect(admin)
-      .openPosition(50 * 1e6);
+      .openPosition(BigInt(0.01 * 1e18));
     await openPositionTx.wait();
+
+    console.log("-------------close position---------------");
+    const closePositionTx = await rockOnyxDeltaNeutralVaultContract
+      .connect(admin)
+      .closePosition(BigInt(0.005 * 1e18));
+    await closePositionTx.wait();
 
     console.log("-------------deposit to vendor on aevo---------------");
     await rockOnyxDeltaNeutralVaultContract.connect(admin).depositToVendor({
@@ -322,7 +328,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     console.log("-------------open position1---------------");
     const openPositionTx = await rockOnyxDeltaNeutralVaultContract
       .connect(admin)
-      .openPosition(50 * 1e6);
+      .openPosition(BigInt(0.01 * 1e18));
     await openPositionTx.wait();
 
     console.log("-------------deposit to vendor on aevo---------------");
@@ -344,7 +350,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     console.log("-------------open position 2---------------");
     const openPosition1Tx = await rockOnyxDeltaNeutralVaultContract
       .connect(admin)
-      .openPosition(50 * 1e6);
+      .openPosition(BigInt(0.01 * 1e18));
     await openPositionTx.wait();
 
     console.log("-------------deposit to vendor on aevo---------------");
@@ -408,7 +414,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     console.log("-------------open position---------------");
     const openPositionTx = await rockOnyxDeltaNeutralVaultContract
       .connect(admin)
-      .openPosition(50 * 1e6);
+      .openPosition(BigInt(0.01 * 1e18));
     await openPositionTx.wait();
 
     console.log("-------------deposit to vendor on aevo---------------");
@@ -422,7 +428,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     console.log("-------------sync derpDex balance---------------");
     const syncDerpDexBalanceTx = await rockOnyxDeltaNeutralVaultContract
       .connect(admin)
-      .syncDerpDexBalanceFromVender(200 * 1e6);
+      .syncBalance(200 * 1e6);
 
     await syncDerpDexBalanceTx.wait();
     totalValueLock = await logAndReturnTotalValueLock();
@@ -482,7 +488,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
 
     console.log("-------------open position---------------");
 
-    var event = rockOnyxDeltaNeutralVaultContract.getEvent("PositionOpened");
+    var openEvent = rockOnyxDeltaNeutralVaultContract.getEvent("PositionOpened");
     var closeEvent =
       rockOnyxDeltaNeutralVaultContract.getEvent("PositionClosed");
 
@@ -519,7 +525,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
 
     await rockOnyxDeltaNeutralVaultContract.on(
-      event,
+      openEvent,
       async (
         usdAmount: any,
         price: any,
@@ -572,7 +578,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
 
     const openPositionTx = await rockOnyxDeltaNeutralVaultContract
       .connect(admin)
-      .openPosition(1000 * 1e6);
+      .openPosition(BigInt(0.01 * 1e18));
     await openPositionTx.wait();
 
     // add a sleep here to keep the main loop running while the event listener working

@@ -5,6 +5,7 @@ import "../extensions/TransferHelper.sol";
 import "../interfaces/ISwapProxy.sol";
 import "../interfaces/ISwapRouter.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "hardhat/console.sol";
 
 contract BaseSwap is ISwapProxy {
     ISwapRouter private swapRouter;
@@ -41,6 +42,45 @@ contract BaseSwap is ISwapProxy {
             });
 
         return swapRouter.exactInputSingle(params);
+    }
+
+    function swapToWithOutput(
+        address recipient,
+        address tokenIn,
+        uint256 amountOut,
+        address tokenOut,
+        uint256 amountInMaximum
+    ) external returns (uint256) {
+
+        TransferHelper.safeTransferFrom(
+            tokenIn,
+            msg.sender,
+            address(this),
+            amountInMaximum
+        );
+        
+        TransferHelper.safeApprove(tokenIn, address(swapRouter), amountInMaximum);
+
+        ISwapRouter.ExactOutputSingleParams memory params =
+            ISwapRouter.ExactOutputSingleParams({
+                tokenIn: tokenIn,
+                tokenOut: tokenOut,
+                fee: 0,
+                recipient: recipient,
+                deadline: block.timestamp,
+                amountOut: amountOut,
+                amountInMaximum: amountInMaximum,
+                limitSqrtPrice: 0
+            });
+
+        uint256 amountIn = swapRouter.exactOutputSingle(params);
+
+        if (amountIn < amountInMaximum) {
+            TransferHelper.safeApprove(tokenIn, address(swapRouter), 0);
+            TransferHelper.safeTransfer(tokenIn, msg.sender, amountInMaximum - amountIn);
+        }
+
+        return amountIn;
     }
 
     function getLiquidityOf(
