@@ -74,7 +74,7 @@ contract RockOynxPerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
         emit PerpDexVendorDeposited(address(perpDexVendor), optionsReceiver, amount);
     }
 
-    function syncDerpDexBalanceFromVender(uint256 balance) external nonReentrant {
+    function syncDerpDexBalance(uint256 balance) internal {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         perpDexState.perpDexBalance = balance;

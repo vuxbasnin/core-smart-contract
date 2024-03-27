@@ -135,10 +135,6 @@ contract RockOnyxDeltaNeutralVault is
 
         vaultState.totalShares -= shares;
 
-        console.log('withdrawAmount %s', withdrawals[msg.sender].withdrawAmount);
-        console.log('pps %s', withdrawals[msg.sender].pps);
-        console.log('ethStakeLendAmount %s %s', ethStakeLendAmount, perpDexAmount);
-
         emit RequestFunds(ethStakeLendAmount, perpDexAmount);
     }
 
@@ -165,6 +161,13 @@ contract RockOnyxDeltaNeutralVault is
         performanceFeeAmount = ethStakeLendPerformanceFeeAmount + perpDexFeeAmount;
         vaultState.performanceFeeAmount += performanceFeeAmount;
         vaultState.withdrawPoolAmount += performanceFeeAmount;
+    }
+
+    function syncBalance(uint256 perpDexbalance) external nonReentrant {
+        _auth(ROCK_ONYX_OPTIONS_TRADER_ROLE);
+
+        syncEthStakeLendBalance();
+        syncDerpDexBalance(perpDexbalance);
     }
 
     /**

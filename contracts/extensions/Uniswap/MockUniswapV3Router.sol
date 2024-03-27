@@ -40,5 +40,39 @@ contract MockSwapRouter is ISwapRouter {
         return amountOut;
     }
 
+    function exactOutputSingle(
+        ExactOutputSingleParams calldata params
+    ) external payable override returns (uint amountIn) {
+        require(
+            IERC20(params.tokenIn).transferFrom(
+                msg.sender,
+                address(this),
+                params.amountInMaximum
+            ),
+            "Transfer failed"
+        );
+
+        // Simulate a 1:1 swap rate
+        amountIn = params.amountOut;
+
+        // Ensure that the output is greater than or equal to the minimum amount out specified
+        require(
+            amountIn >= params.amountInMaximum,
+            "Insufficient output amount"
+        );
+
+        console.log(
+            "[MockSwapRouter] balanceOf %s",
+            IERC20(params.tokenIn).balanceOf(address(this))
+        );
+        // Assuming tokenOut is already approved to this contract
+        require(
+            IERC20(params.tokenOut).transfer(params.recipient, params.amountOut),
+            "Transfer failed"
+        );
+        console.log("[MockSwapRouter] exactInputSingle transfered");
+        return amountIn;
+    }
+
     function factory() external view returns (address) {}
 }

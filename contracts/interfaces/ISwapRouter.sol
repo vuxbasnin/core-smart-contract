@@ -28,13 +28,24 @@ interface ISwapFactory {
 
 interface ISwapRouter {
     struct ExactInputSingleParams {
-        address tokenIn;
-        address tokenOut;
-        address recipient;
-        uint deadline;
-        uint amountIn;
-        uint amountOutMinimum;
-        uint160 limitSqrtPrice;
+      address tokenIn;
+      address tokenOut;
+      address recipient;
+      uint256 deadline;
+      uint256 amountIn;
+      uint256 amountOutMinimum;
+      uint160 limitSqrtPrice;
+    }
+
+    struct ExactOutputSingleParams {
+      address tokenIn;
+      address tokenOut;
+      uint24 fee;
+      address recipient;
+      uint256 deadline;
+      uint256 amountOut;
+      uint256 amountInMaximum;
+      uint160 limitSqrtPrice;
     }
     
     /// @notice Swaps amountIn of one token for as much as possible of another token
@@ -43,6 +54,10 @@ interface ISwapRouter {
     function exactInputSingle(
         ExactInputSingleParams calldata params
     ) external payable returns (uint amountOut);
+
+    function exactOutputSingle(
+        ExactOutputSingleParams calldata params
+    ) external payable returns (uint amountIn);
 
     function factory() external view returns (address);
 }
