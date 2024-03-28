@@ -7,6 +7,7 @@ import {
   WSTETH_ADDRESS,
   AEVO_ADDRESS,
   AEVO_CONNECTOR_ADDRESS,
+  SWAP_ROUTER_ADDRESS,
 } from "../constants";
 import * as Contracts from "../typechain-types";
 
@@ -38,6 +39,20 @@ async function deployAevoContract() {
   );
 }
 
+let camelotSwapContract: Contracts.CamelotSwap;
+const swapRouterAddress = SWAP_ROUTER_ADDRESS[chainId] || "";
+
+async function deployCamelotSwapContract() {
+  const factory = await ethers.getContractFactory("CamelotSwap");
+  camelotSwapContract = await factory.deploy(swapRouterAddress);
+  await camelotSwapContract.waitForDeployment();
+
+  console.log(
+    "Deployed Camelot Swap contract at address %s",
+    await camelotSwapContract.getAddress()
+  );
+}
+
 async function main() {
   const [deployer] = await ethers.getSigners();
 
@@ -45,9 +60,9 @@ async function main() {
     "Deploying contracts with the account:",
     await deployer.getAddress()
   );
-
-  //   const camelotSwapAddress = await camelotSwapContract.getAddress();
-  const camelotSwapAddress = "0x7EA2362e578212d7FDA082E0bBB5134f89EDc4DC";
+  await deployCamelotSwapContract();
+  const camelotSwapAddress = await camelotSwapContract.getAddress();
+  // const camelotSwapAddress = "0x7EA2362e578212d7FDA082E0bBB5134f89EDc4DC";
 
   const optionsTrader = "0x0aDf03D895617a95F317892125Cd6fb9ca3b99c1";
 

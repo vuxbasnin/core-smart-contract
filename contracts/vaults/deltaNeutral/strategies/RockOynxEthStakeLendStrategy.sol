@@ -93,12 +93,6 @@ contract RockOynxEthStakeLendStrategy is
     
         uint256 receivedUsdAmount = _ethStakeLendSwapTo(weth, ethAmount, usd);
         ethStakeLendState.unAllocatedBalance += receivedUsdAmount;
-
-        console.log("1.wstEthEthPrice %s", wstEthEthPrice);
-        console.log("2.ethToUsdPrice %s", _getEthPrice());
-        console.log("3.ethAmount %s", ethAmount);
-        console.log("4.wstEthAmount %s, balance %s", wstEthAmount, IERC20(wstEth).balanceOf(address(this)));
-        console.log("5.receivedUsdAmount %s", receivedUsdAmount);
         
         emit PositionClosed(usdAmount, wstEthEthPrice, ethPrice, ethAmount, wstEthAmount, ethAmount, receivedUsdAmount);
     }
