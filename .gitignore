@@ -26,3 +26,6 @@ package-lock.json
 yarn.lock
 set_env.sh
 test-scripts/
+contracts/vaults/deltaNeutral/strategies/artifacts
+contracts/vaults/deltaNeutral/artifacts
+contracts/vaults/stableUsdc/artifacts

@@ -60,7 +60,8 @@ contract RockOnyxUSDTVault is
         address _usdce,
         address _weth,
         address _wstEth,
-        address _arb
+        address _arb,
+        uint256 _initialPPS
     )
         RockOnyxEthLiquidityStrategy()
         RockOnyxOptionStrategy()
@@ -102,6 +103,11 @@ contract RockOnyxUSDTVault is
             _usdc,
             _usdce
         );
+
+        if (_initialPPS > 0) {
+            currentRound = 1;
+            roundPricePerShares[currentRound - 1] = _initialPPS;
+        }
     }
 
     function onERC721Received(
@@ -448,6 +454,13 @@ contract RockOnyxUSDTVault is
 
     function allocatedRatio() external view returns (uint256 ethLPRatio, uint256 usdLPRatio, uint256 optionsRatio) {
         return (allocateRatio.ethLPRatio, allocateRatio.usdLPRatio, allocateRatio.optionsRatio);
+    }
+
+    /**
+     * @notice get the current round number
+     */
+    function getCurrentRound() external view returns (uint256) {
+        return currentRound;
     }
 
     function emergencyShutdown(
