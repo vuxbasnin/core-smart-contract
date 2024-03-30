@@ -804,4 +804,51 @@ describe("RockOnyxStableCoinVault", function () {
     .pricePerShare();
     console.log("pricePerShare", pps);
   });
+
+  it("user deposit -> deposit to eavo -> mint eth -> mint usd-> update profit -> close round -> deposit", async function () {
+    console.log('-------------deposit time: 50$---------------');
+    await deposit(user1, 50 * 1e6);
+    await deposit(user1, 100 * 1e6);
+    await deposit(user1, 50 * 1e6);
+    await deposit(user1, 5 * 1e6);
+    await deposit(user1, 5 * 1e6);
+    await deposit(user1, 5 * 1e6);
+    await deposit(user1, 50 * 1e6);
+    await deposit(user1, 600 * 1e6);
+    
+    console.log('-------------deposit to vendor on aevo---------------');
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
+      value: ethers.parseEther("0.000159539385325246"),
+    });
+
+    console.log('-------------update allocated balance from aevo vendor---------------');
+    const updateProfitTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .updateProfitFromVender(30*1e6);
+    await updateProfitTx.wait();
+
+    console.log('-------------close round time ---------------');
+    const closeRoundTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .closeRound();
+    await closeRoundTx.wait();
+
+    console.log('-------------deposit time 2: 50$---------------');
+    await deposit(user1, 50 * 1e6);
+  });
+
+  // https://arbiscan.io/address/0x55c4c840F9Ac2e62eFa3f12BaBa1B57A1208B6F5
+  it.skip("deposit error", async function () {
+    console.log('-------------deposit error 0x55c4c840F9Ac2e62eFa3f12BaBa1B57A1208B6F5---------------');
+    rockOnyxUSDTVaultContract = await ethers.getContractAt("RockOnyxUSDTVault", "0x55c4c840F9Ac2e62eFa3f12BaBa1B57A1208B6F5");
+
+    console.log('-------------deposit time 1: 50$---------------');
+    
+    await usdc
+    .connect(user1)
+    .approve(await rockOnyxUSDTVaultContract.getAddress(), 50 * 1e6);
+
+    console.log('rockOnyxUSDTVaultContract address: ', await rockOnyxUSDTVaultContract.getAddress());  
+    await rockOnyxUSDTVaultContract.connect(user1).deposit(50 * 1e6);
+  });
 });
