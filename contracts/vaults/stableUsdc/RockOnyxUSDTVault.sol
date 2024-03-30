@@ -166,7 +166,7 @@ contract RockOnyxUSDTVault is
     function allocateAssets() private {
         uint256 depositToEthLPAmount = vaultState.pendingDepositAmount * allocateRatio.ethLPRatio / 10 ** allocateRatio.decimals;
         uint256 depositToUsdLPAmount = vaultState.pendingDepositAmount * allocateRatio.usdLPRatio / 10 ** allocateRatio.decimals;
-        uint256 depositOptionsAmount = vaultState.pendingDepositAmount * allocateRatio.usdLPRatio / 10 ** allocateRatio.decimals;
+        uint256 depositOptionsAmount = vaultState.pendingDepositAmount * allocateRatio.optionsRatio / 10 ** allocateRatio.decimals;
         vaultState.pendingDepositAmount -= (depositToEthLPAmount + depositToUsdLPAmount + depositOptionsAmount);
 
         depositToEthLiquidityStrategy(depositToEthLPAmount);
