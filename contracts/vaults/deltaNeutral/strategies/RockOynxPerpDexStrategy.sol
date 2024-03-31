@@ -129,4 +129,10 @@ contract RockOynxPerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
         return 
             perpDexState.unAllocatedBalance + perpDexState.perpDexBalance;
     }
+
+    function getPerpDexUnAllocatedBalance() external view returns (uint256) {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        return perpDexState.unAllocatedBalance;
+    }
 }

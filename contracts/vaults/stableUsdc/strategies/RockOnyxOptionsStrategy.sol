@@ -134,11 +134,19 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
      * @dev Updates profit and loss balances from the vendor.
      * @param balance The updated balance from the vendor.
      */
-    function updateProfitFromVender(uint256 balance) external nonReentrant {
+    function updateProfitFromVendor(uint256 balance) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         optionsState.unsettledProfit = balance > optionsState.allocatedUsdcBalance ? balance - optionsState.allocatedUsdcBalance : 0;
         optionsState.unsettledLoss = balance < optionsState.allocatedUsdcBalance ? optionsState.allocatedUsdcBalance - balance : 0;
+    }
+
+    /**
+     * @dev Returns the unallocated USDC balance of the options strategy.
+     * @return The unallocated USDC balance.
+     */
+    function getUnallocatedUsdcBalance() public view returns (uint256) {
+        return optionsState.unAllocatedUsdcBalance;
     }
 
     /**
