@@ -1,6 +1,5 @@
 const { ethers, network } = require("hardhat");
 import { expect } from "chai";
-import axios from "axios";
 
 import * as Contracts from "../../typechain-types";
 import {
@@ -15,24 +14,14 @@ import {
   USDCE_IMPERSONATED_SIGNER_ADDRESS,
 } from "../../constants";
 import {
+  BigNumberish,
   Signer,
-  BigNumberish,
-  ContractTransaction,
-  AbiCoder,
-  ContractTransactionReceipt,
-  ethers,
-  BigNumberish,
 } from "ethers";
-import { float } from "hardhat/internal/core/params/argumentTypes";
 
 // const chainId: CHAINID = network.config.chainId;
 const chainId: CHAINID = 42161;
 const PRECISION = 2 * 1e6;
 
-interface PositionOpenedEvent {
-  wethAmount: ethers.BigNumberish;
-  price: ethers.BigNumberish;
-}
 
 describe("RockOnyxDeltaNeutralVault", function () {
   let admin: Signer,
@@ -520,6 +509,15 @@ describe("RockOnyxDeltaNeutralVault", function () {
     await initiateWithdrawalTx1.wait();
 
     console.log("------------- close position to release fund for user ---------------");
+    // get allocatedRatio ratio from vault
+    const allocatedRatio = await rockOnyxDeltaNeutralVaultContract
+      .connect(admin)
+      .allocatedRatio();
+    console.log("allocatedRatio %s", allocatedRatio);
+
+    const stakingRatio = allocatedRatio[0];
+    const perpRatio = allocatedRatio[1];
+
     // calculate eth amount from withdrawalAmount
     ethPrice = await getEthPrice();
     let withdrawalEthAmount = withdrawalAmount / ethPrice;
@@ -531,19 +529,21 @@ describe("RockOnyxDeltaNeutralVault", function () {
       .closePosition(BigInt(withdrawalEthAmount * 1e18));
     await closePositionTx.wait();
 
-    
+    console.log("------------- trader send fund back to vault ---------------");
+
+
+    // optionsReceiver approve usdc to vault
+    await usdc
+    .connect(optionsReceiver)
+    .approve(
+      await rockOnyxDeltaNeutralVaultContract.getAddress(),
+      usdcAmount
+    );
 
     console.log("-------------handleWithdrawalFunds---------------");
     // 49920910 181838190
     const usdcAmount = 181838190n;
     console.log("usdcAmount %s", usdcAmount);
-
-    await usdc
-      .connect(optionsReceiver)
-      .approve(
-        await rockOnyxDeltaNeutralVaultContract.getAddress(),
-        usdcAmount
-      );
 
     const handleWithdrawalFundsTx = await rockOnyxDeltaNeutralVaultContract
       .connect(optionsReceiver)
