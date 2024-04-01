@@ -121,7 +121,7 @@ contract RockOynxEthStakeLendStrategy is
             ethStakeLendState.unAllocatedBalance + IERC20(wstEth).balanceOf(address(this)) * _getWstEthPrice() / 1e18;
     }
 
-    function handleFundsFromEthStakeLend(uint256 amount) internal returns (uint256) {
+    function acquireFundsFromEthStakeLend(uint256 amount) internal returns (uint256) {
         uint256 unAllocatedBalance = ethStakeLendState.unAllocatedBalance;
         if(ethStakeLendState.unAllocatedBalance >= amount){
             ethStakeLendState.unAllocatedBalance -= amount;

@@ -30,7 +30,7 @@ contract RockOynxPerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
         uint256 depositAmount
     );
 
-    event PerpDexBalanceChanged(uint256 oldBalance, uint256 newBlanace);
+    event PerpDexBalanceChanged(uint256 unAllocatedBalance, uint256 amountWithdrawn);
 
     event RequestFundsPerpDex(
         uint256 acquireAmount
@@ -88,37 +88,34 @@ contract RockOynxPerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
         perpDexState.unAllocatedBalance += amount;
     }
 
-    function handleFundsFromPerpDex(uint256 amount) internal returns (uint256) {
-        if(perpDexState.unAllocatedBalance > amount){
+    /**
+     * Acquire the amount of USDC to allow user withdraw
+     * @param amount the amount need to be acquired
+     */
+    function acquireFundsFromPerpDex(uint256 amount) internal returns (uint256) {       
+        if(perpDexState.unAllocatedBalance > amount) {
             perpDexState.unAllocatedBalance -= amount;
             return amount;    
         }
 
         uint256 unAllocatedBalance = perpDexState.unAllocatedBalance;
         perpDexState.unAllocatedBalance = 0;
-        IERC20(perpDexStrategyUsdc).safeTransferFrom(msg.sender, address(this), amount - unAllocatedBalance);
-        return amount;
+        return unAllocatedBalance;
     }
 
-    function withdrawFromPerpDex(uint256 amount) internal returns (uint256){
-        uint256 amountToAcquire = amount;
-        uint256 allownce =  IERC20(perpDexStrategyUsdc).allowance(msg.sender, address(this));
-        if (allownce < amountToAcquire)
-            amountToAcquire = allownce;
+    /**
+     * @dev Handle the post withdraw process from Dex vendor
+     * @param amount The amount of tokens to transfer.
+     */
+    function handlePostWithdrawFromVendor(uint256 amount) internal {
+        require(amount > 0, "INVALID_WITHDRAW_AMOUNT");
+        _auth(ROCK_ONYX_OPTIONS_TRADER_ROLE);
 
-        IERC20(perpDexStrategyUsdc).safeTransferFrom(msg.sender, address(this), amountToAcquire);
+        IERC20(perpDexStrategyUsdc).safeTransferFrom(msg.sender, address(this), amount);
 
-        if(amount > amountToAcquire){
-            if(perpDexState.unAllocatedBalance > (amount - amountToAcquire)){
-                perpDexState.unAllocatedBalance -= (amount - amountToAcquire);
-                return amount;
-            }else{
-                perpDexState.unAllocatedBalance = 0;
-                return amount - amountToAcquire - perpDexState.unAllocatedBalance;
-            }
-        }
+        perpDexState.unAllocatedBalance += amount;
 
-        return amount;
+        emit PerpDexBalanceChanged(perpDexState.unAllocatedBalance, amount);
     }
 
     /**

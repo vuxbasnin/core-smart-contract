@@ -451,7 +451,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it("user deposit -> deposit to vendor -> open position -> sync profit -> withdraw", async function () {
+  it("user deposit -> deposit to vendor -> open position -> sync profit -> withdraw -> close position -> complete withdraw", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
@@ -462,6 +462,9 @@ describe("RockOnyxDeltaNeutralVault", function () {
     await deposit(user2, 100 * 1e6);
 
     let totalValueLock = await logAndReturnTotalValueLock();
+    // parse totalValueLock to float
+    let tvlNumber = parseFloat(totalValueLock.toString()) / 1e6;
+    
     expect(totalValueLock).to.approximately(inititalDeposit * 1e6, PRECISION);
 
     console.log("-------------deposit to vendor on aevo---------------");
@@ -474,7 +477,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
 
     // calculate eth amount for totalvaluelocked / 2 usd amount
     // round ethAmount to 2 decimal places
-    const ethAmount = parseFloat(((totalValueLock / 2) / ethPrice).toFixed(2));
+    const ethAmount = parseFloat(((tvlNumber / 2) / ethPrice).toFixed(2));
     console.log("ethAmount %s", ethAmount);
 
     const openPositionTx = await rockOnyxDeltaNeutralVaultContract
@@ -488,7 +491,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     console.log("-------------sync derpDex balance---------------");
     // assume that the funding fee return 0.01% every 1 hour
     // we sync balance after 8 hours
-    const dexBalance = (totalValueLock / 2) * 0.0001 * 8;
+    const dexBalance = (tvlNumber / 2) * 0.0001 * 8;
     console.log("dexBalance %s", dexBalance);
 
     const syncDerpDexBalanceTx = await rockOnyxDeltaNeutralVaultContract
@@ -508,7 +511,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
 
     console.log("-------------Users initial withdrawals---------------");
     const withdrawalShares = 100;
-    const withdrawalAmount = (withdrawalShares * pricePerShare) / 1e6;
+    const withdrawalAmount = (withdrawalShares * parseFloat(pricePerShare.toString())) / 1e6;
     console.log("withdrawalAmount %s", withdrawalAmount);
 
     const initiateWithdrawalTx1 = await rockOnyxDeltaNeutralVaultContract
@@ -527,6 +530,8 @@ describe("RockOnyxDeltaNeutralVault", function () {
       .connect(admin)
       .closePosition(BigInt(withdrawalEthAmount * 1e18));
     await closePositionTx.wait();
+
+    
 
     console.log("-------------handleWithdrawalFunds---------------");
     // 49920910 181838190

@@ -141,11 +141,21 @@ contract RockOnyxDeltaNeutralVault is
     /**
      * @notice acquire asset form vendor, prepare funds for withdrawal
      */
-    function handleWithdrawalFunds(uint256 ethStakeLendAmount, uint256 perpDexAmount) external nonReentrant {
-        _auth(ROCK_ONYX_OPTIONS_TRADER_ROLE);
+    function acquireWithdrawalFunds(uint256 usdAmount) external nonReentrant {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        vaultState.withdrawPoolAmount += handleFundsFromEthStakeLend(ethStakeLendAmount);
-        vaultState.withdrawPoolAmount += handleFundsFromPerpDex(perpDexAmount);
+        require(usdAmount <= _totalValueLocked(), "Invalid withdrawal amount to acquire");
+
+        uint256 ethStakeLendAmount = usdAmount * allocateRatio.ethStakeLendRatio / 1e4;
+        console.log('ethStakeLendAmount %s', ethStakeLendAmount);
+
+        uint256 perpDexAmount = usdAmount * allocateRatio.perpDexRatio / 1e4;
+        console.log('perpDexAmount %s', perpDexAmount);
+
+        vaultState.withdrawPoolAmount += acquireFundsFromEthStakeLend(ethStakeLendAmount);
+        console.log('vaultState.withdrawPoolAmount %s', vaultState.withdrawPoolAmount);
+        vaultState.withdrawPoolAmount += acquireFundsFromPerpDex(perpDexAmount);
+        console.log('vaultState.withdrawPoolAmount %s', vaultState.withdrawPoolAmount);
     }
 
     function withdrawPerformanceFee() external nonReentrant {
@@ -155,8 +165,8 @@ contract RockOnyxDeltaNeutralVault is
         uint256 ethStakeLendPerformanceFeeAmount = performanceFeeAmount * allocateRatio.ethStakeLendRatio;
         uint256 perpDexFeeAmount = performanceFeeAmount * allocateRatio.perpDexRatio;
 
-        ethStakeLendPerformanceFeeAmount = handleFundsFromEthStakeLend(ethStakeLendPerformanceFeeAmount);
-        perpDexFeeAmount = handleFundsFromPerpDex(perpDexFeeAmount);
+        ethStakeLendPerformanceFeeAmount = acquireFundsFromEthStakeLend(ethStakeLendPerformanceFeeAmount);
+        perpDexFeeAmount = acquireFundsFromPerpDex(perpDexFeeAmount);
 
         performanceFeeAmount = ethStakeLendPerformanceFeeAmount + perpDexFeeAmount;
         vaultState.performanceFeeAmount += performanceFeeAmount;
@@ -332,7 +342,7 @@ contract RockOnyxDeltaNeutralVault is
     function rebalanceAssetToPerpDex(uint256 amount) private {
         require(amount <= getTotalEthStakeLendAssets(), "INVALID_ETHSTAKELEND_POSITION_SIZE");
 
-        uint256 depositToPerpDexAmount = handleFundsFromEthStakeLend(amount);
+        uint256 depositToPerpDexAmount = acquireFundsFromPerpDex(amount);
         depositToPerpDexStrategy(depositToPerpDexAmount);
     }
 
@@ -343,7 +353,7 @@ contract RockOnyxDeltaNeutralVault is
     function rebalanceAssetToEthStakeLend(uint256 amount) private {
         require(amount <= getTotalPerpDexAssets(), "INVALID_PERPDEX_POSITION_SIZE");
 
-        uint256 depositToEthStakeLendAmount = handleFundsFromPerpDex(amount);
+        uint256 depositToEthStakeLendAmount = acquireFundsFromPerpDex(amount);
         depositToPerpDexStrategy(depositToEthStakeLendAmount);
     }
 
