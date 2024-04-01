@@ -107,7 +107,7 @@ contract RockOynxPerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
      * @dev Handle the post withdraw process from Dex vendor
      * @param amount The amount of tokens to transfer.
      */
-    function handlePostWithdrawFromVendor(uint256 amount) internal {
+    function handlePostWithdrawFromVendor(uint256 amount) external nonReentrant {
         require(amount > 0, "INVALID_WITHDRAW_AMOUNT");
         _auth(ROCK_ONYX_OPTIONS_TRADER_ROLE);
 
