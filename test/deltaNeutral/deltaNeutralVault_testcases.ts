@@ -148,6 +148,50 @@ describe("RockOnyxDeltaNeutralVault", function () {
     return totalValueLocked;
   }
 
+  // define function getWstEthPrice
+  async function getWstEthPrice() {
+    const wstEthAmount = 1; // we convert 1 wstEth to usdc
+    const price = await camelotSwapContract.getPriceOf(
+      wstethAddress,
+      wethAddress,
+      BigInt(18),
+      BigInt(18)
+    );
+    console.log("wstEthPrice %s", price);
+
+    // convert wstEth to eth, parse price BigInt to float
+    const ethAmount = wstEthAmount * parseFloat(price.toString()) / 1e18;
+    console.log("ethAmount %s", ethAmount);
+
+    // get eth price in usdc
+    const ethPrice = await camelotSwapContract.getPriceOf(
+      wethAddress,
+      usdcAddress,
+      BigInt(18),
+      BigInt(6)
+    );
+    console.log("ethPrice %s", ethPrice);
+
+    // convert eth to usdc
+    const usdcAmount = ethAmount * parseFloat(ethPrice.toString()) / 1e6;
+
+    return usdcAmount;
+  }
+
+  async function getEthPrice() {
+    // get current priceOf from CamelotSwapContract
+    const _ethPrice = await camelotSwapContract.getPriceOf(
+      wstethAddress,
+      wethAddress,
+      BigInt(18),
+      BigInt(18)
+    );
+    // parse priceOf to float
+    const ethPrice = parseFloat(_ethPrice.toString()) / 1e18;
+    console.log("ethPrice %s", ethPrice);
+    return ethPrice;
+  }
+
   it("seed data", async function () {
     const usdcSigner = await ethers.getImpersonatedSigner(
       usdcImpersonatedSigner
@@ -407,44 +451,82 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it("user deposit -> open position -> deposit to vender -> sync profit -> withdraw", async function () {
+  it("user deposit -> deposit to vendor -> open position -> sync profit -> withdraw", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
-    
+
+    const inititalDeposit = 10 + 100;
+
     await deposit(user1, 10 * 1e6);
     await deposit(user2, 100 * 1e6);
-    let totalValueLock = await logAndReturnTotalValueLock();
-    expect(totalValueLock).to.approximately(110 * 1e6, PRECISION);
 
-    console.log("-------------open position---------------");
-    const openPositionTx = await rockOnyxDeltaNeutralVaultContract
-      .connect(admin)
-      .openPosition(BigInt(0.01 * 1e18));
-    await openPositionTx.wait();
+    let totalValueLock = await logAndReturnTotalValueLock();
+    expect(totalValueLock).to.approximately(inititalDeposit * 1e6, PRECISION);
 
     console.log("-------------deposit to vendor on aevo---------------");
     await rockOnyxDeltaNeutralVaultContract.connect(admin).depositToVendor({
       value: ethers.parseEther("0.000159539385325246"),
     });
 
+    console.log("-------------open position---------------");
+    let ethPrice = await getEthPrice();
+
+    // calculate eth amount for totalvaluelocked / 2 usd amount
+    // round ethAmount to 2 decimal places
+    const ethAmount = parseFloat(((totalValueLock / 2) / ethPrice).toFixed(2));
+    console.log("ethAmount %s", ethAmount);
+
+    const openPositionTx = await rockOnyxDeltaNeutralVaultContract
+      .connect(admin)
+      .openPosition(BigInt(ethAmount * 1e18));
+    await openPositionTx.wait();
+
     totalValueLock = await logAndReturnTotalValueLock();
-    expect(totalValueLock).to.approximately(110 * 1e6, PRECISION);
+    expect(totalValueLock).to.approximately(inititalDeposit * 1e6, PRECISION);
 
     console.log("-------------sync derpDex balance---------------");
+    // assume that the funding fee return 0.01% every 1 hour
+    // we sync balance after 8 hours
+    const dexBalance = (totalValueLock / 2) * 0.0001 * 8;
+    console.log("dexBalance %s", dexBalance);
+
     const syncDerpDexBalanceTx = await rockOnyxDeltaNeutralVaultContract
       .connect(admin)
-      .syncBalance(200 * 1e6);
-
+      .syncBalance(dexBalance);
     await syncDerpDexBalanceTx.wait();
+
+    // get current price per share from contract
+    const pricePerShare = await rockOnyxDeltaNeutralVaultContract
+      .connect(admin)
+      .pricePerShare();
+    console.log("pricePerShare %s", pricePerShare);
+    expect(pricePerShare).to.greaterThan(1 * 1e6);
+
     totalValueLock = await logAndReturnTotalValueLock();
-    expect(totalValueLock).to.approximately(255 * 1e6, PRECISION);
+    expect(totalValueLock).to.approximately((inititalDeposit / 2 + dexBalance) * 1e6, PRECISION);
 
     console.log("-------------Users initial withdrawals---------------");
+    const withdrawalShares = 100;
+    const withdrawalAmount = (withdrawalShares * pricePerShare) / 1e6;
+    console.log("withdrawalAmount %s", withdrawalAmount);
+
     const initiateWithdrawalTx1 = await rockOnyxDeltaNeutralVaultContract
       .connect(user2)
-      .initiateWithdrawal(100 * 1e6);
+      .initiateWithdrawal(withdrawalShares * 1e6);
     await initiateWithdrawalTx1.wait();
+
+    console.log("------------- close position to release fund for user ---------------");
+    // calculate eth amount from withdrawalAmount
+    ethPrice = await getEthPrice();
+    let withdrawalEthAmount = withdrawalAmount / ethPrice;
+    withdrawalEthAmount = Math.ceil(withdrawalEthAmount * 100) / 100;
+    console.log("ethAmountFromUsd %s", withdrawalEthAmount);
+
+    const closePositionTx = await rockOnyxDeltaNeutralVaultContract
+      .connect(admin)
+      .closePosition(BigInt(withdrawalEthAmount * 1e18));
+    await closePositionTx.wait();
 
     console.log("-------------handleWithdrawalFunds---------------");
     // 49920910 181838190
