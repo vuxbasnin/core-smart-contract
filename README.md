@@ -3,12 +3,7 @@
 This repository contains the smart contract for the **Rock Onyx Vault** project, written in **Solidity** and using **Hardhat**.
 
 ## Introduction
-**Rock Onyx Vault** is a decentralized data storage solution powered by blockchain technology. The smart contract in this repository manages data storage, access control, and user authentication.
-
-## Features
-- **Decentralized Storage**: Rock Onyx Vault leverages the Ethereum blockchain for secure and immutable data storage.
-- **Smart Contract**: The smart contract defines the rules for data access, ownership, and management.
-- **Hardhat Development Environment**: We use Hardhat for local development, testing, and deployment.
+**Rock Onyx Vault** is a platform which provides automated Vaults with various strategies to maximize your returns with low risk.
 
 ## Development Guide
 To contribute to Rock Onyx Vault smart contract, follow these steps:
