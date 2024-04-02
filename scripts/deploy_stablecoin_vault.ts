@@ -119,7 +119,7 @@ async function main() {
     wethAddress,
     wstethAddress,
     arbAddress,
-    BigInt(1.23363 * 1e6) 
+    BigInt(1229021)
   );
 
   console.log(
