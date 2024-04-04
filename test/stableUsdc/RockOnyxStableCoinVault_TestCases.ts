@@ -224,10 +224,10 @@ describe("RockOnyxStableCoinVault", function () {
       usdceImpersonatedSigner
     );
 
-    await transferUsdcForUser(usdcSigner, user1, 1000 * 1e6);
-    await transferUsdcForUser(usdcSigner, user2, 1000 * 1e6);
-    await transferUsdcForUser(usdcSigner, user3, 1000 * 1e6);
-    await transferUsdcForUser(usdcSigner, user4, 1000 * 1e6);
+    await transferUsdcForUser(usdcSigner, user1, 10000 * 1e6);
+    await transferUsdcForUser(usdcSigner, user2, 10000 * 1e6);
+    await transferUsdcForUser(usdcSigner, user3, 10000 * 1e6);
+    await transferUsdcForUser(usdcSigner, user4, 10000 * 1e6);
 
     await transferUsdcForUser(usdceSigner, optionsReceiver, 1000 * 1e6);
   });
@@ -855,7 +855,7 @@ describe("RockOnyxStableCoinVault", function () {
     console.log("pricePerShare", pps);
   });
 
-  it.skip("user deposit -> deposit to eavo -> mint eth -> mint usd-> update profit -> close round -> deposit", async function () {
+  it("user deposit -> deposit to eavo -> mint eth -> mint usd-> update profit -> close round -> deposit", async function () {
     console.log("-------------deposit time: 50$---------------");
     await deposit(user1, 50 * 1e6);
     await deposit(user1, 100 * 1e6);
@@ -966,6 +966,17 @@ describe("RockOnyxStableCoinVault", function () {
     console.log("ETH LP State:", ethLPState2);
     expect(ethLPState2[4]).to.greaterThan(0);
 
+    console.log("------------- decrease USD LP Position ---------------");
+    // get usd lp state
+    const usdLPStateBeforeDecreasing = await rockOnyxUSDTVaultContract.getUsdLPState();
+    console.log("USD LP State before mint:", usdLPStateBeforeDecreasing);
+
+    // decrease USD LP position
+    const decreaseUsdLpPositionTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .decreaseUsdLPLiquidity(usdLPStateBeforeDecreasing[1]);
+    await decreaseUsdLpPositionTx.wait();
+
     const vaultUsdcBalance = await usdc.balanceOf(
       await rockOnyxUSDTVaultContract.getAddress()
     );
@@ -996,6 +1007,17 @@ describe("RockOnyxStableCoinVault", function () {
       .getEthLPState();
     console.log("ETH LP State after mint:", ethLPStateAfterMint);
     expect(ethLPStateAfterMint[1]).to.greaterThan(0);
+
+    console.log("------------- Mint new USD LP Position again ---------------");
+    // mint new USD LP position
+    const mintUsdLpPositionAgainTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .mintUsdLPPosition(-2, 2, 4525, 4);
+    await mintUsdLpPositionAgainTx.wait();
+
+    const usdLPStateAfterMint = await rockOnyxUSDTVaultContract.getUsdLPState();
+    console.log("USD LP State after mint:", usdLPStateAfterMint);
+    expect(usdLPStateAfterMint[1]).to.greaterThan(0);
 
     console.log("------------- Get Price Per Share ---------------");
     const pricePerShare = await rockOnyxUSDTVaultContract.pricePerShare();
