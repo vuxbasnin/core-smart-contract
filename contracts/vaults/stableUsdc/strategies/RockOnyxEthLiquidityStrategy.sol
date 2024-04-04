@@ -175,7 +175,7 @@ contract RockOnyxEthLiquidityStrategy is
             _ethLPSwapTo(wstEth, IERC20(wstEth).balanceOf(address(this)), weth);
         }
 
-        ethLPState.unAllocatedBalance = _ethLPSwapTo(weth, IERC20(weth).balanceOf(address(this)), usd);
+        ethLPState.unAllocatedBalance += _ethLPSwapTo(weth, IERC20(weth).balanceOf(address(this)), usd);
     }
 
     /**
