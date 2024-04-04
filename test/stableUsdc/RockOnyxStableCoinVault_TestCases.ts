@@ -912,7 +912,9 @@ describe("RockOnyxStableCoinVault", function () {
     await mintEthLpPositionTx.wait();
 
     console.log("------------- get ETH LP State ---------------");
-    const ethLPState = await rockOnyxUSDTVaultContract.connect(admin).getEthLPState();
+    const ethLPState = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .getEthLPState();
     console.log("ETH LP State:", ethLPState);
     expect(ethLPState[1]).to.greaterThan(0);
 
@@ -943,7 +945,13 @@ describe("RockOnyxStableCoinVault", function () {
 
     // expect TVL = initialDepositAmount
     totalValueLocked = await logAndReturnTotalValueLock();
-    expect(totalValueLocked).to.greaterThanOrEqual(initialDepositAmount + 0.2 * initialDepositAmount * 0.05);
+    expect(totalValueLocked).to.greaterThanOrEqual(
+      initialDepositAmount + 0.2 * initialDepositAmount * 0.05
+    );
+
+    console.log("------------- Get Price Per Share ---------------");
+    const pricePerShare1 = await rockOnyxUSDTVaultContract.pricePerShare();
+    console.log("Price per Share:", Number(pricePerShare1.toString()) / 1e6);
 
     console.log("------------- decrease ETH LP Position ---------------");
     // decrease ETH LP position
@@ -952,16 +960,59 @@ describe("RockOnyxStableCoinVault", function () {
       .decreaseEthLPLiquidity(ethLPState[1]);
     await decreaseEthLpPositionTx.wait();
 
-    const ethLPState2 = await rockOnyxUSDTVaultContract.connect(admin).getEthLPState();
+    const ethLPState2 = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .getEthLPState();
     console.log("ETH LP State:", ethLPState2);
     expect(ethLPState2[4]).to.greaterThan(0);
 
-    const vaultUsdcBalance = await usdc.balanceOf(await rockOnyxUSDTVaultContract.getAddress());
+    const vaultUsdcBalance = await usdc.balanceOf(
+      await rockOnyxUSDTVaultContract.getAddress()
+    );
     console.log("USDC balance of vault contract:", vaultUsdcBalance.toString());
     expect(Number(vaultUsdcBalance) / 1e6).to.be.gt(initialDepositAmount * 0.5);
 
     const totalValueLocked2 = await logAndReturnTotalValueLock();
-    expect(totalValueLocked2).to.greaterThanOrEqual(totalValueLocked);
+    // precision around 5% of TVL because we cannot control the eth price
+    const precision = parseInt((Number(totalValueLocked) * 0.05).toString());
+    console.log("precision %s", precision);
+    expect(totalValueLocked2).to.approximately(totalValueLocked, precision);
+
+    const ethLPStateAfterDecreasing = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .getEthLPState();
+    console.log("ETH LP State after mint:", ethLPStateAfterDecreasing);
+    expect(ethLPStateAfterDecreasing[1]).to.eq(0);
+
+    console.log("------------- Mint new ETH LP Position again ---------------");
+    // mint new ETH LP position
+    const mintEthLpPositionAgainTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .mintEthLPPosition(1458, 1486, 9030, 4);
+    await mintEthLpPositionAgainTx.wait();
+
+    const ethLPStateAfterMint = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .getEthLPState();
+    console.log("ETH LP State after mint:", ethLPStateAfterMint);
+    expect(ethLPStateAfterMint[1]).to.greaterThan(0);
+
+    console.log("------------- Get Price Per Share ---------------");
+    const pricePerShare = await rockOnyxUSDTVaultContract.pricePerShare();
+    console.log("Price per Share:", Number(pricePerShare.toString()) / 1e6);
+
+    const vaultUsdcBalance2 = await usdc.balanceOf(
+      await rockOnyxUSDTVaultContract.getAddress()
+    );
+    console.log(
+      "USDC balance of vault contract:",
+      vaultUsdcBalance2.toString()
+    );
+
+    // Assert that vaultUsdcBalance2 is not greater than 5% of totalValueLocked2
+    expect(Number(vaultUsdcBalance2) / 1e6).to.be.lte(
+      Number(totalValueLocked2) * 0.05
+    );
   });
 
   // https://arbiscan.io/address/0x55c4c840F9Ac2e62eFa3f12BaBa1B57A1208B6F5
