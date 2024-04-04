@@ -969,13 +969,16 @@ describe("RockOnyxStableCoinVault", function () {
     console.log("------------- decrease USD LP Position ---------------");
     // get usd lp state
     const usdLPStateBeforeDecreasing = await rockOnyxUSDTVaultContract.getUsdLPState();
-    console.log("USD LP State before mint:", usdLPStateBeforeDecreasing);
+    console.log("USD LP State before decreasing:", usdLPStateBeforeDecreasing);
 
     // decrease USD LP position
     const decreaseUsdLpPositionTx = await rockOnyxUSDTVaultContract
       .connect(admin)
       .decreaseUsdLPLiquidity(usdLPStateBeforeDecreasing[1]);
     await decreaseUsdLpPositionTx.wait();
+
+    const usdLPStateAfterDecreasing = await rockOnyxUSDTVaultContract.getUsdLPState();
+    console.log("USD LP State after decreasing:", usdLPStateAfterDecreasing);
 
     const vaultUsdcBalance = await usdc.balanceOf(
       await rockOnyxUSDTVaultContract.getAddress()
@@ -1009,6 +1012,8 @@ describe("RockOnyxStableCoinVault", function () {
     expect(ethLPStateAfterMint[1]).to.greaterThan(0);
 
     console.log("------------- Mint new USD LP Position again ---------------");
+    const usdLPStateBeforeMint = await rockOnyxUSDTVaultContract.getUsdLPState();
+    console.log("USD LP State before Mint:", usdLPStateBeforeMint);
     // mint new USD LP position
     const mintUsdLpPositionAgainTx = await rockOnyxUSDTVaultContract
       .connect(admin)

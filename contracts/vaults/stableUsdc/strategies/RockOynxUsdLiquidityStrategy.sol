@@ -77,7 +77,7 @@ contract RockOynxUsdLiquidityStrategy is
         uint8 decimals
     ) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        require(usdLPState.tokenId == 0, "POSITION_ALREADY_OPEN");
+        require(usdLPState.liquidity == 0, "POSITION_ALREADY_OPEN");
 
         _rebalanceUsdLPAssets(ratio, decimals);
 
@@ -130,7 +130,7 @@ contract RockOynxUsdLiquidityStrategy is
      */
     function increaseUsdLPLiquidity(uint16 ratio, uint8 decimals) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        require(usdLPState.tokenId > 0, "POSITION_HAS_NOT_OPEN");
+        require(usdLPState.liquidity == 0, "POSITION_HAS_NOT_OPEN");
 
         _rebalanceUsdLPAssets(ratio, decimals);
 
