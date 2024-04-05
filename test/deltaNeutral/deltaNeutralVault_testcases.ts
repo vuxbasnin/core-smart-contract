@@ -160,6 +160,18 @@ describe("RockOnyxDeltaNeutralVault", function () {
     return usdcAmount;
   }
 
+  // define function getWstEthPrice
+  async function getWstEthToEthPrice() {
+    const price = await camelotSwapContract.getPriceOf(
+      wstethAddress,
+      wethAddress,
+      BigInt(18),
+      BigInt(18)
+    );
+
+    return price;
+  }
+
   async function getEthPrice() {
     // get current priceOf from CamelotSwapContract
     const _ethPrice = await camelotSwapContract.getPriceOf(
@@ -186,7 +198,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     await transferUsdcForUser(usdcSigner, optionsReceiver, 1000 * 1e6);
   });
 
-  it.skip("user deposit -> withdraw, do not deposit to perp dex", async function () {
+  it("user deposit -> withdraw, do not deposit to perp dex", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
@@ -206,8 +218,8 @@ describe("RockOnyxDeltaNeutralVault", function () {
     // 49957050 49957050
     const handleWithdrawalFundsTx = await rockOnyxDeltaNeutralVaultContract
       .connect(admin)
-      .handleWithdrawalFunds(49957050n, 49957050n);
-    await initiateWithdrawalTx1.wait();
+      .acquireWithdrawalFunds(49957050n + 49957050n);
+    await handleWithdrawalFundsTx.wait();
 
     console.log("-------------complete withdrawals---------------");
     let user2Balance = await usdc.connect(user2).balanceOf(user2);
@@ -226,7 +238,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it.skip("user deposit -> open position -> close position -> withdraw, do not deposit to perp dex", async function () {
+  it("user deposit -> open position -> close position -> withdraw, do not deposit to perp dex", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
@@ -258,7 +270,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     // 49957050 49957050
     const handleWithdrawalFundsTx = await rockOnyxDeltaNeutralVaultContract
       .connect(admin)
-      .handleWithdrawalFunds(49957050n, 49957050n);
+      .acquireWithdrawalFunds(49957050n + 49957050n);
     await initiateWithdrawalTx1.wait();
 
     console.log("-------------complete withdrawals---------------");
@@ -278,7 +290,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it.skip("user deposit -> open position -> deposit to vender -> withdraw", async function () {
+  it("user deposit -> open position -> deposit to vender -> withdraw", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
@@ -294,12 +306,6 @@ describe("RockOnyxDeltaNeutralVault", function () {
       .openPosition(BigInt(0.01 * 1e18));
     await openPositionTx.wait();
 
-    console.log("-------------close position---------------");
-    const closePositionTx = await rockOnyxDeltaNeutralVaultContract
-      .connect(admin)
-      .closePosition(BigInt(0.005 * 1e18));
-    await closePositionTx.wait();
-
     console.log("-------------deposit to vendor on aevo---------------");
     await rockOnyxDeltaNeutralVaultContract.connect(admin).depositToVendor({
       value: ethers.parseEther("0.000159539385325246"),
@@ -314,6 +320,12 @@ describe("RockOnyxDeltaNeutralVault", function () {
       .initiateWithdrawal(100 * 1e6);
     await initiateWithdrawalTx1.wait();
 
+    console.log("-------------close position---------------");
+    const closePositionTx = await rockOnyxDeltaNeutralVaultContract
+      .connect(admin)
+      .closePosition(BigInt(0.01 * 1e18));
+    await closePositionTx.wait();
+
     console.log("-------------handleWithdrawalFunds---------------");
     // 49957050 49957050
     const usdcAmount = 49957050n;
@@ -326,10 +338,15 @@ describe("RockOnyxDeltaNeutralVault", function () {
         usdcAmount
       );
 
-    const handleWithdrawalFundsTx = await rockOnyxDeltaNeutralVaultContract
+    const handlePostWithdrawTx = await rockOnyxDeltaNeutralVaultContract
       .connect(optionsReceiver)
-      .handleWithdrawalFunds(49957050n, 49957050n);
-    await initiateWithdrawalTx1.wait();
+      .handlePostWithdrawFromVendor(usdcAmount);
+    await handlePostWithdrawTx.wait();
+
+    const handleWithdrawalFundsTx = await rockOnyxDeltaNeutralVaultContract
+      .connect(admin)
+      .acquireWithdrawalFunds(49957050n + 49957050n);
+    await handleWithdrawalFundsTx.wait();
 
     console.log("-------------complete withdrawals---------------");
     let user2Balance = await usdc.connect(user2).balanceOf(user2);
@@ -348,7 +365,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it.skip("user deposit1 -> open position -> deposit to vender -> user deposit2 -> open position -> deposit to vender -> withdraw", async function () {
+  it("user deposit1 -> open position -> deposit to vender -> user deposit2 -> open position -> deposit to vender -> withdraw", async function () {
     console.log(
       "-------------deposit1 to rockOnyxDeltaNeutralVault---------------"
     );
@@ -383,7 +400,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     const openPosition1Tx = await rockOnyxDeltaNeutralVaultContract
       .connect(admin)
       .openPosition(BigInt(0.01 * 1e18));
-    await openPositionTx.wait();
+    await openPosition1Tx.wait();
 
     console.log("-------------deposit to vendor on aevo---------------");
     await rockOnyxDeltaNeutralVaultContract.connect(admin).depositToVendor({
@@ -399,6 +416,12 @@ describe("RockOnyxDeltaNeutralVault", function () {
       .initiateWithdrawal(100 * 1e6);
     await initiateWithdrawalTx1.wait();
 
+    console.log("-------------close position---------------");
+    const closePositionTx = await rockOnyxDeltaNeutralVaultContract
+      .connect(admin)
+      .closePosition(BigInt(0.01 * 1e18));
+    await closePositionTx.wait();
+
     console.log("-------------handleWithdrawalFunds---------------");
     // 49957050 49957050
     const usdcAmount = 49957050n;
@@ -411,10 +434,15 @@ describe("RockOnyxDeltaNeutralVault", function () {
         usdcAmount
       );
 
-    const handleWithdrawalFundsTx = await rockOnyxDeltaNeutralVaultContract
+    const handlePostWithdrawTx = await rockOnyxDeltaNeutralVaultContract
       .connect(optionsReceiver)
-      .acquireWithdrawalFunds(49957050n, 49957050n);
-    await initiateWithdrawalTx1.wait();
+      .handlePostWithdrawFromVendor(usdcAmount);
+    await handlePostWithdrawTx.wait();
+
+    const handleWithdrawalFundsTx = await rockOnyxDeltaNeutralVaultContract
+      .connect(admin)
+      .acquireWithdrawalFunds(49957050n + 49957050n);
+    await handleWithdrawalFundsTx.wait();
 
     console.log("-------------complete withdrawals---------------");
     let user2Balance = await usdc.connect(user2).balanceOf(user2);
@@ -439,9 +467,10 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
 
     const inititalDeposit = 10 + 100;
+    const user2_initDeposit = 100;
 
     await deposit(user1, 10 * 1e6);
-    await deposit(user2, 100 * 1e6);
+    await deposit(user2, user2_initDeposit * 1e6);
 
     let totalValueLock = await logAndReturnTotalValueLock();
     // parse totalValueLock to float
@@ -459,13 +488,24 @@ describe("RockOnyxDeltaNeutralVault", function () {
 
     // calculate eth amount for totalvaluelocked / 2 usd amount
     // round ethAmount to 2 decimal places
-    const ethAmount = parseFloat((Math.floor((tvlNumber / 2 / ethPrice) * 100) / 100).toFixed(2));
-    console.log("ethAmount %s", ethAmount);
+    const ethAmount = parseFloat(
+      (Math.floor((tvlNumber / 2 / ethPrice) * 100) / 100).toFixed(2)
+    );
+    console.log("ethAmount to open position %s", ethAmount);
 
     const openPositionTx = await rockOnyxDeltaNeutralVaultContract
       .connect(admin)
       .openPosition(BigInt(ethAmount * 1e18));
     await openPositionTx.wait();
+
+    // get ETH balance of rockOnyxDeltaNeutralVaultContract
+    const wstEthBalance1 = await wsteth.balanceOf(
+      await rockOnyxDeltaNeutralVaultContract.getAddress()
+    );
+    console.log(
+      "wstETH balance of rockOnyxDeltaNeutralVaultContract: ",
+      Number(wstEthBalance1.toString()) / 1e18
+    );
 
     totalValueLock = await logAndReturnTotalValueLock();
     expect(totalValueLock).to.approximately(inititalDeposit * 1e6, PRECISION);
@@ -474,14 +514,17 @@ describe("RockOnyxDeltaNeutralVault", function () {
     // assume that the funding fee return 0.01% every 1 hour
     // we sync balance after 7 days
     // get balanceOf wstEth for rockOnyxDeltaNeutralVaultContract
-    const wstEthBalance = await wsteth.balanceOf(await rockOnyxDeltaNeutralVaultContract.getAddress());
+    const wstEthBalance = await wsteth.balanceOf(
+      await rockOnyxDeltaNeutralVaultContract.getAddress()
+    );
     console.log("wstEthBalance %s", wstEthBalance);
 
     // get wstEthPrice
     const wstEthPrice = await getWstEthPrice();
-    const spotBalance = wstEthPrice * (parseFloat(wstEthBalance.toString()) / 1e18);
+    const spotBalance =
+      wstEthPrice * (parseFloat(wstEthBalance.toString()) / 1e18);
 
-    const allocatedToPerp = inititalDeposit - spotBalance;  // we assume that the spot - perp no loss
+    const allocatedToPerp = inititalDeposit - spotBalance; // we assume that the spot - perp no loss
     const dexBalance = allocatedToPerp * (1 + 0.0001 * 7 * 24);
     console.log("dexBalance %s", dexBalance);
 
@@ -503,6 +546,14 @@ describe("RockOnyxDeltaNeutralVault", function () {
       BigInt(parseInt((inititalDeposit / 2 + dexBalance).toString()) * 1e6),
       PRECISION
     );
+
+    // get user profit & loss
+    console.log("-------------get user profit & loss---------------");
+    const userVaultState = await rockOnyxDeltaNeutralVaultContract
+      .connect(user2)
+      .getUserVaultState();
+    const user2Profit = Number(userVaultState[2]) / 1e6;
+    console.log("user profit: ", user2Profit);
 
     console.log("-------------Users initial withdrawals---------------");
     const withdrawalShares = 100;
@@ -534,8 +585,20 @@ describe("RockOnyxDeltaNeutralVault", function () {
     // calculate eth amount from withdrawalAmount
     ethPrice = await getEthPrice();
     let withdrawalEthAmount = withdrawalAmountInSpot / ethPrice;
+    console.log("withdrawalEthAmount %s", withdrawalEthAmount);
     withdrawalEthAmount = Math.ceil(withdrawalEthAmount * 100) / 100;
     console.log("ethAmountFromUsd %s", withdrawalEthAmount);
+
+    // estimate the ETH balance based on wstEthBalance
+    let wstEthEthPrice = await getWstEthToEthPrice();
+    const estimatedEthAmount =
+      (parseFloat(wstEthBalance.toString()) / 1e18) *
+      (Number(wstEthEthPrice) / 1e18);
+    console.log("estimated ETH balance: ", estimatedEthAmount);
+
+    // we can't sell more than we have, so sell all if the withdrawal amount > vault's eth balance
+    withdrawalEthAmount = Math.min(estimatedEthAmount, withdrawalEthAmount);
+    console.log("withdrawalEthAmount 2: %s", withdrawalEthAmount);
 
     const closePositionTx = await rockOnyxDeltaNeutralVaultContract
       .connect(admin)
@@ -544,28 +607,31 @@ describe("RockOnyxDeltaNeutralVault", function () {
 
     console.log("------------- trader send fund back to vault ---------------");
     // optionsReceiver approve usdc to vault
+    const amountToSend = BigInt(
+      parseInt((withdrawalAmountInPerp * 1e6).toString())
+    );
     await usdc
       .connect(optionsReceiver)
       .approve(
         await rockOnyxDeltaNeutralVaultContract.getAddress(),
-        BigInt(withdrawalAmountInPerp * 1e6)
+        amountToSend
       );
 
     // optionsReceiver call handlePostWithdrawFromVendor to return withdrawalAmountInPerp to vault
     const handlePostWithdrawTx = await rockOnyxDeltaNeutralVaultContract
       .connect(optionsReceiver)
-      .handlePostWithdrawFromVendor(BigInt(withdrawalAmountInPerp * 1e6));
+      .handlePostWithdrawFromVendor(amountToSend);
     await handlePostWithdrawTx.wait();
 
     console.log("-------------acquireWithdrawalFunds---------------");
     const handleWithdrawalFundsTx = await rockOnyxDeltaNeutralVaultContract
-      .connect(optionsReceiver)
+      .connect(admin)
       .acquireWithdrawalFunds(withdrawalAmount * 1e6);
     await handleWithdrawalFundsTx.wait();
 
     console.log("-------------complete withdrawals---------------");
     let user2Balance = await usdc.connect(user2).balanceOf(user2);
-    console.log("usdc of user before withdraw %s", user2Balance);
+    console.log("usdc of user before withdraw %s", Number(user2Balance) / 1e6);
 
     const completeWithdrawalTx = await rockOnyxDeltaNeutralVaultContract
       .connect(user2)
@@ -573,14 +639,21 @@ describe("RockOnyxDeltaNeutralVault", function () {
     await completeWithdrawalTx.wait();
 
     let user1BalanceAfterWithdraw = await usdc.connect(user2).balanceOf(user2);
-    console.log("usdc of user after withdraw %s", user1BalanceAfterWithdraw);
+    console.log(
+      "usdc of user after withdraw %s",
+      Number(user1BalanceAfterWithdraw) / 1e6
+    );
+
+    const expectedUser2Balance =
+      Number(user2Balance) / 1e6 + user2_initDeposit * (1 + user2Profit);
+    console.log("expectedUser2Balance %s", expectedUser2Balance);
     expect(user1BalanceAfterWithdraw).to.approximately(
-      user2Balance + BigInt(230 * 1e6),
+      BigInt(parseInt((expectedUser2Balance * 1e6).toString())),
       PRECISION
     );
   });
 
-  it.skip("user deposit -> open position -> close position", async function () {
+  it("user deposit -> open position -> close position", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );

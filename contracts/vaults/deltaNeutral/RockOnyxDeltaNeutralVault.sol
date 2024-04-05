@@ -178,6 +178,8 @@ contract RockOnyxDeltaNeutralVault is
 
         syncEthStakeLendBalance();
         syncPerpDexBalance(perpDexbalance);
+
+        recalculateAllocateRatio();
     }
 
     /**
@@ -355,6 +357,17 @@ contract RockOnyxDeltaNeutralVault is
 
         uint256 depositToEthStakeLendAmount = acquireFundsFromPerpDex(amount);
         depositToPerpDexStrategy(depositToEthStakeLendAmount);
+    }
+
+    /** 
+     * @notice recalculate allocate ratio vault
+     */
+    function recalculateAllocateRatio() private {
+        uint256 totalEthAssets = getTotalEthStakeLendAssets();
+        uint256 totalPerpAssets = getTotalPerpDexAssets();
+        uint256 tvl = totalEthAssets + totalPerpAssets;
+        allocateRatio.ethStakeLendRatio = totalEthAssets * 10 ** allocateRatio.decimals / tvl;
+        allocateRatio.perpDexRatio = totalPerpAssets * 10 ** allocateRatio.decimals / tvl;
     }
 
     /**
