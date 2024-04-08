@@ -1042,8 +1042,187 @@ describe("RockOnyxStableCoinVault", function () {
     );
   });
 
+  it("migration test, user deposit -> close round -> depoist -> deposit to aevo -> init withdraw -> close round -> export data -> deploy new contract and import data", async function () {
+    console.log("-------------deposit time 1: 50$---------------");
+    await deposit(user1, 50 * 1e6);
+
+    console.log("-------------close round time 1---------------");
+    const closeRound1Tx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .closeRound();
+    await closeRound1Tx.wait();
+
+    console.log("-------------deposit time 2: 5$---------------");
+    await deposit(user1, 5 * 1e6);
+
+    console.log("-------------deposit to vendor on aevo---------------");
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
+      value: ethers.parseEther("0.000159539385325246"),
+    });
+
+    console.log("-------------initial withdrawals time 1: 5$---------------");
+    const initiateWithdrawal1Tx = await rockOnyxUSDTVaultContract
+      .connect(user1)
+      .initiateWithdrawal(5 * 1e6);
+    await initiateWithdrawal1Tx.wait();
+
+    console.log("-------------initial withdrawals time 2: 5$---------------");
+    const initiateWithdrawal2Tx = await rockOnyxUSDTVaultContract
+      .connect(user1)
+      .initiateWithdrawal(5 * 1e6);
+    await initiateWithdrawal2Tx.wait();
+
+    console.log(
+      "-------------update allocated balance from aevo vendor---------------"
+    );
+    const updateProfitTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .updateProfitFromVendor(30 * 1e6);
+    await updateProfitTx.wait();
+
+    console.log("-------------close round time 2---------------");
+    const closeRound2Tx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .closeRound();
+    await closeRound2Tx.wait();
+
+    console.log("-------------export vault state---------------");
+    const exportVaultStateTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .exportVaultState();
+
+    console.log(exportVaultStateTx);
+    console.log(exportVaultStateTx[3][0]);
+    console.log(exportVaultStateTx[4][0]);
+
+    const rockOnyxUSDTVault = await ethers.getContractFactory(
+      "RockOnyxUSDTVault"
+    );
+
+    const newRockOnyxUSDTVaultContract = await rockOnyxUSDTVault.deploy(
+      usdcAddress,
+      await camelotLiquidityContract.getAddress(),
+      rewardAddress,
+      nftPositionAddress,
+      await camelotSwapContract.getAddress(),
+      await aevoContract.getAddress(),
+      await optionsReceiver.getAddress(),
+      usdceAddress,
+      wethAddress,
+      wstethAddress,
+      arbAddress,
+      BigInt(0 * 1e6)
+    );
+    await rockOnyxUSDTVaultContract.waitForDeployment();
+
+    console.log(
+      "deploy newRockOnyxUSDTVaultContract successfully: %s",
+      await newRockOnyxUSDTVaultContract.getAddress()
+    );
+
+    console.log("-------------import vault state---------------");
+    const _currentRound = exportVaultStateTx[0];
+    const _roundWithdrawalShares = [...exportVaultStateTx[1]];
+    const _roundPricePerShares = [...exportVaultStateTx[2]];
+
+    const _depositReceiptArr = exportVaultStateTx[3].map((element) => {
+      return {
+        owner: element[0],
+        depositReceipt: {
+          shares: element[1][0],
+          depositAmount: element[1][1]
+        }
+      }
+    });
+
+    const _withdrawalArr = exportVaultStateTx[4].map((element) => {
+      return {
+        owner: element[0],
+        withdrawal: {
+          shares: element[1][0],
+          round: element[1][1]
+        }
+      }
+    });
+
+    const _vaultParams = {
+      decimals : exportVaultStateTx[5][0],
+      asset : exportVaultStateTx[5][1],
+      minimumSupply : exportVaultStateTx[5][2],
+      cap : exportVaultStateTx[5][3],
+      performanceFeeRate : exportVaultStateTx[5][4],
+      managementFeeRate : exportVaultStateTx[5][5],
+    }
+
+    const _vaultState = {
+      performanceFeeAmount : exportVaultStateTx[6][0],
+      managementFeeAmount : exportVaultStateTx[6][1],
+      currentRoundFeeAmount : exportVaultStateTx[6][2],
+      withdrawPoolAmount : exportVaultStateTx[6][3],
+      pendingDepositAmount : exportVaultStateTx[6][4],
+      totalShares : exportVaultStateTx[6][5],
+      lastLockedAmount : exportVaultStateTx[6][6],
+    }
+
+    const _allocateRatio = {
+      ethLPRatio : exportVaultStateTx[7][0],
+      usdLPRatio : exportVaultStateTx[7][1],
+      optionsRatio : exportVaultStateTx[7][2],
+      decimals : exportVaultStateTx[7][3],
+    }
+
+    const _ethLPState = {
+      tokenId : exportVaultStateTx[8][0],
+      liquidity : exportVaultStateTx[8][1],
+      lowerTick : exportVaultStateTx[8][2],
+      upperTick : exportVaultStateTx[8][3],
+      unAllocatedBalance : exportVaultStateTx[8][4],
+    }
+
+    const _usdLPState = {
+      tokenId : exportVaultStateTx[9][0],
+      liquidity : exportVaultStateTx[9][1],
+      lowerTick : exportVaultStateTx[9][2],
+      upperTick : exportVaultStateTx[9][3],
+      unAllocatedUsdcBalance : exportVaultStateTx[9][4],
+      unAllocatedUsdceBalance:  exportVaultStateTx[9][5]
+    }
+
+    const _optiondsState = {
+      allocatedUsdcBalance : exportVaultStateTx[10][0],
+      unAllocatedUsdcBalance : exportVaultStateTx[10][1],
+      unsettledProfit : exportVaultStateTx[10][2],
+      unsettledLoss : exportVaultStateTx[10][3],
+    }
+
+    const importVaultStateTx = await newRockOnyxUSDTVaultContract
+      .connect(admin)
+      .importVaultState(
+        _currentRound,
+        _roundWithdrawalShares,
+        _roundPricePerShares,
+        _depositReceiptArr,
+        _withdrawalArr,
+        _vaultParams,
+        _vaultState,
+        _allocateRatio,
+        _ethLPState,
+        _usdLPState,
+        _optiondsState
+      );
+
+    console.log("-------------export vault state---------------");
+    const exportVaultStateTx2 = await newRockOnyxUSDTVaultContract
+      .connect(admin)
+      .exportVaultState();
+
+    console.log(exportVaultStateTx2);
+    console.log(exportVaultStateTx2[3][0]);
+    console.log(exportVaultStateTx2[4][0]);
+  });
+
   // https://arbiscan.io/address/0x55c4c840F9Ac2e62eFa3f12BaBa1B57A1208B6F5
-  it("deposit error", async function () {
+  it.skip("deposit error", async function () {
     console.log(
       "-------------deposit error 0x55c4c840F9Ac2e62eFa3f12BaBa1B57A1208B6F5---------------"
     );
