@@ -166,7 +166,7 @@ contract RockOynxEthStakeLendStrategy is
      * @dev Retrieves the unallocated balance in the Ethereum Stake & Lend strategy.
      * @return The unallocated balance in the Ethereum Stake & Lend strategy.
      */
-    function getUnAllocatedBalance() external view returns (uint256) {
+    function getEthStakingUnAllocatedBalance() external view returns (uint256) {
         return ethStakeLendState.unAllocatedBalance;
     }
 
