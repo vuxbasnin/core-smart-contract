@@ -81,17 +81,22 @@ contract RockOynxEthStakeLendStrategy is
 
         uint256 ethPrice = _getEthPrice();
         uint256 usdAmount = ethAmount * ethPrice;
+        console.log("usdAmount %s", usdAmount);
 
         uint256 wstEthEthPrice = 1e36 / ethSwapProxy.getPriceOf(wstEth, weth, 18, 18);
         uint256 wstEthAmount = ethAmount * wstEthEthPrice * (1e4 + slippage) / 1e22;
+        console.log("wstEthAmount %s", wstEthAmount);
+        console.log("balanceOf wstEth %s", IERC20(wstEth).balanceOf(address(this)));
 
         if(IERC20(wstEth).balanceOf(address(this)) < wstEthAmount){
             ethAmount = _ethStakeLendSwapTo(wstEth, IERC20(wstEth).balanceOf(address(this)), weth);
+            console.log("ethAmount 1 %s", ethAmount);
         }else{
             _ethStakeLendSwapToWithOutput(wstEth, ethAmount, weth, wstEthAmount);    
         }
     
         uint256 receivedUsdAmount = _ethStakeLendSwapTo(weth, ethAmount, usd);
+        console.log("receivedUsdAmount %s", receivedUsdAmount);
         ethStakeLendState.unAllocatedBalance += receivedUsdAmount;
         
         emit PositionClosed(usdAmount, wstEthEthPrice, ethPrice, ethAmount, wstEthAmount, ethAmount, receivedUsdAmount);
@@ -121,21 +126,15 @@ contract RockOynxEthStakeLendStrategy is
             ethStakeLendState.unAllocatedBalance + IERC20(wstEth).balanceOf(address(this)) * _getWstEthPrice() / 1e18;
     }
 
-    function handleFundsFromEthStakeLend(uint256 amount) internal returns (uint256) {
+    function acquireFundsFromEthStakeLend(uint256 amount) internal returns (uint256) {
+        console.log("// acquireFundsFromEthStakeLend");
         uint256 unAllocatedBalance = ethStakeLendState.unAllocatedBalance;
-        if(ethStakeLendState.unAllocatedBalance >= amount){
-            ethStakeLendState.unAllocatedBalance -= amount;
-            ethStakeLendState.totalBalance -= amount;
-            return amount;
-        }
-
-        ethStakeLendState.unAllocatedBalance = 0;
-        uint256 amountToAcquire = amount - unAllocatedBalance;
-        uint256 wstEthAmount = amountToAcquire * 1e18 / _getWstEthPrice();
-        uint256 wethAmount = _ethStakeLendSwapTo(wstEth, wstEthAmount, weth);
-        uint256 usdcAmount = _ethStakeLendSwapTo(weth, wethAmount, usd);
-        ethStakeLendState.totalBalance -= (unAllocatedBalance + usdcAmount);
-        return unAllocatedBalance + usdcAmount;
+        console.log("unAllocatedBalance %s", unAllocatedBalance);
+        require(amount <= unAllocatedBalance, "Invalid acquire amount");
+        
+        ethStakeLendState.unAllocatedBalance -= amount;
+        ethStakeLendState.totalBalance -= amount;
+        return amount;
     }
 
     /**
@@ -167,7 +166,7 @@ contract RockOynxEthStakeLendStrategy is
      * @dev Retrieves the unallocated balance in the Ethereum Stake & Lend strategy.
      * @return The unallocated balance in the Ethereum Stake & Lend strategy.
      */
-    function getUnAllocatedBalance() external view returns (uint256) {
+    function getEthStakingUnAllocatedBalance() external view returns (uint256) {
         return ethStakeLendState.unAllocatedBalance;
     }
 

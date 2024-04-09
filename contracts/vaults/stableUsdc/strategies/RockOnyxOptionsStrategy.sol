@@ -64,7 +64,7 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
      */
     function acquireWithdrawalFundsUsdOptions(uint256 withdrawUsdOptionsAmount) internal returns (uint256) {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-
+        
         if(optionsState.unAllocatedUsdcBalance > withdrawUsdOptionsAmount){
             optionsState.unAllocatedUsdcBalance -= withdrawUsdOptionsAmount;
             return withdrawUsdOptionsAmount;    

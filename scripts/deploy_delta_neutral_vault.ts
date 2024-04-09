@@ -60,9 +60,9 @@ async function main() {
     "Deploying contracts with the account:",
     await deployer.getAddress()
   );
-  await deployCamelotSwapContract();
-  const camelotSwapAddress = await camelotSwapContract.getAddress();
-  // const camelotSwapAddress = "0x7EA2362e578212d7FDA082E0bBB5134f89EDc4DC";
+  // await deployCamelotSwapContract();
+  // const camelotSwapAddress = await camelotSwapContract.getAddress();
+  const camelotSwapAddress = "0x6aCa558d06f5149A4118FbD5218F2a430e3e48cF";
 
   const optionsTrader = "0x0aDf03D895617a95F317892125Cd6fb9ca3b99c1";
 

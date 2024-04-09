@@ -33,7 +33,7 @@ contract RockOnyxDeltaNeutralVault is
     event InitiateWithdrawal(address indexed account, uint256 amount, uint256 shares);
     event Withdrawn(address indexed account, uint256 amount, uint256 shares);
     event FeeRatesUpdated(uint256 performanceFee, uint256 managementFee);
-    event RequestFunds(uint256 ethStakeLendAmount, uint256 perpDexAmount);
+    event RequestFunds(uint256 withdrawalAmount, uint256 shares);
 
     constructor(
         address _usdc,
@@ -128,24 +128,25 @@ contract RockOnyxDeltaNeutralVault is
             pps,
             vaultParams.decimals
         );
-
-        uint256 ethStakeLendRatio = getTotalEthStakeLendAssets() * 1e4  / (getTotalEthStakeLendAssets() + getTotalPerpDexAssets());
-        uint256 ethStakeLendAmount = withdrawals[msg.sender].withdrawAmount * ethStakeLendRatio / 1e4;        
-        uint256 perpDexAmount = withdrawals[msg.sender].withdrawAmount - ethStakeLendAmount;
-
         vaultState.totalShares -= shares;
 
-        emit RequestFunds(ethStakeLendAmount, perpDexAmount);
+        emit RequestFunds(withdrawals[msg.sender].withdrawAmount, shares);
     }
 
     /**
      * @notice acquire asset form vendor, prepare funds for withdrawal
      */
-    function handleWithdrawalFunds(uint256 ethStakeLendAmount, uint256 perpDexAmount) external nonReentrant {
-        _auth(ROCK_ONYX_OPTIONS_TRADER_ROLE);
+    function acquireWithdrawalFunds(uint256 usdAmount) external nonReentrant {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        vaultState.withdrawPoolAmount += handleFundsFromEthStakeLend(ethStakeLendAmount);
-        vaultState.withdrawPoolAmount += handleFundsFromPerpDex(perpDexAmount);
+        require(usdAmount <= _totalValueLocked(), "Invalid withdrawal amount to acquire");
+
+        uint256 ethStakeLendAmount = usdAmount * allocateRatio.ethStakeLendRatio / 1e4;
+
+        uint256 perpDexAmount = usdAmount * allocateRatio.perpDexRatio / 1e4;
+
+        vaultState.withdrawPoolAmount += acquireFundsFromEthStakeLend(ethStakeLendAmount);
+        vaultState.withdrawPoolAmount += acquireFundsFromPerpDex(perpDexAmount);
     }
 
     function withdrawPerformanceFee() external nonReentrant {
@@ -155,8 +156,8 @@ contract RockOnyxDeltaNeutralVault is
         uint256 ethStakeLendPerformanceFeeAmount = performanceFeeAmount * allocateRatio.ethStakeLendRatio;
         uint256 perpDexFeeAmount = performanceFeeAmount * allocateRatio.perpDexRatio;
 
-        ethStakeLendPerformanceFeeAmount = handleFundsFromEthStakeLend(ethStakeLendPerformanceFeeAmount);
-        perpDexFeeAmount = handleFundsFromPerpDex(perpDexFeeAmount);
+        ethStakeLendPerformanceFeeAmount = acquireFundsFromEthStakeLend(ethStakeLendPerformanceFeeAmount);
+        perpDexFeeAmount = acquireFundsFromPerpDex(perpDexFeeAmount);
 
         performanceFeeAmount = ethStakeLendPerformanceFeeAmount + perpDexFeeAmount;
         vaultState.performanceFeeAmount += performanceFeeAmount;
@@ -168,6 +169,8 @@ contract RockOnyxDeltaNeutralVault is
 
         syncEthStakeLendBalance();
         syncPerpDexBalance(perpDexbalance);
+
+        recalculateAllocateRatio();
     }
 
     /**
@@ -332,7 +335,7 @@ contract RockOnyxDeltaNeutralVault is
     function rebalanceAssetToPerpDex(uint256 amount) private {
         require(amount <= getTotalEthStakeLendAssets(), "INVALID_ETHSTAKELEND_POSITION_SIZE");
 
-        uint256 depositToPerpDexAmount = handleFundsFromEthStakeLend(amount);
+        uint256 depositToPerpDexAmount = acquireFundsFromPerpDex(amount);
         depositToPerpDexStrategy(depositToPerpDexAmount);
     }
 
@@ -343,8 +346,19 @@ contract RockOnyxDeltaNeutralVault is
     function rebalanceAssetToEthStakeLend(uint256 amount) private {
         require(amount <= getTotalPerpDexAssets(), "INVALID_PERPDEX_POSITION_SIZE");
 
-        uint256 depositToEthStakeLendAmount = handleFundsFromPerpDex(amount);
+        uint256 depositToEthStakeLendAmount = acquireFundsFromPerpDex(amount);
         depositToPerpDexStrategy(depositToEthStakeLendAmount);
+    }
+
+    /** 
+     * @notice recalculate allocate ratio vault
+     */
+    function recalculateAllocateRatio() private {
+        uint256 totalEthAssets = getTotalEthStakeLendAssets();
+        uint256 totalPerpAssets = getTotalPerpDexAssets();
+        uint256 tvl = totalEthAssets + totalPerpAssets;
+        allocateRatio.ethStakeLendRatio = totalEthAssets * 10 ** allocateRatio.decimals / tvl;
+        allocateRatio.perpDexRatio = totalPerpAssets * 10 ** allocateRatio.decimals / tvl;
     }
 
     /**
