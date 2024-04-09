@@ -33,7 +33,7 @@ contract RockOnyxDeltaNeutralVault is
     event InitiateWithdrawal(address indexed account, uint256 amount, uint256 shares);
     event Withdrawn(address indexed account, uint256 amount, uint256 shares);
     event FeeRatesUpdated(uint256 performanceFee, uint256 managementFee);
-    event RequestFunds(uint256 ethStakeLendAmount, uint256 perpDexAmount);
+    event RequestFunds(uint256 withdrawalAmount, uint256 shares);
 
     constructor(
         address _usdc,
@@ -128,14 +128,9 @@ contract RockOnyxDeltaNeutralVault is
             pps,
             vaultParams.decimals
         );
-
-        uint256 ethStakeLendRatio = getTotalEthStakeLendAssets() * 1e4  / (getTotalEthStakeLendAssets() + getTotalPerpDexAssets());
-        uint256 ethStakeLendAmount = withdrawals[msg.sender].withdrawAmount * ethStakeLendRatio / 1e4;        
-        uint256 perpDexAmount = withdrawals[msg.sender].withdrawAmount - ethStakeLendAmount;
-
         vaultState.totalShares -= shares;
 
-        emit RequestFunds(ethStakeLendAmount, perpDexAmount);
+        emit RequestFunds(withdrawals[msg.sender].withdrawAmount, shares);
     }
 
     /**
@@ -147,15 +142,11 @@ contract RockOnyxDeltaNeutralVault is
         require(usdAmount <= _totalValueLocked(), "Invalid withdrawal amount to acquire");
 
         uint256 ethStakeLendAmount = usdAmount * allocateRatio.ethStakeLendRatio / 1e4;
-        console.log('ethStakeLendAmount %s', ethStakeLendAmount);
 
         uint256 perpDexAmount = usdAmount * allocateRatio.perpDexRatio / 1e4;
-        console.log('perpDexAmount %s', perpDexAmount);
 
         vaultState.withdrawPoolAmount += acquireFundsFromEthStakeLend(ethStakeLendAmount);
-        console.log('vaultState.withdrawPoolAmount %s', vaultState.withdrawPoolAmount);
         vaultState.withdrawPoolAmount += acquireFundsFromPerpDex(perpDexAmount);
-        console.log('vaultState.withdrawPoolAmount %s', vaultState.withdrawPoolAmount);
     }
 
     function withdrawPerformanceFee() external nonReentrant {
