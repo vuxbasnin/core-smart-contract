@@ -34,10 +34,6 @@ struct DepositReceipt {
 
 struct Withdrawal {
     uint256 shares;
-    uint256 pps;
-    uint256 withdrawAmount;
-    uint256 profit;
-    uint256 performanceFee;
     uint256 round;
 }
 
@@ -63,4 +59,14 @@ struct AllocateRatio{
     uint256 usdLPRatio;
     uint256 optionsRatio;
     uint8 decimals;
+}
+
+struct DepositReceiptArr {
+    address owner;
+    DepositReceipt depositReceipt;
+}
+
+struct WithdrawalArr {
+    address owner;
+    Withdrawal withdrawal;
 }

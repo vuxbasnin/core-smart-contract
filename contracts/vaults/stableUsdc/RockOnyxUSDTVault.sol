@@ -23,14 +23,18 @@ contract RockOnyxUSDTVault is
     using LiquidityAmounts for uint256;
 
     uint256 currentRound;
-    uint256 currentRoundWithdrawalAmount;
     mapping(address => DepositReceipt) private depositReceipts;
+    mapping(address => Withdrawal) private withdrawals;
     mapping(uint256 => uint256) private roundWithdrawalShares;
     mapping(uint256 => uint256) private roundPricePerShares;
-    mapping(address => Withdrawal) private withdrawals;
     VaultParams private vaultParams;
     VaultState private vaultState;
     AllocateRatio private allocateRatio;
+
+    // migration
+    DepositReceiptArr[] depositReceiptArr;
+    WithdrawalArr[] withdrawalArr;
+    // end migration
 
     /************************************************
      *  EVENTS
@@ -156,9 +160,35 @@ contract RockOnyxUSDTVault is
         vaultState.totalShares += shares;
 
         allocateAssets();
-
         emit Deposited(msg.sender, amount, shares);
+
+        // migration
+        DepositReceiptArr memory depositor = _getDepositOwner(msg.sender);
+        if(depositor.owner == address(0)){
+            depositReceiptArr.push(DepositReceiptArr(msg.sender, depositReceipt));
+        }else{
+            depositor.depositReceipt = depositReceipt;
+        }
+        // end migration
     }
+
+    function _getDepositOwner(address owner) private view returns(DepositReceiptArr memory){
+        for (uint256 i = 0; i < depositReceiptArr.length; i++) {
+            if(depositReceiptArr[i].owner == owner) return depositReceiptArr[i];
+        }
+
+        DepositReceiptArr memory emptyObj;
+        return emptyObj;
+    } 
+
+    function _getWithdrawOwner(address owner) private view returns(WithdrawalArr memory){
+        for (uint256 i = 0; i < withdrawalArr.length; i++) {
+            if(withdrawalArr[i].owner == owner) return withdrawalArr[i];
+        }
+
+        WithdrawalArr memory emptyObj;
+        return emptyObj;
+    } 
 
     /**
      * @notice allocate assets to strategies 
@@ -201,6 +231,18 @@ contract RockOnyxUSDTVault is
         withdrawals[msg.sender].round = currentRound;
         depositReceipt.shares -= shares;
         roundWithdrawalShares[currentRound] += shares;
+
+        // migration
+        WithdrawalArr memory withdrawer = _getWithdrawOwner(msg.sender);
+        if(withdrawer.owner == address(0)){
+            withdrawalArr.push(WithdrawalArr(msg.sender, withdrawals[msg.sender]));
+        }else{
+            withdrawer.withdrawal = withdrawals[msg.sender];
+        }
+
+        DepositReceiptArr memory depositor = _getDepositOwner(msg.sender);
+        depositor.depositReceipt = depositReceipt;
+        // end migration
     }
 
     /**
@@ -260,6 +302,14 @@ contract RockOnyxUSDTVault is
         IERC20(vaultParams.asset).safeTransfer(msg.sender, withdrawAmount);
         
         emit Withdrawn(msg.sender, withdrawAmount, withdrawals[msg.sender].shares);
+
+        // migration
+        DepositReceiptArr memory depositor = _getDepositOwner(msg.sender);
+        depositor.depositReceipt = depositReceipts[msg.sender];
+
+        WithdrawalArr memory withdrawer = _getWithdrawOwner(msg.sender);
+        withdrawer.withdrawal = withdrawals[msg.sender];
+        // end migration
     }
 
     /**
@@ -322,7 +372,6 @@ contract RockOnyxUSDTVault is
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         uint256 withdrawAmount = roundWithdrawalShares[currentRound - 1] * roundPricePerShares[currentRound - 1] / 1e6;
-
         uint256 withdrawAmountIncludeFee = withdrawAmount + vaultState.currentRoundFeeAmount;
 
         uint256 withdrawEthLPAmount = withdrawAmountIncludeFee * allocateRatio.ethLPRatio / 10 ** allocateRatio.decimals;
@@ -479,4 +528,72 @@ contract RockOnyxUSDTVault is
         bool sent = token.transfer(receiver, amount);
         require(sent, "TOKEN_TRANSFER_FAILED");
     }
+
+    // migration
+    function exportVaultState() external view returns (uint256, uint256[] memory, uint256[] memory, DepositReceiptArr[] memory, WithdrawalArr[] memory, VaultParams memory, VaultState memory, AllocateRatio memory, EthLPState memory, UsdLPState memory, OptionsStrategyState memory) {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+        
+        return (currentRound, exportRoundWithdrawalShares(), exportRoundPricePerShares(), depositReceiptArr, withdrawalArr, vaultParams, vaultState, allocateRatio, ethLPState, usdLPState, optionsState);
+    }
+
+    function exportRoundWithdrawalShares() internal view returns(uint256[] memory){
+        uint256[] memory result = new uint256[](currentRound);
+
+        for (uint256 i = 0; i < currentRound; i++) {
+            result[i] = roundWithdrawalShares[i];
+        }
+
+        return result;
+    }
+
+    function exportRoundPricePerShares() internal view returns(uint256[] memory){
+        uint256[] memory result = new uint256[](currentRound);
+
+        for (uint256 i = 0; i < currentRound; i++) {
+            result[i] = roundPricePerShares[i];
+        }
+
+        return result;
+    }
+
+    function importVaultState(
+        uint256 _currentRound,
+        uint256[] calldata _roundWithdrawalShares,
+        uint256[] calldata _roundPricePerShares,
+        DepositReceiptArr[] calldata _depositReceiptArr,
+        WithdrawalArr[] calldata _withdrawalArr,
+        VaultParams calldata _vaultParams,
+        VaultState calldata _vaultState,
+        AllocateRatio calldata _allocateRatio,
+        EthLPState calldata _ethLPState,
+        UsdLPState calldata _usdLPState,
+        OptionsStrategyState calldata _optionsState
+         ) external {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+        
+        currentRound =_currentRound;
+
+        for (uint256 i = 0; i < currentRound; i++) {
+            roundWithdrawalShares[i] = _roundWithdrawalShares[i];
+            roundPricePerShares[i] = _roundPricePerShares[i];
+        }
+
+        depositReceiptArr =_depositReceiptArr;
+        for (uint256 i = 0; i < _depositReceiptArr.length; i++) {
+            depositReceipts[_depositReceiptArr[i].owner] = _depositReceiptArr[i].depositReceipt;
+        }
+
+        withdrawalArr = _withdrawalArr;
+        for (uint256 i = 0; i < _withdrawalArr.length; i++) {
+            withdrawals[_withdrawalArr[i].owner] = _withdrawalArr[i].withdrawal;
+        }
+
+        vaultParams = _vaultParams;
+        vaultState =_vaultState;
+        allocateRatio = _allocateRatio;
+        ethLPState = _ethLPState;
+        usdLPState = _usdLPState;
+        optionsState = _optionsState;
+    }
+    // end migration
 }
