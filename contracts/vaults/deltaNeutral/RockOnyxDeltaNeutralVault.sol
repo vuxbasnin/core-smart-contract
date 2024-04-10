@@ -20,11 +20,15 @@ contract RockOnyxDeltaNeutralVault is
     using SafeERC20 for IERC20;
 
     mapping(address => DepositReceipt) private depositReceipts;
-    uint256 private withdrawalAmount;
     mapping(address => Withdrawal) private withdrawals;
     VaultParams private vaultParams;
     VaultState private vaultState;
     DeltaNeutralAllocateRatio private allocateRatio;
+
+    // migration
+    DepositReceiptArr[] depositReceiptArr;
+    WithdrawalArr[] withdrawalArr;
+    // end migration
 
     /************************************************
      *  EVENTS
@@ -98,7 +102,36 @@ contract RockOnyxDeltaNeutralVault is
         allocateAssets();
 
         emit Deposited(msg.sender, amount, shares);
+
+        // migration
+        DepositReceiptArr memory depositor = _getDepositOwner(msg.sender);
+        if(depositor.owner == address(0)){
+            depositReceiptArr.push(DepositReceiptArr(msg.sender, depositReceipt));
+        }else{
+            depositor.depositReceipt = depositReceipt;
+        }
+        // end migration
     }
+
+    // migration
+    function _getDepositOwner(address owner) private view returns(DepositReceiptArr memory){
+        for (uint256 i = 0; i < depositReceiptArr.length; i++) {
+            if(depositReceiptArr[i].owner == owner) return depositReceiptArr[i];
+        }
+
+        DepositReceiptArr memory emptyObj;
+        return emptyObj;
+    } 
+
+    function _getWithdrawOwner(address owner) private view returns(WithdrawalArr memory){
+        for (uint256 i = 0; i < withdrawalArr.length; i++) {
+            if(withdrawalArr[i].owner == owner) return withdrawalArr[i];
+        }
+
+        WithdrawalArr memory emptyObj;
+        return emptyObj;
+    }
+    // end migration
 
     /**
      * @notice Initiates a withdrawal that can be processed once the round completes
@@ -131,6 +164,18 @@ contract RockOnyxDeltaNeutralVault is
         vaultState.totalShares -= shares;
 
         emit RequestFunds(withdrawals[msg.sender].withdrawAmount, shares);
+
+        // migration
+        WithdrawalArr memory withdrawer = _getWithdrawOwner(msg.sender);
+        if(withdrawer.owner == address(0)){
+            withdrawalArr.push(WithdrawalArr(msg.sender, withdrawals[msg.sender]));
+        }else{
+            withdrawer.withdrawal = withdrawals[msg.sender];
+        }
+
+        DepositReceiptArr memory depositor = _getDepositOwner(msg.sender);
+        depositor.depositReceipt = depositReceipt;
+        // end migration
     }
 
     /**
@@ -213,6 +258,14 @@ contract RockOnyxDeltaNeutralVault is
 
         IERC20(vaultParams.asset).safeTransfer(msg.sender, withdrawAmount);
         emit Withdrawn(msg.sender, withdrawAmount, withdrawals[msg.sender].shares);
+
+        // migration
+        DepositReceiptArr memory depositor = _getDepositOwner(msg.sender);
+        depositor.depositReceipt = depositReceipts[msg.sender];
+
+        WithdrawalArr memory withdrawer = _getWithdrawOwner(msg.sender);
+        withdrawer.withdrawal = withdrawals[msg.sender];
+        // end migration
     }
 
     /**
@@ -404,4 +457,47 @@ contract RockOnyxDeltaNeutralVault is
         bool sent = token.transfer(receiver, amount);
         require(sent, "TOKEN_TRANSFER_FAILED");
     }
+
+    // migration
+    function exportVaultState() external view returns (
+        DepositReceiptArr[] memory, 
+        WithdrawalArr[] memory, 
+        VaultParams memory, 
+        VaultState memory, 
+        DeltaNeutralAllocateRatio memory, 
+        EthStakeLendState memory, 
+        PerpDexState memory) {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        return (depositReceiptArr, withdrawalArr, vaultParams, vaultState, allocateRatio, ethStakeLendState, perpDexState);
+    }
+
+    function importVaultState(
+        DepositReceiptArr[] calldata _depositReceiptArr,
+        WithdrawalArr[] calldata _withdrawalArr,
+        VaultParams calldata _vaultParams,
+        VaultState calldata _vaultState,
+        DeltaNeutralAllocateRatio calldata _allocateRatio,
+        EthStakeLendState calldata _ethStakeLendState,
+        PerpDexState calldata _perpDexState
+         ) external {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        depositReceiptArr =_depositReceiptArr;
+        for (uint256 i = 0; i < _depositReceiptArr.length; i++) {
+            depositReceipts[_depositReceiptArr[i].owner] = _depositReceiptArr[i].depositReceipt;
+        }
+
+        withdrawalArr = _withdrawalArr;
+        for (uint256 i = 0; i < _withdrawalArr.length; i++) {
+            withdrawals[_withdrawalArr[i].owner] = _withdrawalArr[i].withdrawal;
+        }
+
+        vaultParams = _vaultParams;
+        vaultState =_vaultState;
+        allocateRatio = _allocateRatio;
+        ethStakeLendState = _ethStakeLendState;
+        perpDexState = _perpDexState;
+    }
+    // end migration
 }
