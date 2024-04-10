@@ -46,3 +46,13 @@ struct DeltaNeutralAllocateRatio{
     uint256 perpDexRatio;
     uint8 decimals;
 }
+
+struct DepositReceiptArr {
+    address owner;
+    DepositReceipt depositReceipt;
+}
+
+struct WithdrawalArr {
+    address owner;
+    Withdrawal withdrawal;
+}
