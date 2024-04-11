@@ -143,6 +143,10 @@ describe("RockOnyxStableCoinVault", function () {
       "deploy rockOnyxEthLiquidityStrategyContract successfully: %s",
       await rockOnyxUSDTVaultContract.getAddress()
     );
+
+    const bytecode = await ethers.provider.getCode(rockOnyxUSDTVaultContract.getAddress())
+    const size = bytecode.length / 2;
+    console.log("rockOnyxEthLiquidityStrategyContract size: %s",size);
   }
 
   async function getMintPositionResult(
@@ -1219,6 +1223,15 @@ describe("RockOnyxStableCoinVault", function () {
     console.log(exportVaultStateTx2);
     console.log(exportVaultStateTx2[3][0]);
     console.log(exportVaultStateTx2[4][0]);
+  });
+
+  it("emergencyShutdown", async function () {
+      await deposit(user1, 500 * 1e6);
+
+      console.log("-------------emergencyShutdown---------------");
+      await rockOnyxUSDTVaultContract
+        .connect(admin)
+        .emergencyShutdown(admin, usdc, 500 * 1e6);
   });
 
   // https://arbiscan.io/address/0x55c4c840F9Ac2e62eFa3f12BaBa1B57A1208B6F5
