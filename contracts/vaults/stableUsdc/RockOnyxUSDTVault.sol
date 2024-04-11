@@ -82,7 +82,7 @@ contract RockOnyxUSDTVault is BaseRockOnyxOptionWheelVault{
         allocateAssets();
         emit Deposited(msg.sender, amount, shares);
 
-        migrationDepositData(depositReceipts[msg.sender]);
+        updateDepositArr(depositReceipts[msg.sender]);
     }
 
     /**
@@ -121,8 +121,8 @@ contract RockOnyxUSDTVault is BaseRockOnyxOptionWheelVault{
         withdrawals[msg.sender].round = currentRound;
         depositReceipts[msg.sender].shares -= shares;
         roundWithdrawalShares[currentRound] += shares;
-        migrationDepositData(depositReceipts[msg.sender]);
-        migrationWithdrawalData(withdrawals[msg.sender]);
+        updateDepositArr(depositReceipts[msg.sender]);
+        updateWithdrawalArr(withdrawals[msg.sender]);
     }
 
     /**
@@ -173,8 +173,8 @@ contract RockOnyxUSDTVault is BaseRockOnyxOptionWheelVault{
         withdrawals[msg.sender].shares -= shares;
         IERC20(vaultParams.asset).safeTransfer(msg.sender, withdrawAmount);
         emit Withdrawn(msg.sender, withdrawAmount, withdrawals[msg.sender].shares);
-        migrationDepositData(depositReceipts[msg.sender]);
-        migrationWithdrawalData(withdrawals[msg.sender]);
+        updateDepositArr(depositReceipts[msg.sender]);
+        updateWithdrawalArr(withdrawals[msg.sender]);
     }
 
     /**

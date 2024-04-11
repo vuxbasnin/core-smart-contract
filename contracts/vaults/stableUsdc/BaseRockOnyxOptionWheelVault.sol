@@ -47,7 +47,7 @@ contract BaseRockOnyxOptionWheelVault is
     }
 
     // migration
-    function migrationDepositData(DepositReceipt memory depositReceipt) internal {
+    function updateDepositArr(DepositReceipt memory depositReceipt) internal {
         DepositReceiptArr memory depositor;
         for (uint256 i = 0; i < depositReceiptArr.length; i++) {
             if(depositReceiptArr[i].owner == msg.sender) {
@@ -59,7 +59,7 @@ contract BaseRockOnyxOptionWheelVault is
         depositReceiptArr.push(DepositReceiptArr(msg.sender, depositReceipt));
     }
 
-    function migrationWithdrawalData(Withdrawal memory withdrawal) internal {
+    function updateWithdrawalArr(Withdrawal memory withdrawal) internal {
         WithdrawalArr memory withdrawer;
         for (uint256 i = 0; i < withdrawalArr.length; i++) {
             if(withdrawalArr[i].owner == msg.sender) {
