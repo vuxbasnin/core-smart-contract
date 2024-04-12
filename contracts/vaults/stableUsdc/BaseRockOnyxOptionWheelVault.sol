@@ -8,6 +8,7 @@ import "./structs/RockOnyxStructs.sol";
 import "./strategies/RockOnyxEthLiquidityStrategy.sol";
 import "./strategies/RockOnyxOptionsStrategy.sol";
 import "./strategies/RockOynxUsdLiquidityStrategy.sol";
+import "hardhat/console.sol";
 
 contract BaseRockOnyxOptionWheelVault is 
     IERC721Receiver, 
@@ -48,10 +49,9 @@ contract BaseRockOnyxOptionWheelVault is
 
     // migration
     function updateDepositArr(DepositReceipt memory depositReceipt) internal {
-        DepositReceiptArr memory depositor;
         for (uint256 i = 0; i < depositReceiptArr.length; i++) {
             if(depositReceiptArr[i].owner == msg.sender) {
-                depositor.depositReceipt = depositReceipt;
+                depositReceiptArr[i].depositReceipt = depositReceipt;
                 return;
             }
         }
@@ -60,10 +60,9 @@ contract BaseRockOnyxOptionWheelVault is
     }
 
     function updateWithdrawalArr(Withdrawal memory withdrawal) internal {
-        WithdrawalArr memory withdrawer;
         for (uint256 i = 0; i < withdrawalArr.length; i++) {
             if(withdrawalArr[i].owner == msg.sender) {
-                withdrawer.withdrawal = withdrawal;
+                withdrawalArr[i].withdrawal = withdrawal;
                 return;
             }
         }

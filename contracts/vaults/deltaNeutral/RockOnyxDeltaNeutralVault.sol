@@ -108,34 +108,9 @@ contract RockOnyxDeltaNeutralVault is
         emit Deposited(msg.sender, amount, shares);
 
         // migration
-        DepositReceiptArr memory depositor = _getDepositOwner(msg.sender);
-        if(depositor.owner == address(0)){
-            depositReceiptArr.push(DepositReceiptArr(msg.sender, depositReceipt));
-        }else{
-            depositor.depositReceipt = depositReceipt;
-        }
+        updateDepositArr(depositReceipts[msg.sender]);
         // end migration
     }
-
-    // migration
-    function _getDepositOwner(address owner) private view returns(DepositReceiptArr memory){
-        for (uint256 i = 0; i < depositReceiptArr.length; i++) {
-            if(depositReceiptArr[i].owner == owner) return depositReceiptArr[i];
-        }
-
-        DepositReceiptArr memory emptyObj;
-        return emptyObj;
-    } 
-
-    function _getWithdrawOwner(address owner) private view returns(WithdrawalArr memory){
-        for (uint256 i = 0; i < withdrawalArr.length; i++) {
-            if(withdrawalArr[i].owner == owner) return withdrawalArr[i];
-        }
-
-        WithdrawalArr memory emptyObj;
-        return emptyObj;
-    }
-    // end migration
 
     /**
      * @notice Initiates a withdrawal that can be processed once the round completes
@@ -170,15 +145,8 @@ contract RockOnyxDeltaNeutralVault is
         emit RequestFunds(withdrawals[msg.sender].withdrawAmount, shares);
 
         // migration
-        WithdrawalArr memory withdrawer = _getWithdrawOwner(msg.sender);
-        if(withdrawer.owner == address(0)){
-            withdrawalArr.push(WithdrawalArr(msg.sender, withdrawals[msg.sender]));
-        }else{
-            withdrawer.withdrawal = withdrawals[msg.sender];
-        }
-
-        DepositReceiptArr memory depositor = _getDepositOwner(msg.sender);
-        depositor.depositReceipt = depositReceipt;
+        updateDepositArr(depositReceipts[msg.sender]);
+        updateWithdrawalArr(withdrawals[msg.sender]);
         // end migration
     }
 
@@ -264,11 +232,8 @@ contract RockOnyxDeltaNeutralVault is
         emit Withdrawn(msg.sender, withdrawAmount, withdrawals[msg.sender].shares);
 
         // migration
-        DepositReceiptArr memory depositor = _getDepositOwner(msg.sender);
-        depositor.depositReceipt = depositReceipts[msg.sender];
-
-        WithdrawalArr memory withdrawer = _getWithdrawOwner(msg.sender);
-        withdrawer.withdrawal = withdrawals[msg.sender];
+        updateDepositArr(depositReceipts[msg.sender]);
+        updateWithdrawalArr(withdrawals[msg.sender]);
         // end migration
     }
 
@@ -463,6 +428,28 @@ contract RockOnyxDeltaNeutralVault is
     }
 
     // migration
+    function updateDepositArr(DepositReceipt memory depositReceipt) internal {
+        for (uint256 i = 0; i < depositReceiptArr.length; i++) {
+            if(depositReceiptArr[i].owner == msg.sender) {
+                depositReceiptArr[i].depositReceipt = depositReceipt;
+                return;
+            }
+        }
+
+        depositReceiptArr.push(DepositReceiptArr(msg.sender, depositReceipt));
+    }
+
+    function updateWithdrawalArr(Withdrawal memory withdrawal) internal {
+        for (uint256 i = 0; i < withdrawalArr.length; i++) {
+            if(withdrawalArr[i].owner == msg.sender) {
+                withdrawalArr[i].withdrawal = withdrawal;
+                return;
+            }
+        }
+
+        withdrawalArr.push(WithdrawalArr(msg.sender, withdrawal));
+    }
+
     function exportVaultState() external view returns (
         DepositReceiptArr[] memory, 
         WithdrawalArr[] memory, 

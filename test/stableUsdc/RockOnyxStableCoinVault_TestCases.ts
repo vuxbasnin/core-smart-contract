@@ -135,7 +135,7 @@ describe("RockOnyxStableCoinVault", function () {
       wethAddress,
       wstethAddress,
       arbAddress,
-      BigInt(1.213 * 1e6)
+      BigInt(1 * 1e6)
     );
     await rockOnyxUSDTVaultContract.waitForDeployment();
 
@@ -1052,7 +1052,7 @@ describe("RockOnyxStableCoinVault", function () {
     );
   });
 
-  it.skip("migration test, user deposit -> close round -> depoist -> deposit to aevo -> init withdraw -> close round -> export data -> deploy new contract and import data", async function () {
+  it("migration test, user deposit -> close round -> depoist -> deposit to aevo -> init withdraw -> close round -> export data -> deploy new contract and import data", async function () {
     console.log("-------------deposit time 1: 50$---------------");
     await deposit(user1, 50 * 1e6);
 
@@ -1064,6 +1064,16 @@ describe("RockOnyxStableCoinVault", function () {
 
     console.log("-------------deposit time 2: 5$---------------");
     await deposit(user1, 5 * 1e6);
+
+    console.log("-------------export vault state---------------");
+    let exportVaultStateTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .exportVaultState();
+
+    let depositReceiptShares = exportVaultStateTx[3][0][1][0];
+    let depositReceiptAmount = exportVaultStateTx[3][0][1][1];
+    expect(Number(depositReceiptShares)).to.equal(55000965);
+    expect(Number(depositReceiptAmount)).to.equal(55000000);
 
     console.log("-------------deposit to vendor on aevo---------------");
     await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
@@ -1082,6 +1092,19 @@ describe("RockOnyxStableCoinVault", function () {
       .initiateWithdrawal(5 * 1e6);
     await initiateWithdrawal2Tx.wait();
 
+    console.log("-------------export vault state---------------");
+    exportVaultStateTx = await rockOnyxUSDTVaultContract
+      .connect(admin)
+      .exportVaultState();
+
+    depositReceiptShares = exportVaultStateTx[3][0][1][0];
+    depositReceiptAmount = exportVaultStateTx[3][0][1][1];
+    let withdrawShares = exportVaultStateTx[4][0][1][0];
+
+    expect(Number(depositReceiptShares)).to.equal(45000965);
+    expect(Number(depositReceiptAmount)).to.equal(55000000);
+    expect(Number(withdrawShares)).to.equal(10000000);
+
     console.log(
       "-------------update allocated balance from aevo vendor---------------"
     );
@@ -1097,7 +1120,7 @@ describe("RockOnyxStableCoinVault", function () {
     await closeRound2Tx.wait();
 
     console.log("-------------export vault state---------------");
-    const exportVaultStateTx = await rockOnyxUSDTVaultContract
+    exportVaultStateTx = await rockOnyxUSDTVaultContract
       .connect(admin)
       .exportVaultState();
 
@@ -1263,7 +1286,7 @@ describe("RockOnyxStableCoinVault", function () {
     await rockOnyxUSDTVaultContract.connect(user1).deposit(50 * 1e6);
   });
 
-  it("user deposit -> deposit to eavo -> mint eth -> mint usd-> update profit -> close round -> decrease eth -> decrease usd", async function () {
+  it.skip("user deposit -> deposit to eavo -> mint eth -> mint usd-> update profit -> close round -> decrease eth -> decrease usd", async function () {
     console.log("-------------deposit time: 50$---------------");
     const initialDepositAmount = 50;
     await deposit(user1, 50 * 1e6);

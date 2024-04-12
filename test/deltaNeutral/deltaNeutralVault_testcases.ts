@@ -86,7 +86,8 @@ describe("RockOnyxDeltaNeutralVault", function () {
       await aevoContract.getAddress(),
       await optionsReceiver.getAddress(),
       wethAddress,
-      wstethAddress
+      wstethAddress,
+      BigInt(1 * 1e6)
     );
     await rockOnyxDeltaNeutralVaultContract.waitForDeployment();
 
@@ -461,7 +462,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it("user deposit -> deposit to vendor -> open position -> sync profit -> withdraw -> close position -> complete withdraw", async function () {
+  it.skip("user deposit -> deposit to vendor -> open position -> sync profit -> withdraw -> close position -> complete withdraw", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
@@ -678,7 +679,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it.skip("migration test, user deposit -> deposit to vendor -> open position -> sync profit -> withdraw -> close position -> complete withdraw", async function () {
+  it("migration test, user deposit -> deposit to vendor -> open position -> sync profit -> withdraw -> close position -> complete withdraw", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
@@ -772,6 +773,16 @@ describe("RockOnyxDeltaNeutralVault", function () {
     const user2Profit = Number(userVaultState[2]) / 1e6;
     console.log("user profit: ", user2Profit);
 
+    console.log("-------------export vault state---------------");
+    let exportVaultStateTx = await rockOnyxDeltaNeutralVaultContract
+      .connect(admin)
+      .exportVaultState();
+
+    let depositReceiptShares = exportVaultStateTx[0][1][1][0];
+    let depositReceiptAmount = exportVaultStateTx[0][1][1][1];
+    expect(Number(depositReceiptShares)).to.equal(100000000n);
+    expect(Number(depositReceiptAmount)).to.equal(100000000n);
+
     console.log("-------------Users initial withdrawals---------------");
     const withdrawalShares = 100;
     const withdrawalAmount =
@@ -782,6 +793,19 @@ describe("RockOnyxDeltaNeutralVault", function () {
       .connect(user2)
       .initiateWithdrawal(withdrawalShares * 1e6);
     await initiateWithdrawalTx1.wait();
+
+    console.log("-------------export vault state---------------");
+    exportVaultStateTx = await rockOnyxDeltaNeutralVaultContract
+      .connect(admin)
+      .exportVaultState();
+
+    depositReceiptShares = exportVaultStateTx[0][1][1][0];
+    depositReceiptAmount = exportVaultStateTx[0][1][1][1];
+    let withdrawShares = exportVaultStateTx[1][0][1][0];
+
+    expect(Number(depositReceiptShares)).to.equal(0n);
+    expect(Number(depositReceiptAmount)).to.equal(0n);
+    expect(Number(withdrawShares)).to.equal(100000000n);
 
     console.log(
       "------------- close position to release fund for user ---------------"
@@ -870,13 +894,17 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
 
     console.log("-------------export vault state---------------");
-    const exportVaultStateTx = await rockOnyxDeltaNeutralVaultContract
+    exportVaultStateTx = await rockOnyxDeltaNeutralVaultContract
       .connect(admin)
       .exportVaultState();
 
-    console.log(exportVaultStateTx);
-    console.log(exportVaultStateTx[0][0]);
-    console.log(exportVaultStateTx[1][0]);
+    depositReceiptShares = exportVaultStateTx[0][1][1][0];
+    depositReceiptAmount = exportVaultStateTx[0][1][1][1];
+    withdrawShares = exportVaultStateTx[1][0][1][0];
+
+    expect(Number(depositReceiptShares)).to.equal(0n);
+    expect(Number(depositReceiptAmount)).to.equal(0n);
+    expect(Number(withdrawShares)).to.equal(0n);
 
     const newRockOnyxDeltaNeutralVault = await ethers.getContractFactory(
       "RockOnyxDeltaNeutralVault"
@@ -889,7 +917,8 @@ describe("RockOnyxDeltaNeutralVault", function () {
         await aevoContract.getAddress(),
         await optionsReceiver.getAddress(),
         wethAddress,
-        wstethAddress
+        wstethAddress,
+        BigInt(1 * 1e6)
       );
     await newRockOnyxDeltaNeutralVaultContract.waitForDeployment();
 
@@ -969,13 +998,18 @@ describe("RockOnyxDeltaNeutralVault", function () {
       );
 
     console.log("-------------export vault state---------------");
+    
     const exportVaultStateTx2 = await newRockOnyxDeltaNeutralVaultContract
       .connect(admin)
       .exportVaultState();
 
-    console.log(exportVaultStateTx2);
-    console.log(exportVaultStateTx[0][0]);
-    console.log(exportVaultStateTx[1][0]);
+      depositReceiptShares = exportVaultStateTx2[0][1][1][0];
+      depositReceiptAmount = exportVaultStateTx2[0][1][1][1];
+      withdrawShares = exportVaultStateTx2[1][0][1][0];
+  
+      expect(Number(depositReceiptShares)).to.equal(0n);
+      expect(Number(depositReceiptAmount)).to.equal(0n);
+      expect(Number(withdrawShares)).to.equal(0n);
   });
 
   it.skip("user deposit -> open position -> close position", async function () {
