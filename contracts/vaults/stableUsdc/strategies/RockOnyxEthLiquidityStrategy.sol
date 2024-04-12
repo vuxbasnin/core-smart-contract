@@ -124,7 +124,7 @@ contract RockOnyxEthLiquidityStrategy is
      */
     function increaseEthLPLiquidity(uint16 ratio, uint8 decimals) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        require(ethLPState.tokenId > 0, "POSITION_NOT_OPEN");
+        require(ethLPState.liquidity > 0, "POSITION_NOT_OPEN");
         _rebalanceEthLPAssets(ratio, decimals);
         IERC20(wstEth).approve(
             address(ethLPProvider),
@@ -171,7 +171,7 @@ contract RockOnyxEthLiquidityStrategy is
      * @dev Closes the current Ethereum liquidity provision round by collecting fees.
      */
     function closeEthLPRound() internal {
-        if(ethLPState.tokenId == 0) return;
+        if(ethLPState.liquidity == 0) return;
         ethLPProvider.collectAllFees(ethLPState.tokenId);
     }
 
@@ -186,13 +186,15 @@ contract RockOnyxEthLiquidityStrategy is
         }
         ethLPState.unAllocatedBalance = 0;
         uint256 unAllocatedAllAssetBalance = unAllocatedBalance + IERC20(weth).balanceOf(address(this)) * _getEthPrice() / 1e18;
+        
         if(unAllocatedAllAssetBalance > amount){
-            _ethLPSwapTo(weth, (amount - unAllocatedBalance) / _getEthPrice(), usd);
+            _ethLPSwapTo(weth, (amount - unAllocatedBalance) * 1e6 / _getEthPrice(), usd);
             return amount;
         }
 
         uint256 amountToAcquire = amount - unAllocatedAllAssetBalance;
         uint128 liquidity = _amountToPoolLiquidity(amountToAcquire);
+        liquidity = (liquidity > ethLPState.liquidity) ? ethLPState.liquidity : liquidity;
          _decreaseEthLPLiquidity(liquidity);
         if(IERC20(wstEth).balanceOf(address(this)) > 0){
             _ethLPSwapTo(wstEth, IERC20(wstEth).balanceOf(address(this)), weth);

@@ -16,6 +16,7 @@ contract RockOnyxDeltaNeutralVault is
     RockOynxPerpDexStrategy
 {
     uint256 private constant NETWORK_COST = 1e6;
+    uint256 private initialPPS;
     using ShareMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -45,7 +46,8 @@ contract RockOnyxDeltaNeutralVault is
         address _perpDexProxy,
         address _perpDexReceiver,
         address _weth,
-        address _wstEth
+        address _wstEth,
+        uint256 _initialPPS
     )
         RockOynxEthStakeLendStrategy()
         RockOynxPerpDexStrategy()
@@ -75,6 +77,8 @@ contract RockOnyxDeltaNeutralVault is
             _perpDexReceiver,
             _usdc
         );
+
+        initialPPS = _initialPPS;
     }
 
     /**
@@ -436,7 +440,7 @@ contract RockOnyxDeltaNeutralVault is
      */
     function _getPricePerShare() private view returns (uint256) {
         if(vaultState.totalShares == 0) 
-            return 1 * 10 ** vaultParams.decimals;
+            return initialPPS;
 
         return _totalValueLocked() * 10 ** vaultParams.decimals / vaultState.totalShares;
     }

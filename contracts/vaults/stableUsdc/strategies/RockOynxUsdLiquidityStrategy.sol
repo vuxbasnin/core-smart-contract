@@ -125,7 +125,7 @@ contract RockOynxUsdLiquidityStrategy is
      */
     function increaseUsdLPLiquidity(uint16 ratio, uint8 decimals) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        require(usdLPState.liquidity == 0, "POSITION_HAS_NOT_OPEN");
+        require(usdLPState.liquidity > 0, "POSITION_HAS_NOT_OPEN");
 
         _rebalanceUsdLPAssets(ratio, decimals);
 
@@ -205,6 +205,7 @@ contract RockOynxUsdLiquidityStrategy is
         usdLPState.unAllocatedUsdcBalance = 0;
 
         uint128 liquidity = _amountToUsdPoolLiquidity(amountToAcquire);
+        liquidity = (liquidity > usdLPState.liquidity) ? usdLPState.liquidity : liquidity;
         (uint256 acquireUsdcAmount, uint256 acquireUsdceAmount) = _decreaseUsdLPLiquidity(liquidity);
         uint256 usdcAmount = acquireUsdceAmount > 0 ? _usdLPSwapTo(usdce, acquireUsdceAmount, usdc) : 0;
        

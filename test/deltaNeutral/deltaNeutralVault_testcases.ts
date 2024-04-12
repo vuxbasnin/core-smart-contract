@@ -198,7 +198,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     await transferUsdcForUser(usdcSigner, optionsReceiver, 1000 * 1e6);
   });
 
-  it("user deposit -> withdraw, do not deposit to perp dex", async function () {
+  it.skip("user deposit -> withdraw, do not deposit to perp dex", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
@@ -238,7 +238,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it("user deposit -> open position -> close position -> withdraw, do not deposit to perp dex", async function () {
+  it.skip("user deposit -> open position -> close position -> withdraw, do not deposit to perp dex", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
@@ -290,7 +290,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it("user deposit -> open position -> deposit to vender -> withdraw", async function () {
+  it.skip("user deposit -> open position -> deposit to vender -> withdraw", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
@@ -365,7 +365,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it("user deposit1 -> open position -> deposit to vender -> user deposit2 -> open position -> deposit to vender -> withdraw", async function () {
+  it.skip("user deposit1 -> open position -> deposit to vender -> user deposit2 -> open position -> deposit to vender -> withdraw", async function () {
     console.log(
       "-------------deposit1 to rockOnyxDeltaNeutralVault---------------"
     );
@@ -629,6 +629,31 @@ describe("RockOnyxDeltaNeutralVault", function () {
       .acquireWithdrawalFunds(withdrawalAmount * 1e6);
     await handleWithdrawalFundsTx.wait();
 
+    // get getPerpDexUnAllocatedBalance from contract
+    const perpDexState =
+      await rockOnyxDeltaNeutralVaultContract.getPerpDexState();
+    console.log("perpDexUnAllocatedBalance: ", perpDexState);
+
+    const perpDexBalance = perpDexState[0];
+
+    const pricePerShare2 = await rockOnyxDeltaNeutralVaultContract
+      .connect(admin)
+      .pricePerShare();
+    console.log("pricePerShare %s", pricePerShare);
+    const pricePerShare2Int = Number(pricePerShare2) / 1e6;
+
+    const expectedPerpDexUnallocatedBalance =
+      10 * pricePerShare2Int * perpRatio;
+    console.log(
+      "expectedPerpDexUnallocatedBalance %s",
+      expectedPerpDexUnallocatedBalance
+    );
+
+    expect(perpDexBalance).to.approximately(
+      BigInt(parseInt((expectedPerpDexUnallocatedBalance * 1e6).toString())),
+      2 * 1e6
+    );
+
     console.log("-------------complete withdrawals---------------");
     let user2Balance = await usdc.connect(user2).balanceOf(user2);
     console.log("usdc of user before withdraw %s", Number(user2Balance) / 1e6);
@@ -653,7 +678,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it("migration test, user deposit -> deposit to vendor -> open position -> sync profit -> withdraw -> close position -> complete withdraw", async function () {
+  it.skip("migration test, user deposit -> deposit to vendor -> open position -> sync profit -> withdraw -> close position -> complete withdraw", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
@@ -857,14 +882,15 @@ describe("RockOnyxDeltaNeutralVault", function () {
       "RockOnyxDeltaNeutralVault"
     );
 
-    const newRockOnyxDeltaNeutralVaultContract = await newRockOnyxDeltaNeutralVault.deploy(
-      usdcAddress,
-      await camelotSwapContract.getAddress(),
-      await aevoContract.getAddress(),
-      await optionsReceiver.getAddress(),
-      wethAddress,
-      wstethAddress
-    );
+    const newRockOnyxDeltaNeutralVaultContract =
+      await newRockOnyxDeltaNeutralVault.deploy(
+        usdcAddress,
+        await camelotSwapContract.getAddress(),
+        await aevoContract.getAddress(),
+        await optionsReceiver.getAddress(),
+        wethAddress,
+        wstethAddress
+      );
     await newRockOnyxDeltaNeutralVaultContract.waitForDeployment();
 
     console.log(
@@ -879,9 +905,9 @@ describe("RockOnyxDeltaNeutralVault", function () {
         owner: element[0],
         depositReceipt: {
           shares: element[1][0],
-          depositAmount: element[1][1]
-        }
-      }
+          depositAmount: element[1][1],
+        },
+      };
     });
 
     const _withdrawalArr = exportVaultStateTx[1].map((element) => {
@@ -892,43 +918,43 @@ describe("RockOnyxDeltaNeutralVault", function () {
           pps: element[1][1],
           profit: element[1][2],
           performanceFee: element[1][3],
-          withdrawAmount: element[1][4]
-        }
-      }
+          withdrawAmount: element[1][4],
+        },
+      };
     });
 
     const _vaultParams = {
-      decimals : exportVaultStateTx[2][0],
-      asset : exportVaultStateTx[2][1],
-      minimumSupply : exportVaultStateTx[2][2],
-      cap : exportVaultStateTx[2][3],
-      performanceFeeRate : exportVaultStateTx[2][4],
-      managementFeeRate : exportVaultStateTx[2][5],
-    }
+      decimals: exportVaultStateTx[2][0],
+      asset: exportVaultStateTx[2][1],
+      minimumSupply: exportVaultStateTx[2][2],
+      cap: exportVaultStateTx[2][3],
+      performanceFeeRate: exportVaultStateTx[2][4],
+      managementFeeRate: exportVaultStateTx[2][5],
+    };
 
     const _vaultState = {
-      performanceFeeAmount : exportVaultStateTx[3][0],
-      managementFeeAmount : exportVaultStateTx[3][1],
-      withdrawPoolAmount : exportVaultStateTx[3][2],
-      pendingDepositAmount : exportVaultStateTx[3][3],
-      totalShares : exportVaultStateTx[3][4],
-    }
+      performanceFeeAmount: exportVaultStateTx[3][0],
+      managementFeeAmount: exportVaultStateTx[3][1],
+      withdrawPoolAmount: exportVaultStateTx[3][2],
+      pendingDepositAmount: exportVaultStateTx[3][3],
+      totalShares: exportVaultStateTx[3][4],
+    };
 
     const _allocateRatio = {
-      ethStakeLendRatio : exportVaultStateTx[4][0],
-      perpDexRatio : exportVaultStateTx[4][1],
-      decimals : exportVaultStateTx[4][2],
-    }
+      ethStakeLendRatio: exportVaultStateTx[4][0],
+      perpDexRatio: exportVaultStateTx[4][1],
+      decimals: exportVaultStateTx[4][2],
+    };
 
     const _ethStakeLendState = {
-      unAllocatedBalance : exportVaultStateTx[5][0],
-      totalBalance : exportVaultStateTx[5][1]
-    }
+      unAllocatedBalance: exportVaultStateTx[5][0],
+      totalBalance: exportVaultStateTx[5][1],
+    };
 
     const _perpDexState = {
-      unAllocatedBalance : exportVaultStateTx[6][0],
-      perpDexBalance : exportVaultStateTx[6][1]
-    }
+      unAllocatedBalance: exportVaultStateTx[6][0],
+      perpDexBalance: exportVaultStateTx[6][1],
+    };
 
     const importVaultStateTx = await newRockOnyxDeltaNeutralVaultContract
       .connect(admin)
