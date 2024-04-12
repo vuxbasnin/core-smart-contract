@@ -54,12 +54,12 @@ async function main() {
     console.log(proofs);
     console.log(await arb.balanceOf(vaultAddress));
 
-    const claimlTx = await rockOnyxUSDTVaultContract
-      .connect(contractAdmin)
-      .claimReward(users, tokens, claims, proofs as string[][]);
-    await claimlTx.wait();
+    // const claimlTx = await rockOnyxUSDTVaultContract
+    //   .connect(contractAdmin)
+    //   .claimReward(users, tokens, claims, proofs as string[][]);
+    // await claimlTx.wait();
 
-    console.log(await arb.balanceOf(vaultAddress));
+    // console.log(await arb.balanceOf(vaultAddress));
   }
 
   // We recommend this pattern to be able to use async/await everywhere

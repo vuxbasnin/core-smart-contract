@@ -71,6 +71,7 @@ contract RockOynxPerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
         );
 
         perpDexState.perpDexBalance += amount;
+        console.log("perpDexState.perpDexBalance %s", perpDexState.perpDexBalance);
         emit PerpDexVendorDeposited(address(perpDexVendor), optionsReceiver, amount);
     }
 
@@ -78,6 +79,7 @@ contract RockOynxPerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         perpDexState.perpDexBalance = balance;
+        console.log("perpDexState.perpDexBalance %s", perpDexState.perpDexBalance);
     }
 
     /**
@@ -95,11 +97,15 @@ contract RockOynxPerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
     function acquireFundsFromPerpDex(uint256 amount) internal returns (uint256) {       
         if(perpDexState.unAllocatedBalance > amount) {
             perpDexState.unAllocatedBalance -= amount;
+            console.log("1 perpDexState.unAllocatedBalance %s", perpDexState.unAllocatedBalance);
+            console.log("1 perpDexState.perpDexBalance %s", perpDexState.perpDexBalance);
             return amount;    
         }
 
         uint256 unAllocatedBalance = perpDexState.unAllocatedBalance;
         perpDexState.unAllocatedBalance = 0;
+        console.log("perpDexState.unAllocatedBalance %s", perpDexState.unAllocatedBalance);
+        console.log("perpDexState.perpDexBalance %s", perpDexState.perpDexBalance);
         return unAllocatedBalance;
     }
 
@@ -114,6 +120,9 @@ contract RockOynxPerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
         IERC20(perpDexStrategyUsdc).safeTransferFrom(msg.sender, address(this), amount);
 
         perpDexState.unAllocatedBalance += amount;
+        console.log("perpDexState.unAllocatedBalance %s", perpDexState.unAllocatedBalance);
+        perpDexState.perpDexBalance = (amount <= perpDexState.perpDexBalance) ? perpDexState.perpDexBalance - amount : 0;
+        console.log("perpDexState.perpDexBalance %s", perpDexState.perpDexBalance);
 
         emit PerpDexBalanceChanged(perpDexState.unAllocatedBalance, amount);
     }
@@ -127,9 +136,9 @@ contract RockOynxPerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
             perpDexState.unAllocatedBalance + perpDexState.perpDexBalance;
     }
 
-    function getPerpDexUnAllocatedBalance() external view returns (uint256) {
+    function getPerpDexState() external view returns (uint256, uint256) {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        return perpDexState.unAllocatedBalance;
+        return (perpDexState.perpDexBalance, perpDexState.unAllocatedBalance);
     }
 }
