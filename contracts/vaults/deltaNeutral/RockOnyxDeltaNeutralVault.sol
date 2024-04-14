@@ -38,7 +38,7 @@ contract RockOnyxDeltaNeutralVault is
     event InitiateWithdrawal(address indexed account, uint256 amount, uint256 shares);
     event Withdrawn(address indexed account, uint256 amount, uint256 shares);
     event FeeRatesUpdated(uint256 performanceFee, uint256 managementFee);
-    event RequestFunds(uint256 withdrawalAmount, uint256 shares);
+    event RequestFunds(address indexed account, uint256 withdrawalAmount, uint256 shares);
 
     constructor(
         address _usdc,
@@ -142,7 +142,7 @@ contract RockOnyxDeltaNeutralVault is
         );
         vaultState.totalShares -= shares;
 
-        emit RequestFunds(withdrawals[msg.sender].withdrawAmount, shares);
+        emit RequestFunds(msg.sender, withdrawals[msg.sender].withdrawAmount, shares);
 
         // migration
         updateDepositArr(depositReceipts[msg.sender]);

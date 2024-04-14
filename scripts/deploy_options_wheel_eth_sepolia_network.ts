@@ -81,7 +81,6 @@ async function deployCamelotSwapContract() {
   const swapRouter = await MockSwapRouter.deploy();
   console.log("Deployed SwapRouter %s", await swapRouter.getAddress());
 
-
   const factory = await ethers.getContractFactory("RockOnyxSwap");
   const camelotSwapContract = await factory.deploy(
     await swapRouter.getAddress()
@@ -89,7 +88,7 @@ async function deployCamelotSwapContract() {
   await camelotSwapContract.waitForDeployment();
 
   // await addLiquidityToPool(await camelotSwapContract.getAddress());
-  
+
   console.log(
     "Deployed Camelot Swap contract at address %s",
     await camelotSwapContract.getAddress()
@@ -102,12 +101,12 @@ async function deployAevoContract() {
   const mockAevoFactory = await ethers.getContractFactory("MockAEVO");
   const aevoMockContract =
     (await mockAevoFactory.deploy()) as Contracts.MockAEVO;
-  const factory = await ethers.getContractFactory("AevoOptions");
+  const factory = await ethers.getContractFactory("Aevo");
   const aevoOptionsContract = (await factory.deploy(
-    usdceAddress,
+    usdcAddress,
     await aevoMockContract.getAddress(),
     await aevoMockContract.getAddress()
-  )) as Contracts.AevoOptions;
+  )) as Contracts.Aevo;
   const aevoProxyAddress = await aevoOptionsContract.getAddress();
   console.log("Deployed AEVO contract at address %s", aevoProxyAddress);
 
@@ -116,26 +115,37 @@ async function deployAevoContract() {
 
 async function main() {
   [deployer] = await ethers.getSigners();
-  console.log("Deploying contracts with the account:", await deployer.getAddress());
+  console.log(
+    "Deploying contracts with the account:",
+    await deployer.getAddress()
+  );
 
   // deploy all assets
-  usdcAddress = await deployMockAsset("USDC", deployer, 6);
-  usdceAddress = await deployMockAsset("USDC.e", deployer, 6);
-  wethAddress = await deployMockAsset("WETH", deployer, 18);
-  wstethAddress = await deployMockAsset("wstETH", deployer, 18);
-  // usdcAddress = "0xA33a482E2e470E2d1286d0e791923657F59428f2";
-  // usdceAddress = "0xd654B1bA9FfC696285FA8deF26eEbAdD7D875033";
-  // wethAddress = "0x5551d35dE07BebC4e6a5FAdc1c9073ce02a02b5F";
-  // wstethAddress = "0x2C5E28dEaa0E10241Ba38d136EBed75037732c15";
+  // usdcAddress = await deployMockAsset("roUSDC", deployer, 6);
+  // usdceAddress = await deployMockAsset("roUSDC.e", deployer, 6);
+  // wethAddress = await deployMockAsset("roWETH", deployer, 18);
+  // wstethAddress = await deployMockAsset("roWstETH", deployer, 18);
+  // const arbAddress = await deployMockAsset("roARB", deployer, 18);
+  usdcAddress = "0xba2C2BeDE721F22A87811E744dfA8ad1BBa1e496";
+  usdceAddress = "0x8b46A495C9fcabD15376527F7D0131DC666c7164";
+  wethAddress = "0x221744E913cDC73Bc64E8064899F55afc16C535c";
+  wstethAddress = "0x5816AEd6DC51334671b41f290Fa3B9ce364B13aD";
+  const arbAddress = "0x9E66B862fDDD2D80DA47Ff585E5e121D4b88f9d1";
 
   usdc = await ethers.getContractAt("IERC20", usdcAddress);
   usdce = await ethers.getContractAt("IERC20", usdceAddress);
   weth = await ethers.getContractAt("IERC20", wethAddress);
   wsteth = await ethers.getContractAt("IERC20", wstethAddress);
 
-  const camelotLiquidityAddress = await deployLiquidityContract();
-  const camelotSwapAddress = await deployCamelotSwapContract();
-  const aevoProxyAddress = await deployAevoContract();
+  // const camelotLiquidityAddress = await deployLiquidityContract();
+  // const camelotSwapAddress = await deployCamelotSwapContract();
+  // const aevoProxyAddress = await deployAevoContract();
+
+  const camelotLiquidityAddress = "0x77AbF3d7fD0Fc929c53469D8Cf009274fff21326";
+  const camelotSwapAddress = "0x15003f1aD9389C7FF249cA93C88EC5072aBb1963";
+  const aevoProxyAddress = "0xD7eaE0B3a08F267e8ed6b0d7BD07c23D88d1Af14";
+
+  const aevoTrader = "0x33F4EF3d84cb354e2E825FBDA4B4DBF579B2dBF0";
 
   const RockOnyxUSDTVaultFactory = await ethers.getContractFactory(
     "RockOnyxUSDTVault"
@@ -144,15 +154,16 @@ async function main() {
   const rockOnyxUSDTVault = await RockOnyxUSDTVaultFactory.deploy(
     usdcAddress,
     camelotLiquidityAddress,
-    "",
+    "0x0000000000000000000000000000000000000000",
     nonfungiblePositionManager,
     camelotSwapAddress,
     aevoProxyAddress,
-    await deployer.getAddress(),
+    aevoTrader,
     usdceAddress,
     wethAddress,
     wstethAddress,
-    ""
+    arbAddress,
+    BigInt(0)
   );
 
   // const rockOnyxUSDTVault = await RockOnyxUSDTVaultFactory.deploy(
