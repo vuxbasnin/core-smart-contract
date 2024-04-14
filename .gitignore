@@ -29,3 +29,4 @@ test-scripts/
 contracts/vaults/deltaNeutral/strategies/artifacts
 contracts/vaults/deltaNeutral/artifacts
 contracts/vaults/stableUsdc/artifacts
+.states

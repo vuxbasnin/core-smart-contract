@@ -18,7 +18,7 @@ async function main() {
     const vaultAddress = "0x077835528875C27bFaCBc5d923C919BC56a9C250";
     rockOnyxOptionWheelVaultContract = await ethers.getContractAt("RockOnyxUSDTVault", vaultAddress);
     
-    const newVaultAddress = "";
+    const newVaultAddress = "0xDc7BCA217d22A221A67580611253f16412AF063D";
     newRockOnyxOptionWheelVaultContract = await ethers.getContractAt("RockOnyxUSDTVault", newVaultAddress);
 
     console.log("-------------export old vault state---------------");

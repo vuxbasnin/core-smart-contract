@@ -124,6 +124,9 @@ contract RockOnyxUSDTVault is BaseRockOnyxOptionWheelVault{
         depositReceipts[msg.sender].shares -= shares;
         roundWithdrawalShares[currentRound] += shares;
 
+        uint256 withdrawAmount = ShareMath.sharesToAsset(shares, _getPricePerShare(), vaultParams.decimals);
+        emit InitiateWithdrawal(msg.sender, withdrawAmount, withdrawals[msg.sender].shares);
+
         // migration
         updateDepositArr(depositReceipts[msg.sender]);
         updateWithdrawalArr(withdrawals[msg.sender]);
