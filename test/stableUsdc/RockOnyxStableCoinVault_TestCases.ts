@@ -197,7 +197,7 @@ describe("RockOnyxStableCoinVault", function () {
     await transferUsdceForUser(usdceSigner, optionsReceiver, 1000 * 1e6);
   });
 
-  it.skip("deposit to rockOnyxUSDTVault, WETH in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
+  it("deposit to rockOnyxUSDTVault, WETH in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
     console.log("-------------deposit to rockOnyxUSDTVault---------------");
     await deposit(user1, 10 * 1e6);
     await deposit(user2, 100 * 1e6);
@@ -257,7 +257,7 @@ describe("RockOnyxStableCoinVault", function () {
     );
   });
 
-  it.skip("deposit to rockOnyxUSDTVault, wstETH in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
+  it("deposit to rockOnyxUSDTVault, wstETH in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
     console.log("-------------deposit to rockOnyxUSDTVault---------------");
     await deposit(user1, 10 * 1e6);
     await deposit(user2, 100 * 1e6);
@@ -318,7 +318,7 @@ describe("RockOnyxStableCoinVault", function () {
     );
   });
 
-  it.skip("deposit to rockOnyxUSDTVault, USDC in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
+  it("deposit to rockOnyxUSDTVault, USDC in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
     console.log("-------------deposit to rockOnyxUSDTVault---------------");
     await deposit(user1, 10 * 1e6);
     await deposit(user2, 100 * 1e6);
@@ -376,7 +376,7 @@ describe("RockOnyxStableCoinVault", function () {
     );
   });
 
-  it.skip("calculate performance fee rockOnyxUSDTVault, USDC in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
+  it("calculate performance fee rockOnyxUSDTVault, USDC in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
     console.log(
       "-------------calculate performance fee rockOnyxUSDTVault---------------"
     );
@@ -449,7 +449,7 @@ describe("RockOnyxStableCoinVault", function () {
     await completeWithdrawalTx.wait();
   });
 
-  it.skip("Full flow with multiple users deposit and withdraw all money", async function () {
+  it("Full flow with multiple users deposit and withdraw all money", async function () {
     console.log(
       "-------------calculate performance fee rockOnyxUSDTVault---------------"
     );
@@ -544,7 +544,7 @@ describe("RockOnyxStableCoinVault", function () {
     await completeWithdrawalTx.wait();
   });
 
-  it.skip("Full flow with multiple users deposit and withdraw all money in losses", async function () {
+  it("Full flow with multiple users deposit and withdraw all money in losses", async function () {
     console.log(
       "-------------calculate performance fee rockOnyxUSDTVault---------------"
     );
@@ -639,7 +639,7 @@ describe("RockOnyxStableCoinVault", function () {
     await completeWithdrawalTx.wait();
   });
 
-  it.skip("user deposit -> close round -> depoist -> init withdraw -> close round -> close round -> completed withdraw", async function () {
+  it("user deposit -> close round -> depoist -> init withdraw -> close round -> close round -> completed withdraw", async function () {
     console.log(
       "-------------calculate performance fee rockOnyxUSDTVault---------------"
     );
@@ -1283,7 +1283,7 @@ describe("RockOnyxStableCoinVault", function () {
   });
 
   // https://arbiscan.io/address/0x55c4c840F9Ac2e62eFa3f12BaBa1B57A1208B6F5
-  it.skip("deposit error", async function () {
+  it("deposit error", async function () {
     console.log(
       "-------------deposit error 0x55c4c840F9Ac2e62eFa3f12BaBa1B57A1208B6F5---------------"
     );
