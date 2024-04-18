@@ -316,6 +316,16 @@ contract RockOnyxUSDTVault is
     }
 
     /**
+     * @notice get fee information
+     */
+    function getFeeInfo() external view returns (uint256 depositFee, uint256 exitFee, uint256 performanceFee, uint256 managementFee) {
+        depositFee = 0;
+        exitFee = 0;
+        performanceFee = vaultParams.performanceFeeRate;
+        managementFee = vaultParams.managementFeeRate;
+    }
+
+    /**
      * @notice acquire asset form vendor, prepare funds for withdrawal
      */
     function acquireWithdrawalFunds() external nonReentrant {
