@@ -27,13 +27,12 @@ async function deployCamelotSwapContract() {
   const swapRouter = await MockSwapRouter.deploy();
   console.log("Deployed SwapRouter %s", await swapRouter.getAddress());
 
-
   const factory = await ethers.getContractFactory("RockOnyxSwap");
   const camelotSwapContract = await factory.deploy(
     await swapRouter.getAddress()
   );
   await camelotSwapContract.waitForDeployment();
-  
+
   console.log(
     "Deployed Camelot Swap contract at address %s",
     await camelotSwapContract.getAddress()
@@ -52,8 +51,13 @@ async function main() {
 
   const camelotSwapAddress = await deployCamelotSwapContract();
 
-  const usdcAddress = "0xA33a482E2e470E2d1286d0e791923657F59428f2";
+  const usdcAddress = "0xba2C2BeDE721F22A87811E744dfA8ad1BBa1e496";
+  const usdceAddress = "0x8b46A495C9fcabD15376527F7D0131DC666c7164";
+  const wethAddress = "0x221744E913cDC73Bc64E8064899F55afc16C535c";
+  const wstethAddress = "0x5816AEd6DC51334671b41f290Fa3B9ce364B13aD";
   const optionsTrader = "0x0aDf03D895617a95F317892125Cd6fb9ca3b99c1";
+
+  const aevoProxyAddress = "0xD7eaE0B3a08F267e8ed6b0d7BD07c23D88d1Af14";
 
   const rockOnyxDeltaNeutralVault = await ethers.getContractFactory(
     "RockOnyxDeltaNeutralVault"
@@ -62,10 +66,11 @@ async function main() {
   rockOnyxDeltaNeutralVaultContract = await rockOnyxDeltaNeutralVault.deploy(
     usdcAddress,
     camelotSwapAddress,
-    "",
+    aevoProxyAddress,
     optionsTrader,
     wethAddress,
-    wstethAddress
+    wstethAddress,
+    BigInt(0)
   );
   await rockOnyxDeltaNeutralVaultContract.waitForDeployment();
 

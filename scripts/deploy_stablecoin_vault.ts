@@ -13,7 +13,7 @@ import {
   WETH_ADDRESS,
   AEVO_TRADER_ADDRESS,
   ARB_ADDRESS,
-  ANGLE_REWARD_ADDRESS
+  ANGLE_REWARD_ADDRESS,
 } from "../constants";
 
 const chainId: CHAINID = network.config.chainId ?? 0;
@@ -101,8 +101,14 @@ async function main() {
   // const aevoProxyAddress = await deployAevoContract();
 
   const camelotLiquidityAddress = "0x05AAe168AEB8516a068D9DED91F56f81C76706Eb";
-  const camelotSwapAddress = "0x7EA2362e578212d7FDA082E0bBB5134f89EDc4DC";
+  const camelotSwapAddress = "0x6aCa558d06f5149A4118FbD5218F2a430e3e48cF";
   const aevoProxyAddress = "0xE1D5Bfe0665177986D3CAB8c27A19827570710eE";
+
+  // mainnet
+  const aevoTrader = AEVO_TRADER_ADDRESS[chainId] ?? "";
+
+  // testnet
+  // const aevoTrader = "0x6731F8639b4e57B400C25603718E797054Ba52AA";
 
   const RockOnyxUSDTVaultFactory = await ethers.getContractFactory(
     "RockOnyxUSDTVault"
@@ -114,12 +120,12 @@ async function main() {
     nonfungiblePositionManager,
     camelotSwapAddress,
     aevoProxyAddress,
-    AEVO_TRADER_ADDRESS[chainId] ?? "",
+    aevoTrader,
     usdceAddress,
     wethAddress,
     wstethAddress,
     arbAddress,
-    BigInt(1229021)
+    BigInt(1.213 * 1e6)
   );
 
   console.log(

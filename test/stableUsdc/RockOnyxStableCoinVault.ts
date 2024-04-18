@@ -1,4 +1,4 @@
-const { ethers, network } = require("hardhat");
+const { ethers } = require("hardhat");
 import { expect } from "chai";
 import axios from "axios";
 
@@ -22,7 +22,6 @@ import {
 import {
   Signer,
   BigNumberish,
-  ContractTransaction,
   AbiCoder,
   ContractTransactionReceipt,
 } from "ethers";
@@ -35,22 +34,16 @@ describe("RockOnyxStableCoinVault", function () {
     user1: Signer,
     user2: Signer,
     user3: Signer,
-    user4: Signer,
-    user5: Signer;
+    user4: Signer;
 
   let optionsReceiver: Signer;
 
   let camelotLiquidityContract: Contracts.CamelotLiquidity;
   let rockOnyxUSDTVaultContract: Contracts.RockOnyxUSDTVault;
 
-  let onchainCamelotLiquidityContract: Contracts.CamelotLiquidity;
-  let onchainRockOnyxUSDTVaultContract: Contracts.RockOnyxUSDTVault;
   let usdc: Contracts.IERC20;
   let usdce: Contracts.IERC20;
-  let wsteth: Contracts.IERC20;
-  let weth: Contracts.IERC20;
   let arb: Contracts.IERC20;
-  let nftPosition: Contracts.IERC721;
   let reward: Contracts.IRewardVendor;
   let liquidityTokenId: number;
   let liquidityAmount: number;
@@ -158,30 +151,12 @@ describe("RockOnyxStableCoinVault", function () {
     )[index];
   }
 
-  async function getIncreasePositionResult(
-    tx: ContractTransactionReceipt,
-    index: number
-  ) {
-    var log = tx?.logs.find((l) =>
-      l.topics.includes(
-        "0x0a65cc63f481035bddeace027bb12726628d84152598e98e29635cbcbb0bfa76"
-      )
-    );
-    return AbiCoder.defaultAbiCoder().decode(
-      ["uint256", "uint128", "uint256", "uint256"],
-      log!.data
-    )[index];
-  }
 
   before(async function () {
     [admin, optionsReceiver, user1, user2, user3, user4] = await ethers.getSigners();
 
-    nftPosition = await ethers.getContractAt("IERC721", nftPositionAddress);
     usdc = await ethers.getContractAt("IERC20", usdcAddress);
     usdce = await ethers.getContractAt("IERC20", usdceAddress);
-
-    wsteth = await ethers.getContractAt("IERC20", wstethAddress);
-    weth = await ethers.getContractAt("IERC20", wethAddress);
     arb = await ethers.getContractAt("IERC20", arbAddress);
     await deployCamelotLiquidity();
     await deployCamelotSwapContract();
@@ -209,6 +184,28 @@ describe("RockOnyxStableCoinVault", function () {
     await transferTx.wait();
   }
 
+  async function transferUsdceForUser(
+    from: Signer,
+    to: Signer,
+    amount: number
+  ) {
+    const transferTx = await usdce
+      .connect(from)
+      .transfer(to, amount);
+    await transferTx.wait();
+  }
+
+  async function transferArbForUser(
+    from: Signer,
+    to: Signer,
+    amount: number
+  ) {
+    const transferTx = await usdce
+      .connect(from)
+      .transfer(to, amount);
+    await transferTx.wait();
+  }
+
   async function logAndReturnTotalValueLock() {
     const totalValueLocked = await rockOnyxUSDTVaultContract
       .connect(admin)
@@ -227,8 +224,8 @@ describe("RockOnyxStableCoinVault", function () {
     await transferUsdcForUser(usdcSigner, user2, 1000*1e6);
     await transferUsdcForUser(usdcSigner, user3, 1000*1e6);
     await transferUsdcForUser(usdcSigner, user4, 1000*1e6);
-
-    await transferUsdcForUser(usdceSigner, optionsReceiver, 1000*1e6);
+    await transferUsdcForUser(usdcSigner, optionsReceiver, 1000*1e6);
+    await transferUsdceForUser(usdceSigner, optionsReceiver, 1000*1e6);
   });
 
   it("deposit to rockOnyxUSDTVault, should deposit successfully", async function () {
@@ -244,10 +241,10 @@ describe("RockOnyxStableCoinVault", function () {
 
   it("get user profitt and loss, should get successfully", async function () {
     console.log('-------------deposit to rockOnyxUSDTVault---------------');
-    
     const getPnLTx = await rockOnyxUSDTVaultContract
-      .connect(user1)
-      .getPnL();
+    .connect(user1)
+    .getPnL();
+    console.log('getPnL %s', getPnLTx);
   });
 
   it("mintEthLP position on Camelot, should mint successfully", async function () {
@@ -341,7 +338,7 @@ describe("RockOnyxStableCoinVault", function () {
     console.log('-------------update allocated balance from aevo vendor---------------');
     const updateProfitTx = await rockOnyxUSDTVaultContract
       .connect(admin)
-      .updateProfitFromVender(80*1e6);
+      .updateProfitFromVendor(80*1e6);
     await updateProfitTx.wait();
 
     let totalValueLock = await logAndReturnTotalValueLock();
@@ -417,9 +414,6 @@ describe("RockOnyxStableCoinVault", function () {
   it("get user profitt and loss, should get successfully", async function () {
     console.log('-------------deposit to rockOnyxUSDTVault---------------');
     
-    const getPnLTx = await rockOnyxUSDTVaultContract
-      .connect(user1)
-      .getPnL();
   });
 
   it("get user allocation ratios, should get successfully", async function () {
@@ -458,7 +452,6 @@ describe("RockOnyxStableCoinVault", function () {
     console.log('-------------convert reward to usdc---------------');
 
     const arbSigner = await ethers.getImpersonatedSigner("0x2e383d51d72507e8c8e803f1a7d6651cbe65b151");
-
     const transferTx = await arb
       .connect(arbSigner)
       .transfer(rockOnyxUSDTVaultContract, 2000000000000000000n);
@@ -511,7 +504,7 @@ describe("RockOnyxStableCoinVault", function () {
     );
     const claims = tokens.map((t) => transactionData[t].claim);
     const proofs = tokens.map((t) => transactionData[t].proof);  
-    const users = tokens.map((t) => "0xb4415d533ba381d8057ae23c281ab329ab7a6778");
+    const users = tokens.map(() => "0xb4415d533ba381d8057ae23c281ab329ab7a6778");
 
     console.log(users);
     console.log(tokens);
@@ -555,7 +548,7 @@ describe("RockOnyxStableCoinVault", function () {
       (k) => transactionData[k].proof !== undefined
     );
 
-    const users = tokens.map((t) => "0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa");
+    const users = tokens.map(() => "0xbc05da14287317fe12b1a2b5a0e1d756ff1801aa");
     const claims = tokens.map((t) => transactionData[t].claim);
     const proofs = tokens.map((t) => transactionData[t].proof);  
 
@@ -589,15 +582,57 @@ describe("RockOnyxStableCoinVault", function () {
   
     console.log(state);
 
-    const mintEthLPPositionTx = await rockOnyxUSDTVaultContract
-      .connect(contractAdmin)
-      .mintEthLPPosition(1459, 1468, 8546, 4);  
-    var mintEthLPPositionTxResult = await mintEthLPPositionTx.wait();
 
     state = await rockOnyxUSDTVaultContract
     .connect(contractAdmin)
     .getEthLPState();
   
     console.log(state);
+  });
+
+  it.skip("migration, export and import data to new option wheel vault - 200265516", async function () {
+    const contractAdmin = await ethers.getImpersonatedSigner("0x20f89bA1B0Fc1e83f9aEf0a134095Cd63F7e8CC7");
+    rockOnyxUSDTVaultContract = await ethers.getContractAt("RockOnyxUSDTVault", "0x077835528875C27bFaCBc5d923C919BC56a9C250");
+
+    console.log("-------------export old vault state---------------");
+    let exportVaultStateTx = await rockOnyxUSDTVaultContract
+    .connect(contractAdmin)
+    .exportVaultState();
+
+    console.log(exportVaultStateTx);
+    console.log(exportVaultStateTx[3][0][1]);
+    console.log(exportVaultStateTx[3][1][1]);
+    console.log(exportVaultStateTx[3][2][1]);
+  
+    const rockOnyxUSDTVault = await ethers.getContractFactory(
+      "RockOnyxUSDTVault"
+    );
+    const newRockOnyxUSDTVaultContract = await rockOnyxUSDTVault.deploy(
+      usdcAddress,
+      await camelotLiquidityContract.getAddress(),
+      rewardAddress,
+      nftPositionAddress,
+      await camelotSwapContract.getAddress(),
+      await aevoContract.getAddress(),
+      await optionsReceiver.getAddress(),
+      usdceAddress,
+      wethAddress,
+      wstethAddress,
+      arbAddress,
+      BigInt(0 * 1e6)
+    );
+    await rockOnyxUSDTVaultContract.waitForDeployment();
+  
+    console.log("-------------import vault state---------------");
+    
+    console.log("-------------export new vault state---------------");
+    const exportVaultStateTx2 = await newRockOnyxUSDTVaultContract
+      .connect(admin)
+      .exportVaultState();
+  
+    console.log(exportVaultStateTx2);
+    console.log(exportVaultStateTx2[3][0][1]);
+    console.log(exportVaultStateTx2[3][1][1]);
+    console.log(exportVaultStateTx2[3][2][1]);
   });
 });

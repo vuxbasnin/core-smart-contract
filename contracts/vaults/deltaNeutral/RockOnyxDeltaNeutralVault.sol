@@ -16,15 +16,20 @@ contract RockOnyxDeltaNeutralVault is
     RockOynxPerpDexStrategy
 {
     uint256 private constant NETWORK_COST = 1e6;
+    uint256 private initialPPS;
     using ShareMath for uint256;
     using SafeERC20 for IERC20;
 
     mapping(address => DepositReceipt) private depositReceipts;
-    uint256 private withdrawalAmount;
     mapping(address => Withdrawal) private withdrawals;
     VaultParams private vaultParams;
     VaultState private vaultState;
     DeltaNeutralAllocateRatio private allocateRatio;
+
+    // migration
+    DepositReceiptArr[] depositReceiptArr;
+    WithdrawalArr[] withdrawalArr;
+    // end migration
 
     /************************************************
      *  EVENTS
@@ -33,7 +38,7 @@ contract RockOnyxDeltaNeutralVault is
     event InitiateWithdrawal(address indexed account, uint256 amount, uint256 shares);
     event Withdrawn(address indexed account, uint256 amount, uint256 shares);
     event FeeRatesUpdated(uint256 performanceFee, uint256 managementFee);
-    event RequestFunds(uint256 ethStakeLendAmount, uint256 perpDexAmount);
+    event RequestFunds(address indexed account, uint256 withdrawalAmount, uint256 shares);
 
     constructor(
         address _usdc,
@@ -41,7 +46,8 @@ contract RockOnyxDeltaNeutralVault is
         address _perpDexProxy,
         address _perpDexReceiver,
         address _weth,
-        address _wstEth
+        address _wstEth,
+        uint256 _initialPPS
     )
         RockOynxEthStakeLendStrategy()
         RockOynxPerpDexStrategy()
@@ -71,6 +77,8 @@ contract RockOnyxDeltaNeutralVault is
             _perpDexReceiver,
             _usdc
         );
+
+        initialPPS = _initialPPS;
     }
 
     /**
@@ -98,6 +106,10 @@ contract RockOnyxDeltaNeutralVault is
         allocateAssets();
 
         emit Deposited(msg.sender, amount, shares);
+
+        // migration
+        updateDepositArr(depositReceipts[msg.sender]);
+        // end migration
     }
 
     /**
@@ -128,24 +140,27 @@ contract RockOnyxDeltaNeutralVault is
             pps,
             vaultParams.decimals
         );
-
-        uint256 ethStakeLendRatio = getTotalEthStakeLendAssets() * 1e4  / (getTotalEthStakeLendAssets() + getTotalPerpDexAssets());
-        uint256 ethStakeLendAmount = withdrawals[msg.sender].withdrawAmount * ethStakeLendRatio / 1e4;        
-        uint256 perpDexAmount = withdrawals[msg.sender].withdrawAmount - ethStakeLendAmount;
-
         vaultState.totalShares -= shares;
 
-        emit RequestFunds(ethStakeLendAmount, perpDexAmount);
+        emit RequestFunds(msg.sender, withdrawals[msg.sender].withdrawAmount, shares);
+
+        // migration
+        updateDepositArr(depositReceipts[msg.sender]);
+        updateWithdrawalArr(withdrawals[msg.sender]);
+        // end migration
     }
 
     /**
      * @notice acquire asset form vendor, prepare funds for withdrawal
      */
-    function handleWithdrawalFunds(uint256 ethStakeLendAmount, uint256 perpDexAmount) external nonReentrant {
-        _auth(ROCK_ONYX_OPTIONS_TRADER_ROLE);
+    function acquireWithdrawalFunds(uint256 usdAmount) external nonReentrant {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        vaultState.withdrawPoolAmount += handleFundsFromEthStakeLend(ethStakeLendAmount);
-        vaultState.withdrawPoolAmount += handleFundsFromPerpDex(perpDexAmount);
+        require(usdAmount <= _totalValueLocked(), "INVALID_ACQUIRE_AMOUNT");
+        uint256 ethStakeLendAmount = usdAmount * allocateRatio.ethStakeLendRatio / 1e4;
+        uint256 perpDexAmount = usdAmount * allocateRatio.perpDexRatio / 1e4;
+        vaultState.withdrawPoolAmount += acquireFundsFromEthStakeLend(ethStakeLendAmount);
+        vaultState.withdrawPoolAmount += acquireFundsFromPerpDex(perpDexAmount);
     }
 
     function withdrawPerformanceFee() external nonReentrant {
@@ -154,10 +169,8 @@ contract RockOnyxDeltaNeutralVault is
         uint256 performanceFeeAmount = (_totalValueLocked() * vaultParams.managementFeeRate) / 100 / 52;
         uint256 ethStakeLendPerformanceFeeAmount = performanceFeeAmount * allocateRatio.ethStakeLendRatio;
         uint256 perpDexFeeAmount = performanceFeeAmount * allocateRatio.perpDexRatio;
-
-        ethStakeLendPerformanceFeeAmount = handleFundsFromEthStakeLend(ethStakeLendPerformanceFeeAmount);
-        perpDexFeeAmount = handleFundsFromPerpDex(perpDexFeeAmount);
-
+        ethStakeLendPerformanceFeeAmount = acquireFundsFromEthStakeLend(ethStakeLendPerformanceFeeAmount);
+        perpDexFeeAmount = acquireFundsFromPerpDex(perpDexFeeAmount);
         performanceFeeAmount = ethStakeLendPerformanceFeeAmount + perpDexFeeAmount;
         vaultState.performanceFeeAmount += performanceFeeAmount;
         vaultState.withdrawPoolAmount += performanceFeeAmount;
@@ -168,18 +181,16 @@ contract RockOnyxDeltaNeutralVault is
 
         syncEthStakeLendBalance();
         syncPerpDexBalance(perpDexbalance);
+        recalculateAllocateRatio();
     }
 
     /**
      * @notice get vault state for user
      */
     function getUserVaultState() external view returns(uint256, uint256, uint256, uint256) {
-        DepositReceipt storage depositReceipt = depositReceipts[msg.sender];
-        uint256 currentAmount = depositReceipt.shares * _getPricePerShare() / 1e6;
-
-        uint256 profit = currentAmount > depositReceipt.depositAmount ? (currentAmount - depositReceipt.depositAmount) * 1e6 / depositReceipt.depositAmount : 0;
-        uint256 loss = currentAmount < depositReceipt.depositAmount ? (depositReceipt.depositAmount - currentAmount) * 1e6 / depositReceipt.depositAmount : 0;
-
+        uint256 currentAmount = depositReceipts[msg.sender].shares * _getPricePerShare() / 1e6;
+        uint256 profit = currentAmount > depositReceipts[msg.sender].depositAmount ? (currentAmount - depositReceipts[msg.sender].depositAmount) * 1e6 / depositReceipts[msg.sender].depositAmount : 0;
+        uint256 loss = currentAmount < depositReceipts[msg.sender].depositAmount ? (depositReceipts[msg.sender].depositAmount - currentAmount) * 1e6 / depositReceipts[msg.sender].depositAmount : 0;
         return (depositReceipts[msg.sender].depositAmount, depositReceipts[msg.sender].shares, profit, loss);
     }
 
@@ -196,20 +207,20 @@ contract RockOnyxDeltaNeutralVault is
      */
     function completeWithdrawal(uint256 shares) external nonReentrant {
         require(withdrawals[msg.sender].shares >= shares, "INVALID_SHARES");
-
         uint256 withdrawAmount = shares * withdrawals[msg.sender].withdrawAmount / withdrawals[msg.sender].shares;
         uint256 performanceFee = shares * withdrawals[msg.sender].performanceFee / withdrawals[msg.sender].shares;
         withdrawAmount -= (performanceFee + NETWORK_COST);
-
         require(vaultState.withdrawPoolAmount > withdrawAmount, "EXCEED_WITHDRAW_POOL_CAPACITY");
-
         vaultState.performanceFeeAmount += performanceFee;
         vaultState.withdrawPoolAmount -=  withdrawAmount;
         withdrawals[msg.sender].withdrawAmount -= withdrawAmount;
         withdrawals[msg.sender].shares -= shares;
-
         IERC20(vaultParams.asset).safeTransfer(msg.sender, withdrawAmount);
         emit Withdrawn(msg.sender, withdrawAmount, withdrawals[msg.sender].shares);
+        // migration
+        updateDepositArr(depositReceipts[msg.sender]);
+        updateWithdrawalArr(withdrawals[msg.sender]);
+        // end migration
     }
 
     /**
@@ -249,10 +260,8 @@ contract RockOnyxDeltaNeutralVault is
 
         require(_performanceFeeRate <= 100, "INVALID_PERFORMANCE_FEE_RATE");
         require(_managementFeeRate <= 100, "INVALID_MANAGEMENT_FEE_RATE");
-
         vaultParams.performanceFeeRate = _performanceFeeRate;
         vaultParams.managementFeeRate = _managementFeeRate;
-
         emit FeeRatesUpdated(_performanceFeeRate, _managementFeeRate);
     }
 
@@ -330,9 +339,8 @@ contract RockOnyxDeltaNeutralVault is
      * @param amount the amount in ETH we should sell 
      */
     function rebalanceAssetToPerpDex(uint256 amount) private {
-        require(amount <= getTotalEthStakeLendAssets(), "INVALID_ETHSTAKELEND_POSITION_SIZE");
-
-        uint256 depositToPerpDexAmount = handleFundsFromEthStakeLend(amount);
+        require(amount <= getTotalEthStakeLendAssets(), "INVALID_ETHSTAKELEND_ASSETS");
+        uint256 depositToPerpDexAmount = acquireFundsFromPerpDex(amount);
         depositToPerpDexStrategy(depositToPerpDexAmount);
     }
 
@@ -341,10 +349,20 @@ contract RockOnyxDeltaNeutralVault is
      * @param amount the amount in usd we should buy eth 
      */
     function rebalanceAssetToEthStakeLend(uint256 amount) private {
-        require(amount <= getTotalPerpDexAssets(), "INVALID_PERPDEX_POSITION_SIZE");
-
-        uint256 depositToEthStakeLendAmount = handleFundsFromPerpDex(amount);
+        require(amount <= getTotalPerpDexAssets(), "INVALID_PERPDEX_ASSETS");
+        uint256 depositToEthStakeLendAmount = acquireFundsFromPerpDex(amount);
         depositToPerpDexStrategy(depositToEthStakeLendAmount);
+    }
+
+    /** 
+     * @notice recalculate allocate ratio vault
+     */
+    function recalculateAllocateRatio() private {
+        uint256 totalEthAssets = getTotalEthStakeLendAssets();
+        uint256 totalPerpAssets = getTotalPerpDexAssets();
+        uint256 tvl = totalEthAssets + totalPerpAssets;
+        allocateRatio.ethStakeLendRatio = totalEthAssets * 10 ** allocateRatio.decimals / tvl;
+        allocateRatio.perpDexRatio = totalPerpAssets * 10 ** allocateRatio.decimals / tvl;
     }
 
     /**
@@ -369,7 +387,7 @@ contract RockOnyxDeltaNeutralVault is
      */
     function _getPricePerShare() private view returns (uint256) {
         if(vaultState.totalShares == 0) 
-            return 1 * 10 ** vaultParams.decimals;
+            return initialPPS;
 
         return _totalValueLocked() * 10 ** vaultParams.decimals / vaultState.totalShares;
     }
@@ -390,4 +408,66 @@ contract RockOnyxDeltaNeutralVault is
         bool sent = token.transfer(receiver, amount);
         require(sent, "TOKEN_TRANSFER_FAILED");
     }
+
+    // migration
+    function updateDepositArr(DepositReceipt memory depositReceipt) internal {
+        for (uint256 i = 0; i < depositReceiptArr.length; i++) {
+            if(depositReceiptArr[i].owner == msg.sender) {
+                depositReceiptArr[i].depositReceipt = depositReceipt;
+                return;
+            }
+        }
+
+        depositReceiptArr.push(DepositReceiptArr(msg.sender, depositReceipt));
+    }
+    function updateWithdrawalArr(Withdrawal memory withdrawal) internal {
+        for (uint256 i = 0; i < withdrawalArr.length; i++) {
+            if(withdrawalArr[i].owner == msg.sender) {
+                withdrawalArr[i].withdrawal = withdrawal;
+                return;
+            }
+        }
+
+        withdrawalArr.push(WithdrawalArr(msg.sender, withdrawal));
+    }
+    function exportVaultState() external view returns (
+        DepositReceiptArr[] memory, 
+        WithdrawalArr[] memory, 
+        VaultParams memory, 
+        VaultState memory, 
+        DeltaNeutralAllocateRatio memory, 
+        EthStakeLendState memory, 
+        PerpDexState memory) {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        return (depositReceiptArr, withdrawalArr, vaultParams, vaultState, allocateRatio, ethStakeLendState, perpDexState);
+    }
+    function importVaultState(
+        DepositReceiptArr[] calldata _depositReceiptArr,
+        WithdrawalArr[] calldata _withdrawalArr,
+        VaultParams calldata _vaultParams,
+        VaultState calldata _vaultState,
+        DeltaNeutralAllocateRatio calldata _allocateRatio,
+        EthStakeLendState calldata _ethStakeLendState,
+        PerpDexState calldata _perpDexState
+         ) external {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        depositReceiptArr =_depositReceiptArr;
+        for (uint256 i = 0; i < _depositReceiptArr.length; i++) {
+            depositReceipts[_depositReceiptArr[i].owner] = _depositReceiptArr[i].depositReceipt;
+        }
+
+        withdrawalArr = _withdrawalArr;
+        for (uint256 i = 0; i < _withdrawalArr.length; i++) {
+            withdrawals[_withdrawalArr[i].owner] = _withdrawalArr[i].withdrawal;
+        }
+
+        vaultParams = _vaultParams;
+        vaultState =_vaultState;
+        allocateRatio = _allocateRatio;
+        ethStakeLendState = _ethStakeLendState;
+        perpDexState = _perpDexState;
+    }
+    // end migration
 }

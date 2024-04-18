@@ -60,13 +60,21 @@ async function main() {
     "Deploying contracts with the account:",
     await deployer.getAddress()
   );
-  await deployCamelotSwapContract();
-  const camelotSwapAddress = await camelotSwapContract.getAddress();
-  // const camelotSwapAddress = "0x7EA2362e578212d7FDA082E0bBB5134f89EDc4DC";
 
+  const camelotSwapAddress = "0x6aCa558d06f5149A4118FbD5218F2a430e3e48cF";
+  const aevoContractAddress = "0x3D75e9366Fe5A2f1B7481a4Fb05deC21f8038467";
+
+  // MAINNET
   const optionsTrader = "0x0aDf03D895617a95F317892125Cd6fb9ca3b99c1";
 
+  // Testnet
+  // const optionsTrader = "0xF4aF6504462E5D574EDBdB161F1063633CCa0274";
+
+  // await deployCamelotSwapContract();
+  // const camelotSwapAddress = await camelotSwapContract.getAddress();
+
   // await deployAevoContract();
+  // const aevoContractAddress = await aevoContract.getAddress();
 
   const rockOnyxDeltaNeutralVault = await ethers.getContractFactory(
     "RockOnyxDeltaNeutralVault"
@@ -75,11 +83,11 @@ async function main() {
   rockOnyxDeltaNeutralVaultContract = await rockOnyxDeltaNeutralVault.deploy(
     usdcAddress,
     camelotSwapAddress,
-    // await aevoContract.getAddress(),
-    "0x3D75e9366Fe5A2f1B7481a4Fb05deC21f8038467",
+    aevoContractAddress,
     optionsTrader,
     wethAddress,
-    wstethAddress
+    wstethAddress,
+    BigInt(parseInt((1.0069*1e6).toString()))
   );
   await rockOnyxDeltaNeutralVaultContract.waitForDeployment();
 

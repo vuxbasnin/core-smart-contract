@@ -2,17 +2,12 @@
 pragma solidity ^0.8.19;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "../../../extensions/RockOnyxAccessControl.sol";
 import "../../../lib/LiquidityAmounts.sol";
-import "../../../lib/ShareMath.sol";
 import "../../../interfaces/IVenderLiquidityProxy.sol";
 import "../../../interfaces/ISwapProxy.sol";
-import "../../../interfaces/IERC721Receiver.sol";
-import "../../../extensions/RockOnyxAccessControl.sol";
 import "../structs/RockOnyxStructs.sol";
 import "hardhat/console.sol";
 
@@ -77,7 +72,7 @@ contract RockOynxUsdLiquidityStrategy is
         uint8 decimals
     ) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        require(usdLPState.tokenId == 0, "POSITION_ALREADY_OPEN");
+        require(usdLPState.liquidity == 0, "POSITION_ALREADY_OPEN");
 
         _rebalanceUsdLPAssets(ratio, decimals);
 
@@ -130,7 +125,7 @@ contract RockOynxUsdLiquidityStrategy is
      */
     function increaseUsdLPLiquidity(uint16 ratio, uint8 decimals) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        require(usdLPState.tokenId > 0, "POSITION_HAS_NOT_OPEN");
+        require(usdLPState.liquidity > 0, "POSITION_HAS_NOT_OPEN");
 
         _rebalanceUsdLPAssets(ratio, decimals);
 
@@ -210,6 +205,7 @@ contract RockOynxUsdLiquidityStrategy is
         usdLPState.unAllocatedUsdcBalance = 0;
 
         uint128 liquidity = _amountToUsdPoolLiquidity(amountToAcquire);
+        liquidity = (liquidity > usdLPState.liquidity) ? usdLPState.liquidity : liquidity;
         (uint256 acquireUsdcAmount, uint256 acquireUsdceAmount) = _decreaseUsdLPLiquidity(liquidity);
         uint256 usdcAmount = acquireUsdceAmount > 0 ? _usdLPSwapTo(usdce, acquireUsdceAmount, usdc) : 0;
        
@@ -256,7 +252,7 @@ contract RockOynxUsdLiquidityStrategy is
      * @return The price of USDCE in USD Coin (USDC).
      */
     function _getUsdcePrice() private view returns (uint256) {
-        uint256 usdc2Usdce = usdSwapProxy.getPriceOf(usdc, usdce, 6, 6);
+        uint256 usdc2Usdce = usdSwapProxy.getPriceOf(usdc, usdce);
         return 1e12 / usdc2Usdce;
     }
 

@@ -19,7 +19,8 @@ async function main() {
     arb = await ethers.getContractAt("IERC20", arbAddress);
     // const contractAdmin = await ethers.getImpersonatedSigner("0x20f89bA1B0Fc1e83f9aEf0a134095Cd63F7e8CC7");
     const contractAdmin = new ethers.Wallet(privateKey, ethers.provider);
-    rockOnyxUSDTVaultContract = await ethers.getContractAt("RockOnyxUSDTVault", "0x01cdc1dc16c677dfd4cfde4478aaa494954657a0");
+    const vaultAddress = "0x18994527E6FfE7e91F1873eCA53e900CE0D0f276";
+    rockOnyxUSDTVaultContract = await ethers.getContractAt("RockOnyxUSDTVault", vaultAddress);
 
     interface TransactionData {
       [token: string]: {
@@ -31,9 +32,9 @@ async function main() {
     let transactionData : TransactionData;
     try {
       const { data } = await axios.get(
-        `https://api.angle.money/v2/merkl?chainIds[]=42161&user=0x01cdc1dc16c677dfd4cfde4478aaa494954657a0`,
+        `https://api.angle.money/v2/merkl?chainIds[]=42161&user=${vaultAddress}`,
         {
-          timeout: 5000,
+          timeout: 50000,
         }
       );
       
@@ -46,19 +47,19 @@ async function main() {
     );
     const claims = tokens.map((t) => transactionData[t].claim);
     const proofs = tokens.map((t) => transactionData[t].proof);  
-    const users = tokens.map((t) => "0x01cdc1dc16c677dfd4cfde4478aaa494954657a0");
+    const users = tokens.map((t) => vaultAddress);
 
     console.log(tokens);
     console.log(claims);
     console.log(proofs);
-    console.log(await arb.balanceOf("0x01cdc1dc16c677dfd4cfde4478aaa494954657a0"));
+    console.log(await arb.balanceOf(vaultAddress));
 
-    const claimlTx = await rockOnyxUSDTVaultContract
-      .connect(contractAdmin)
-      .claimReward(users, tokens, claims, proofs as string[][]);
-    await claimlTx.wait();
+    // const claimlTx = await rockOnyxUSDTVaultContract
+    //   .connect(contractAdmin)
+    //   .claimReward(users, tokens, claims, proofs as string[][]);
+    // await claimlTx.wait();
 
-    console.log(await arb.balanceOf("0x01cdc1dc16c677dfd4cfde4478aaa494954657a0"));
+    // console.log(await arb.balanceOf(vaultAddress));
   }
 
   // We recommend this pattern to be able to use async/await everywhere

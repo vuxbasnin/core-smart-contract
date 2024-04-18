@@ -1,3 +1,4 @@
+require('dotenv').config();
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 
@@ -18,9 +19,11 @@ const config: HardhatUserConfig = {
     hardhat: {
       forking: {
         url: "https://arbitrum-mainnet.infura.io/v3/85cde589ce754dafa0a57001c326104d",
-        blockNumber: 192713202,
+        blockNumber: 199932931,
       },
-      chainId: 42161
+      chainId: 42161,
+      allowUnlimitedContractSize: true,
+      // blockGasLimit: 2100000
     },
     // hardhat: {
     //   forking: {

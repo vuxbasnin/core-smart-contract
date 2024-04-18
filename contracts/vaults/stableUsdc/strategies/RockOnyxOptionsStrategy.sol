@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-import "../../../interfaces/IAevo.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "hardhat/console.sol";
-import "../../../extensions/RockOnyxAccessControl.sol";
-import "../../../interfaces/IOptionsVendorProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "../../../interfaces/IAevo.sol";
+import "../../../extensions/RockOnyxAccessControl.sol";
+import "../../../interfaces/IOptionsVendorProxy.sol";
 import "../structs/RockOnyxStructs.sol";
+import "hardhat/console.sol";
 
 contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -64,7 +64,7 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
      */
     function acquireWithdrawalFundsUsdOptions(uint256 withdrawUsdOptionsAmount) internal returns (uint256) {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-
+        
         if(optionsState.unAllocatedUsdcBalance > withdrawUsdOptionsAmount){
             optionsState.unAllocatedUsdcBalance -= withdrawUsdOptionsAmount;
             return withdrawUsdOptionsAmount;    
@@ -83,7 +83,6 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
 
         uint256 amount = optionsState.unAllocatedUsdcBalance;
         optionsState.unAllocatedUsdcBalance -= amount;
-        console.log('amount %s', amount);
         IERC20(vaultAssetAddress).approve(address(optionsVendor), amount);
 
         optionsVendor.depositToVendor{value: msg.value}(
