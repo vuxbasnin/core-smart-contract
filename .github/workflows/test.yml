@@ -18,7 +18,9 @@ jobs:
         node-version: '18'
 
     - name: Install dependencies
-      run: npm i
-
+      run: npm ci
+    
     - name: Run Hardhat tests
+      env:
+        PRIVATE_KEY: ${{ secrets.HARDHAT_PRIVATE_KEY }}
       run: npx hardhat test
