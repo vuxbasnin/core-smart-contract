@@ -373,6 +373,16 @@ contract RockOnyxDeltaNeutralVault is
     }
 
     /**
+     * @notice get fee information
+     */
+    function getFeeInfo() external view returns (uint256 depositFee, uint256 exitFee, uint256 performanceFee, uint256 managementFee) {
+        depositFee = 0;
+        exitFee = 0;
+        performanceFee = vaultParams.performanceFeeRate;
+        managementFee = vaultParams.managementFeeRate;
+    }
+
+    /**
      * @notice get total value locked vault
      */
     function _totalValueLocked() private view returns (uint256) {
