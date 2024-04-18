@@ -1074,17 +1074,13 @@ describe("RockOnyxDeltaNeutralVault", function () {
 
         const wstEthEthPrice = await camelotSwapContract.getPriceOf(
           wstethAddress,
-          wethAddress,
-          BigInt(18),
-          BigInt(18)
+          wethAddress
         );
         console.log("WSTETH/ETH Price: %s", Number(wstEthEthPrice) / 1e18);
 
         const ethPrice = await camelotSwapContract.getPriceOf(
           wethAddress,
           usdcAddress,
-          BigInt(18),
-          BigInt(6)
         );
         console.log("WETH/USDC Price: %s", (Number(ethPrice) / 1e6).toFixed(8));
 
