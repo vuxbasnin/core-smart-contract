@@ -1,4 +1,4 @@
-const { ethers, network } = require("hardhat");
+const { ethers } = require("hardhat");
 import { expect } from "chai";
 import axios from "axios";
 
@@ -22,9 +22,6 @@ import {
 import {
   Signer,
   BigNumberish,
-  ContractTransaction,
-  AbiCoder,
-  ContractTransactionReceipt,
 } from "ethers";
 
 // const chainId: CHAINID = network.config.chainId;
@@ -35,28 +32,17 @@ describe("RockOnyxStableCoinVault", function () {
     user1: Signer,
     user2: Signer,
     user3: Signer,
-    user4: Signer,
-    user5: Signer;
+    user4: Signer;
 
   let optionsReceiver: Signer;
 
   let camelotLiquidityContract: Contracts.CamelotLiquidity;
   let rockOnyxUSDTVaultContract: Contracts.RockOnyxUSDTVault;
 
-  let onchainCamelotLiquidityContract: Contracts.CamelotLiquidity;
-  let onchainRockOnyxUSDTVaultContract: Contracts.RockOnyxUSDTVault;
   let usdc: Contracts.IERC20;
   let usdce: Contracts.IERC20;
   let wsteth: Contracts.IERC20;
-  let weth: Contracts.IERC20;
-  let arb: Contracts.IERC20;
-  let nftPosition: Contracts.IERC721;
-  let reward: Contracts.IRewardVendor;
-  let liquidityTokenId: number;
-  let liquidityAmount: number;
 
-  const LIQUIDITY_TOKEN_ID_INDEX = 0;
-  const LIQUIDITY_AMOUNT_INDEX = 1;
   const PRECISION = 2 * 1e6;
 
   let aevoContract: Contracts.Aevo;
@@ -151,47 +137,14 @@ describe("RockOnyxStableCoinVault", function () {
     console.log("rockOnyxEthLiquidityStrategyContract size: %s", size);
   }
 
-  async function getMintPositionResult(
-    tx: ContractTransactionReceipt,
-    index: number
-  ) {
-    var log = tx?.logs.find((l) =>
-      l.topics.includes(
-        "0x38296fd5286ebdb66bc9ab8003152f9666c9e808b447df47c94f7d2387fb3a54"
-      )
-    );
-    return AbiCoder.defaultAbiCoder().decode(
-      ["uint256", "uint128", "uint256", "uint256"],
-      log!.data
-    )[index];
-  }
-
-  async function getIncreasePositionResult(
-    tx: ContractTransactionReceipt,
-    index: number
-  ) {
-    var log = tx?.logs.find((l) =>
-      l.topics.includes(
-        "0x0a65cc63f481035bddeace027bb12726628d84152598e98e29635cbcbb0bfa76"
-      )
-    );
-    return AbiCoder.defaultAbiCoder().decode(
-      ["uint256", "uint128", "uint256", "uint256"],
-      log!.data
-    )[index];
-  }
-
   beforeEach(async function () {
     [admin, optionsReceiver, user1, user2, user3, user4] =
       await ethers.getSigners();
 
-    nftPosition = await ethers.getContractAt("IERC721", nftPositionAddress);
     usdc = await ethers.getContractAt("IERC20", usdcAddress);
     usdce = await ethers.getContractAt("IERC20", usdceAddress);
 
     wsteth = await ethers.getContractAt("IERC20", wstethAddress);
-    weth = await ethers.getContractAt("IERC20", wethAddress);
-    arb = await ethers.getContractAt("IERC20", arbAddress);
     await deployCamelotLiquidity();
     await deployCamelotSwapContract();
     await deployAevoContract();
@@ -209,6 +162,11 @@ describe("RockOnyxStableCoinVault", function () {
 
   async function transferUsdcForUser(from: Signer, to: Signer, amount: number) {
     const transferTx = await usdc.connect(from).transfer(to, amount);
+    await transferTx.wait();
+  }
+
+  async function transferUsdceForUser(from: Signer, to: Signer, amount: number) {
+    const transferTx = await usdce.connect(from).transfer(to, amount);
     await transferTx.wait();
   }
 
@@ -236,7 +194,7 @@ describe("RockOnyxStableCoinVault", function () {
     await transferUsdcForUser(usdcSigner, user4, 10000 * 1e6);
     await transferUsdcForUser(usdcSigner, optionsReceiver, 10000 * 1e6);
 
-    await transferUsdcForUser(usdceSigner, optionsReceiver, 1000 * 1e6);
+    await transferUsdceForUser(usdceSigner, optionsReceiver, 1000 * 1e6);
   });
 
   it.skip("deposit to rockOnyxUSDTVault, WETH in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
@@ -369,10 +327,6 @@ describe("RockOnyxStableCoinVault", function () {
     expect(totalValueLock).to.approximately(110 * 1e6, PRECISION);
 
     console.log("-------------mintUsdLP position on Camelot---------------");
-    const mintUsdLPPositionTx = await rockOnyxUSDTVaultContract
-      .connect(admin)
-      .mintUsdLPPosition(-2, 2, 3000, 4);
-    const mintUsdLPPositionTxResult = await mintUsdLPPositionTx.wait();
 
     let usdcBalance = await usdc.balanceOf(
       await rockOnyxUSDTVaultContract.getAddress()
@@ -429,10 +383,6 @@ describe("RockOnyxStableCoinVault", function () {
     await deposit(user2, 100 * 1e6);
 
     console.log("-------------mintUsdLP position on Camelot---------------");
-    const mintUsdLPPositionTx = await rockOnyxUSDTVaultContract
-      .connect(admin)
-      .mintUsdLPPosition(-2, 2, 3000, 4);
-    const mintUsdLPPositionTxResult = await mintUsdLPPositionTx.wait();
 
     console.log("-------------deposit to vendor on aevo---------------");
     await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
@@ -489,7 +439,6 @@ describe("RockOnyxStableCoinVault", function () {
     await acquireWithdrawalFundsTx.wait();
 
     console.log("-------------complete withdrawals---------------");
-    let user2Balance = await usdc.connect(user2).balanceOf(user2);
 
     const completeWithdrawalTx = await rockOnyxUSDTVaultContract
       .connect(user2)
@@ -497,7 +446,6 @@ describe("RockOnyxStableCoinVault", function () {
     await completeWithdrawalTx.wait();
 
     console.log("------------- Claim all fees ---------------");
-    const claimTx = await rockOnyxUSDTVaultContract.connect(admin).claimFee();
     await completeWithdrawalTx.wait();
   });
 
@@ -509,10 +457,6 @@ describe("RockOnyxStableCoinVault", function () {
     await deposit(user2, 100 * 1e6);
 
     console.log("-------------mintUsdLP position on Camelot---------------");
-    const mintUsdLPPositionTx = await rockOnyxUSDTVaultContract
-      .connect(admin)
-      .mintUsdLPPosition(-2, 2, 3000, 4);
-    const mintUsdLPPositionTxResult = await mintUsdLPPositionTx.wait();
 
     console.log("-------------deposit to vendor on aevo---------------");
     await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
@@ -597,7 +541,6 @@ describe("RockOnyxStableCoinVault", function () {
     await completeWithdrawalTx2.wait();
 
     console.log("------------- Claim all fees ---------------");
-    const claimTx = await rockOnyxUSDTVaultContract.connect(admin).claimFee();
     await completeWithdrawalTx.wait();
   });
 
@@ -609,10 +552,6 @@ describe("RockOnyxStableCoinVault", function () {
     await deposit(user2, 100 * 1e6);
 
     console.log("-------------mintUsdLP position on Camelot---------------");
-    const mintUsdLPPositionTx = await rockOnyxUSDTVaultContract
-      .connect(admin)
-      .mintUsdLPPosition(-2, 2, 3000, 4);
-    const mintUsdLPPositionTxResult = await mintUsdLPPositionTx.wait();
 
     console.log("-------------deposit to vendor on aevo---------------");
     await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
@@ -697,7 +636,6 @@ describe("RockOnyxStableCoinVault", function () {
     await completeWithdrawalTx2.wait();
 
     console.log("------------- Claim all fees ---------------");
-    const claimTx = await rockOnyxUSDTVaultContract.connect(admin).claimFee();
     await completeWithdrawalTx.wait();
   });
 
@@ -739,9 +677,6 @@ describe("RockOnyxStableCoinVault", function () {
     await acquireWithdrawalFundsTx.wait();
 
     console.log("-------------close round time 3---------------");
-    const closeRound3Tx = await rockOnyxUSDTVaultContract
-      .connect(admin)
-      .closeRound();
     await closeRound2Tx.wait();
 
     console.log("-------------complete withdrawals 1---------------");
@@ -754,7 +689,7 @@ describe("RockOnyxStableCoinVault", function () {
     console.log("pricePerShare", pps);
   });
 
-  it.skip("user deposit -> close round -> depoist -> init withdraw -> close round -> close round -> completed withdraw -> deposit", async function () {
+  it("user deposit -> close round -> depoist -> init withdraw -> close round -> close round -> completed withdraw -> deposit", async function () {
     console.log(
       "-------------calculate performance fee rockOnyxUSDTVault---------------"
     );
@@ -862,7 +797,7 @@ describe("RockOnyxStableCoinVault", function () {
     console.log("pricePerShare", pps);
   });
 
-  it.skip("user deposit -> deposit to eavo -> mint eth -> mint usd-> update profit -> close round -> deposit", async function () {
+  it("user deposit -> deposit to eavo -> mint eth -> mint usd-> update profit -> close round -> deposit", async function () {
     console.log("-------------deposit time: 50$---------------");
     await deposit(user1, 50 * 1e6);
     await deposit(user1, 100 * 1e6);
@@ -896,7 +831,7 @@ describe("RockOnyxStableCoinVault", function () {
     await deposit(user1, 50 * 1e6);
   });
 
-  it.skip("user deposit -> deposit to eavo -> mint eth -> mint usd-> update profit -> close round -> decrease eth -> decrease usd", async function () {
+  it("user deposit -> deposit to eavo -> mint eth -> mint usd-> update profit -> close round -> decrease eth -> decrease usd", async function () {
     console.log("-------------deposit time: 50$---------------");
     const initialDepositAmount = 1000;
     await deposit(user1, 500 * 1e6);
@@ -1254,7 +1189,7 @@ describe("RockOnyxStableCoinVault", function () {
     console.log(exportVaultStateTx2[4][0]);
   });
 
-  it.skip("emergencyShutdown", async function () {
+  it("emergencyShutdown", async function () {
     await deposit(user1, 500 * 1e6);
 
     console.log("-------------emergencyShutdown---------------");
@@ -1263,30 +1198,7 @@ describe("RockOnyxStableCoinVault", function () {
       .emergencyShutdown(admin, usdc, 500 * 1e6);
   });
 
-  // https://arbiscan.io/address/0x55c4c840F9Ac2e62eFa3f12BaBa1B57A1208B6F5
-  it.skip("deposit error", async function () {
-    console.log(
-      "-------------deposit error 0x55c4c840F9Ac2e62eFa3f12BaBa1B57A1208B6F5---------------"
-    );
-    rockOnyxUSDTVaultContract = await ethers.getContractAt(
-      "RockOnyxUSDTVault",
-      "0x55c4c840F9Ac2e62eFa3f12BaBa1B57A1208B6F5"
-    );
-
-    console.log("-------------deposit time 1: 50$---------------");
-
-    await usdc
-      .connect(user1)
-      .approve(await rockOnyxUSDTVaultContract.getAddress(), 50 * 1e6);
-
-    console.log(
-      "rockOnyxUSDTVaultContract address: ",
-      await rockOnyxUSDTVaultContract.getAddress()
-    );
-    await rockOnyxUSDTVaultContract.connect(user1).deposit(50 * 1e6);
-  });
-
-  it.skip("user deposit -> deposit to eavo -> mint eth -> mint usd-> update profit -> close round -> decrease eth -> decrease usd", async function () {
+  it("user deposit -> deposit to eavo -> mint eth -> mint usd-> update profit -> close round -> decrease eth -> decrease usd", async function () {
     console.log("-------------deposit time: 50$---------------");
     const initialDepositAmount = 50;
     await deposit(user1, 50 * 1e6);
@@ -1346,12 +1258,6 @@ describe("RockOnyxStableCoinVault", function () {
     await initiateWithdrawalTx1.wait();
 
     // assume we have profit 5%
-    const optionsBalance2 = 10;
-
-    const updateProfitTx2 = await rockOnyxUSDTVaultContract
-      .connect(admin)
-      .updateProfitFromVendor(optionsBalance2 * 1e6);
-
     console.log("-------------close round 2 time ---------------");
     const closeRoundTx2 = await rockOnyxUSDTVaultContract
       .connect(admin)
@@ -1374,5 +1280,28 @@ describe("RockOnyxStableCoinVault", function () {
       .connect(admin)
       .acquireWithdrawalFunds();
     await acquireWithdrawalFundsTx.wait();
+  });
+
+  // https://arbiscan.io/address/0x55c4c840F9Ac2e62eFa3f12BaBa1B57A1208B6F5
+  it.skip("deposit error", async function () {
+    console.log(
+      "-------------deposit error 0x55c4c840F9Ac2e62eFa3f12BaBa1B57A1208B6F5---------------"
+    );
+    rockOnyxUSDTVaultContract = await ethers.getContractAt(
+      "RockOnyxUSDTVault",
+      "0x55c4c840F9Ac2e62eFa3f12BaBa1B57A1208B6F5"
+    );
+
+    console.log("-------------deposit time 1: 50$---------------");
+
+    await usdc
+      .connect(user1)
+      .approve(await rockOnyxUSDTVaultContract.getAddress(), 50 * 1e6);
+
+    console.log(
+      "rockOnyxUSDTVaultContract address: ",
+      await rockOnyxUSDTVaultContract.getAddress()
+    );
+    await rockOnyxUSDTVaultContract.connect(user1).deposit(50 * 1e6);
   });
 });

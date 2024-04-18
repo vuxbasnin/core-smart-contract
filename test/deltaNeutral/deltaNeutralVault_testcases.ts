@@ -139,9 +139,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     const wstEthAmount = 1; // we convert 1 wstEth to usdc
     const price = await camelotSwapContract.getPriceOf(
       wstethAddress,
-      wethAddress,
-      BigInt(18),
-      BigInt(18)
+      wethAddress
     );
 
     // convert wstEth to eth, parse price BigInt to float
@@ -150,9 +148,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     // get eth price in usdc
     const ethPrice = await camelotSwapContract.getPriceOf(
       wethAddress,
-      usdcAddress,
-      BigInt(18),
-      BigInt(6)
+      usdcAddress
     );
 
     // convert eth to usdc
@@ -165,9 +161,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
   async function getWstEthToEthPrice() {
     const price = await camelotSwapContract.getPriceOf(
       wstethAddress,
-      wethAddress,
-      BigInt(18),
-      BigInt(18)
+      wethAddress
     );
 
     return price;
@@ -177,9 +171,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     // get current priceOf from CamelotSwapContract
     const _ethPrice = await camelotSwapContract.getPriceOf(
       wethAddress,
-      usdcAddress,
-      BigInt(18),
-      BigInt(6)
+      usdcAddress
     );
     // parse priceOf to float
     const ethPrice = parseFloat(_ethPrice.toString()) / 1e6;
@@ -199,7 +191,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     await transferUsdcForUser(usdcSigner, optionsReceiver, 1000 * 1e6);
   });
 
-  it.skip("user deposit -> withdraw, do not deposit to perp dex", async function () {
+  it("user deposit -> withdraw, do not deposit to perp dex", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
@@ -239,7 +231,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it.skip("user deposit -> open position -> close position -> withdraw, do not deposit to perp dex", async function () {
+  it("user deposit -> open position -> close position -> withdraw, do not deposit to perp dex", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
@@ -291,7 +283,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it.skip("user deposit -> open position -> deposit to vender -> withdraw", async function () {
+  it("user deposit -> open position -> deposit to vender -> withdraw", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
@@ -366,7 +358,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it.skip("user deposit1 -> open position -> deposit to vender -> user deposit2 -> open position -> deposit to vender -> withdraw", async function () {
+  it("user deposit1 -> open position -> deposit to vender -> user deposit2 -> open position -> deposit to vender -> withdraw", async function () {
     console.log(
       "-------------deposit1 to rockOnyxDeltaNeutralVault---------------"
     );
@@ -462,7 +454,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it.skip("user deposit -> deposit to vendor -> open position -> sync profit -> withdraw -> close position -> complete withdraw", async function () {
+  it("user deposit -> deposit to vendor -> open position -> sync profit -> withdraw -> close position -> complete withdraw", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
@@ -679,7 +671,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it.skip("migration test, user deposit -> deposit to vendor -> open position -> sync profit -> withdraw -> close position -> complete withdraw", async function () {
+  it("migration test, user deposit -> deposit to vendor -> open position -> sync profit -> withdraw -> close position -> complete withdraw", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
@@ -1011,7 +1003,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     expect(Number(withdrawShares)).to.equal(0n);
   });
 
-  it.skip("user deposit -> open position -> close position", async function () {
+  it("user deposit -> open position -> close position", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );

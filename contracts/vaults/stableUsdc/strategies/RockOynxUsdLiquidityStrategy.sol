@@ -252,7 +252,7 @@ contract RockOynxUsdLiquidityStrategy is
      * @return The price of USDCE in USD Coin (USDC).
      */
     function _getUsdcePrice() private view returns (uint256) {
-        uint256 usdc2Usdce = usdSwapProxy.getPriceOf(usdc, usdce, 6, 6);
+        uint256 usdc2Usdce = usdSwapProxy.getPriceOf(usdc, usdce);
         return 1e12 / usdc2Usdce;
     }
 
