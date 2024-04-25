@@ -1,4 +1,4 @@
-import { ethers } from "hardhat";
+const { ethers, network } = require("hardhat");
 import { expect } from "chai";
 
 import * as Contracts from "../../typechain-types";
@@ -18,8 +18,8 @@ import {
     ANGLE_REWARD_ADDRESS,
   } from "../../constants";
 
-  // const chainId: CHAINID = network.config.chainId;
-const chainId: CHAINID = 42161;
+const chainId: CHAINID = network.config.chainId;
+// const chainId: CHAINID = 42161;
 
 describe("camelot liquidity contract test", function () {
     let admin: Signer;
