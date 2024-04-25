@@ -88,6 +88,7 @@ contract CamelotLiquidity is IVenderLiquidityProxy, RockOnyxAccessControl, Reent
         address token1,
         uint amount1ToAdd
     ) external nonReentrant returns (uint128 liquidity, uint256 amount0, uint256 amount1) {
+        require(nonfungiblePositionManager.ownerOf(tokenId) == msg.sender, "INVALID_TOKENID_OWNER");
         
         IERC20(token0).transferFrom(msg.sender, address(this), amount0ToAdd);
         IERC20(token1).transferFrom(msg.sender, address(this), amount1ToAdd);
@@ -140,6 +141,8 @@ contract CamelotLiquidity is IVenderLiquidityProxy, RockOnyxAccessControl, Reent
     function collectAllFees(
         uint tokenId
     ) external nonReentrant returns (uint256 amount0, uint256 amount1) {
+        require(nonfungiblePositionManager.ownerOf(tokenId) == msg.sender, "INVALID_TOKENID_OWNER");
+
         INonfungiblePositionManager.CollectParams 
             memory params = INonfungiblePositionManager.CollectParams({
                 tokenId: tokenId,
