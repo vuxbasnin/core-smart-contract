@@ -1,8 +1,25 @@
-import { ethers } from "hardhat";
+const { ethers, network } = require("hardhat");
 import { expect } from "chai";
 
 import * as Contracts from "../../typechain-types";
 import { Signer, AbiCoder, ContractTransactionReceipt } from "ethers";
+import {
+    CHAINID,
+    WETH_ADDRESS,
+    USDC_ADDRESS,
+    USDCE_ADDRESS,
+    WSTETH_ADDRESS,
+    ARB_ADDRESS,
+    NonfungiblePositionManager,
+    USDC_IMPERSONATED_SIGNER_ADDRESS,
+    USDCE_IMPERSONATED_SIGNER_ADDRESS,
+    WETH_IMPERSONATED_SIGNER_ADDRESS,
+    WSTETH_IMPERSONATED_SIGNER_ADDRESS,
+    ANGLE_REWARD_ADDRESS,
+  } from "../../constants";
+
+const chainId: CHAINID = network.config.chainId;
+// const chainId: CHAINID = 42161;
 
 describe("camelot liquidity contract test", function () {
     let admin: Signer;
@@ -13,39 +30,42 @@ describe("camelot liquidity contract test", function () {
     let weth: Contracts.IERC20;
     let arb: Contracts.IERC20;
     let grail: Contracts.IERC20;
-
     let nftPosition: Contracts.IERC721;
-
     let liquidityTokenId: number;
     let liquidityAmount: number;
 
     const LIQUIDITY_TOKEN_ID = 0;
     const LIQUIDITY_AMOUNT = 0;
 
-    const nonfungiblePositionManager = "0x00c7f3082833e796A5b3e4Bd59f6642FF44DCD15"; 
+    const rewardAddress = ANGLE_REWARD_ADDRESS[chainId];
+    const usdcImpersonatedSigner = USDC_IMPERSONATED_SIGNER_ADDRESS[chainId];
+    const usdceImpersonatedSigner = USDCE_IMPERSONATED_SIGNER_ADDRESS[chainId];
+    const wethImpersonatedSigner = WETH_IMPERSONATED_SIGNER_ADDRESS[chainId];
+    const wstEthImpersonatedSigner = WSTETH_IMPERSONATED_SIGNER_ADDRESS[chainId];
+    const nonfungiblePositionManager = NonfungiblePositionManager[chainId];
+    const usdcAddress = USDC_ADDRESS[chainId];
+    const usdceAddress = USDCE_ADDRESS[chainId];
+    const wstethAddress = WSTETH_ADDRESS[chainId];
+    const wethAddress = WETH_ADDRESS[chainId];
+    const arbAddress = ARB_ADDRESS[chainId];
 
-    const nftPositionAddress = "0x00c7f3082833e796a5b3e4bd59f6642ff44dcd15";
-    const usdcAddress = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
-    const usdceAddress = "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8";
-    const usdcusdcePoolAddressPool = "0xc86Eb7B85807020b4548EE05B54bfC956eEbbfCD"; 
-
-    const wstethAddress = "0x5979D7b546E38E414F7E9822514be443A4800529";
-    const wethAddress = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1";
-
-    const arbAddress = "0x912CE59144191C1204E64559FE8253a0e49E6548";
-    const grailAddress = "0x3d9907F9a368ad0a51Be60f7Da3b97cf940982D8";
     
     async function deployCamelotLiquidity() {
-        const camelotLiquidity = await ethers.getContractFactory("CamelotLiquidity");
-        camelotLiquidityContract = await camelotLiquidity.deploy(nonfungiblePositionManager);
-        await camelotLiquidityContract.waitForDeployment();
-
-        console.log("deploy CamelotLiquidity successfully: %s", await camelotLiquidityContract.getAddress());
+        const camelotLiquidity = await ethers.getContractFactory(
+            "CamelotLiquidity"
+          );
+          camelotLiquidityContract = await camelotLiquidity.deploy(
+            nonfungiblePositionManager
+          );
+          await camelotLiquidityContract.waitForDeployment();
+      
+          console.log(
+            "deploy CamelotLiquidity successfully: %s",
+            await camelotLiquidityContract.getAddress()
+          );
     }
 
     async function getMintPositionResult(tx : ContractTransactionReceipt, index: number) {
-        // var camelotLiquidityContractAddressHex = AbiCoder.defaultAbiCoder().encode(["address"], [await camelotLiquidityContract.getAddress()]);
-        // var zeroAddressHex = AbiCoder.defaultAbiCoder().encode(["address"], ["0x0000000000000000000000000000000000000000"]);
         var log = tx?.logs.find(l=> l.topics.includes("0x38296fd5286ebdb66bc9ab8003152f9666c9e808b447df47c94f7d2387fb3a54"));
         return AbiCoder.defaultAbiCoder().decode(["uint256", "uint128", "uint256", "uint256"], log!.data)[index];
     }
@@ -56,16 +76,12 @@ describe("camelot liquidity contract test", function () {
     }
 
     before(async function () {
-        nftPosition = await ethers.getContractAt("IERC721", nftPositionAddress);
-
+        nftPosition = await ethers.getContractAt("IERC721", nonfungiblePositionManager);
         usdc = await ethers.getContractAt("IERC20", usdcAddress);
         usdce = await ethers.getContractAt("IERC20", usdceAddress);
-
         wsteth = await ethers.getContractAt("IERC20", wstethAddress);
         weth = await ethers.getContractAt("IERC20", wethAddress);
-
         arb = await ethers.getContractAt("IERC20", arbAddress);
-        grail = await ethers.getContractAt("IERC20", grailAddress);
 
         [admin] = await ethers.getSigners();
         await deployCamelotLiquidity();
@@ -124,22 +140,21 @@ describe("camelot liquidity contract test", function () {
     });
 
     // POOL WSTETH_ETH TEST
-    it.skip("mint position weth_wsteth pool, should create position successfully on camelot dex", async function () {
+    it("mint position weth_wsteth pool, should create position successfully on camelot dex", async function () {
         const tx0 = await admin.sendTransaction({
-            to: "0x916792f7734089470de27297903bed8a4630b26d",
+            to: wstEthImpersonatedSigner,
             value: ethers.parseEther("0.5")
         });
-
         const tx1 = await admin.sendTransaction({
-            to: "0x1eed63efba5f81d95bfe37d82c8e736b974f477b",
+            to: wethImpersonatedSigner,
             value: ethers.parseEther("0.5")
         });
 
-        const wstethSigner = await ethers.getImpersonatedSigner("0x916792f7734089470de27297903bed8a4630b26d");
+        const wstethSigner = await ethers.getImpersonatedSigner(wstEthImpersonatedSigner);
         const transferTx0 = await wsteth.connect(wstethSigner).transfer(admin, ethers.parseEther("10"));
         await transferTx0.wait();
 
-        const wethSigner = await ethers.getImpersonatedSigner("0x1eed63efba5f81d95bfe37d82c8e736b974f477b");
+        const wethSigner = await ethers.getImpersonatedSigner(wethImpersonatedSigner);
         const transferTx1 = await weth.connect(wethSigner).transfer(admin, ethers.parseEther("10"));
         await transferTx1.wait();
 
@@ -173,7 +188,7 @@ describe("camelot liquidity contract test", function () {
         console.log("balance of admin after mint position: %s wsteth, %s weth", newWstethAdminBalance , newWethAdminBalance);
     });
 
-    it.skip("increase liquidity weth and wsteth pool, should increase successfully on camelot dex", async function () {
+    it("increase liquidity weth and wsteth pool, should increase successfully on camelot dex", async function () {
         const wstethAmount = ethers.parseUnits("2", 18);
         const wethAmount = ethers.parseUnits("2", 18);
 
@@ -199,16 +214,25 @@ describe("camelot liquidity contract test", function () {
         console.log("balance of admin after increase position: %s wsteth, %s weth", newWstethAdminBalance , newWethAdminBalance);
     });
     
-    it.skip("collect fee weth and wsteth pool, should collect successfully on camelot dex", async function () {
+    it("collect fee weth and wsteth pool, sender is not owner's nft, should collect fail on camelot dex", async function () {
+        await nftPosition.connect(admin).approve(await camelotLiquidityContract.getAddress(), liquidityTokenId);
+        const wstethSigner = await ethers.getImpersonatedSigner(wstEthImpersonatedSigner);
+
+        await expect(camelotLiquidityContract
+            .connect(wstethSigner)
+            .collectAllFees(liquidityTokenId))
+            .to.be.revertedWith("INVALID_TOKENID_OWNER");
+    });
+
+    it("collect fee weth and wsteth pool, should collect successfully on camelot dex", async function () {
         await nftPosition.connect(admin).approve(await camelotLiquidityContract.getAddress(), liquidityTokenId);
         const transferTx1 = await camelotLiquidityContract.connect(admin).collectAllFees(
             liquidityTokenId
         );
         var transferTx1Result = await transferTx1.wait(); 
-        console.log(transferTx1Result?.logs);
     });
 
-    it.skip("decrease liquidity weth and wsteth pool, should decrease successfully on camelot dex", async function () {
+    it("decrease liquidity weth and wsteth pool, should decrease successfully on camelot dex", async function () {
         console.log("liquidityTokenId: %s liquidityAmount: %s", liquidityTokenId, liquidityAmount);
 
         await nftPosition.connect(admin).approve(await camelotLiquidityContract.getAddress(), liquidityTokenId);
