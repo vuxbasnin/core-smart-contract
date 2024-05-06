@@ -15,10 +15,7 @@ import {
   AEVO_TRADER_ADDRESS,
   ARB_ADDRESS,
   ANGLE_REWARD_ADDRESS,
-  ETH_PRICE_FEED_ADDRESS,
-  WSTETH__ETH_PRICE_FEED_ADDRESS,
-  USDC_PRICE_FEED_ADDRESS,
-  ARB_PRICE_FEED_ADDRESS
+  PRICE_CONSUMER_ADDRESS
 } from "../constants";
 
 const chainId: CHAINID = network.config.chainId ?? 0;
@@ -33,10 +30,6 @@ const nonfungiblePositionManager = NonfungiblePositionManager[chainId] ?? "";
 const rewardAddress = ANGLE_REWARD_ADDRESS[chainId] ?? "";
 const aevoAddress = AEVO_ADDRESS[chainId] ?? "";
 const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId] ?? "";
-const ethPriceFeed = ETH_PRICE_FEED_ADDRESS[chainId] ?? "";
-const wsteth_ethPriceFeed = WSTETH__ETH_PRICE_FEED_ADDRESS[chainId] ?? "";
-const usdcePriceFeed = USDC_PRICE_FEED_ADDRESS[chainId] ?? "";
-const arbPriceFeed = ARB_PRICE_FEED_ADDRESS[chainId] ?? "";
 
 let deployer: Signer;
 let priceConsumerContract: Contracts.PriceConsumer;
@@ -61,27 +54,13 @@ async function deployLiquidityContract() {
   return camelotLiquidityAddress;
 }
 
-async function deployPriceConsumerContract() {
-  const factory = await ethers.getContractFactory("PriceConsumer");
-  priceConsumerContract = await factory.deploy(
-    [wethAddress, wstethAddress, usdceAddress, arbAddress],
-    [usdcAddress, wethAddress, usdcAddress, usdcAddress],
-    [ethPriceFeed, wsteth_ethPriceFeed, usdcePriceFeed, arbPriceFeed]
-  );
-  await priceConsumerContract.waitForDeployment();
-
-  console.log(
-    "Deployed price consumer contract at address %s",
-    await priceConsumerContract.getAddress()
-  );
-}
-
 async function deployCamelotSwapContract() {
   const swapRouterAddress = SWAP_ROUTER_ADDRESS[chainId] ?? "";
+  const priceConsumerAddress = PRICE_CONSUMER_ADDRESS[chainId] || "";
   console.log("SwapRouter %s", swapRouterAddress);
 
   const factory = await ethers.getContractFactory("CamelotSwap");
-  const camelotSwapContract = await factory.deploy(swapRouterAddress, priceConsumerContract.getAddress(), {
+  const camelotSwapContract = await factory.deploy(swapRouterAddress, priceConsumerAddress, {
     gasLimit: GAS_LIMIT,
   });
   await camelotSwapContract.waitForDeployment();
