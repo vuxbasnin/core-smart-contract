@@ -6,12 +6,17 @@ import {
   CHAINID,
   WETH_ADDRESS,
   USDC_ADDRESS,
+  USDCE_ADDRESS,
   WSTETH_ADDRESS,
   SWAP_ROUTER_ADDRESS,
   AEVO_ADDRESS,
   AEVO_CONNECTOR_ADDRESS,
   USDC_IMPERSONATED_SIGNER_ADDRESS,
   USDCE_IMPERSONATED_SIGNER_ADDRESS,
+  ETH_PRICE_FEED_ADDRESS,
+  WSTETH__ETH_PRICE_FEED_ADDRESS,
+  USDC_PRICE_FEED_ADDRESS,
+  ARB_PRICE_FEED_ADDRESS,
 } from "../../constants";
 import { BigNumberish, Signer } from "ethers";
 
@@ -41,17 +46,37 @@ describe("RockOnyxDeltaNeutralVault", function () {
   const usdcImpersonatedSigner = USDC_IMPERSONATED_SIGNER_ADDRESS[chainId];
   const usdceImpersonatedSigner = USDCE_IMPERSONATED_SIGNER_ADDRESS[chainId];
   const usdcAddress = USDC_ADDRESS[chainId] || "";
+  const usdceAddress = USDCE_ADDRESS[chainId] || "";
   const wstethAddress = WSTETH_ADDRESS[chainId] || "";
   const wethAddress = WETH_ADDRESS[chainId] || "";
   const swapRouterAddress = SWAP_ROUTER_ADDRESS[chainId];
   const aevoAddress = AEVO_ADDRESS[chainId];
   const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId];
+  const ethPriceFeed = ETH_PRICE_FEED_ADDRESS[chainId];
+  const wsteth_ethPriceFeed = WSTETH__ETH_PRICE_FEED_ADDRESS[chainId];
+  const usdcePriceFeed = USDC_PRICE_FEED_ADDRESS[chainId];
 
+  let priceConsumerContract: Contracts.PriceConsumer;
   let camelotSwapContract: Contracts.CamelotSwap;
+
+  async function deployPriceConsumerContract() {
+    const factory = await ethers.getContractFactory("PriceConsumer");
+    priceConsumerContract = await factory.deploy(
+      [wethAddress, wstethAddress, usdceAddress],
+      [usdcAddress, wethAddress, usdcAddress],
+      [ethPriceFeed, wsteth_ethPriceFeed, usdcePriceFeed]
+    );
+    await priceConsumerContract.waitForDeployment();
+
+    console.log(
+      "Deployed price consumer contract at address %s",
+      await priceConsumerContract.getAddress()
+    );
+  }
 
   async function deployCamelotSwapContract() {
     const factory = await ethers.getContractFactory("CamelotSwap");
-    camelotSwapContract = await factory.deploy(swapRouterAddress);
+    camelotSwapContract = await factory.deploy(swapRouterAddress, priceConsumerContract.getAddress());
     await camelotSwapContract.waitForDeployment();
 
     console.log(
@@ -105,6 +130,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
 
     wsteth = await ethers.getContractAt("IERC20", wstethAddress);
     weth = await ethers.getContractAt("IERC20", wethAddress);
+    await deployPriceConsumerContract();
     await deployCamelotSwapContract();
     await deployAevoContract();
     await deployRockOnyxDeltaNeutralVault();
