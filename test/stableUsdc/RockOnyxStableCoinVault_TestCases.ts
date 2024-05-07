@@ -18,6 +18,10 @@ import {
   USDCE_IMPERSONATED_SIGNER_ADDRESS,
   NFT_POSITION_ADDRESS,
   ANGLE_REWARD_ADDRESS,
+  ETH_PRICE_FEED_ADDRESS,
+  WSTETH__ETH_PRICE_FEED_ADDRESS,
+  USDC_PRICE_FEED_ADDRESS,
+  ARB_PRICE_FEED_ADDRESS
 } from "../../constants";
 import {
   Signer,
@@ -35,17 +39,17 @@ describe("RockOnyxStableCoinVault", function () {
     user4: Signer;
 
   let optionsReceiver: Signer;
-
   let camelotLiquidityContract: Contracts.CamelotLiquidity;
   let rockOnyxUSDTVaultContract: Contracts.RockOnyxUSDTVault;
+  let aevoContract: Contracts.Aevo;
+  let camelotSwapContract: Contracts.CamelotSwap;
+  let priceConsumerContract: Contracts.PriceConsumer;
 
   let usdc: Contracts.IERC20;
   let usdce: Contracts.IERC20;
   let wsteth: Contracts.IERC20;
 
   const PRECISION = 2 * 1e6;
-
-  let aevoContract: Contracts.Aevo;
 
   const nftPositionAddress = NFT_POSITION_ADDRESS[chainId];
   const rewardAddress = ANGLE_REWARD_ADDRESS[chainId];
@@ -61,7 +65,25 @@ describe("RockOnyxStableCoinVault", function () {
   const aevoAddress = AEVO_ADDRESS[chainId];
   const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId];
 
-  let camelotSwapContract: Contracts.CamelotSwap;
+  const ethPriceFeed = ETH_PRICE_FEED_ADDRESS[chainId];
+  const wsteth_ethPriceFeed = WSTETH__ETH_PRICE_FEED_ADDRESS[chainId];
+  const usdcePriceFeed = USDC_PRICE_FEED_ADDRESS[chainId];
+  const arbPriceFeed = ARB_PRICE_FEED_ADDRESS[chainId];
+
+  async function deployPriceConsumerContract() {
+    const factory = await ethers.getContractFactory("PriceConsumer");
+    priceConsumerContract = await factory.deploy(
+      [wethAddress, wstethAddress, usdceAddress, arbAddress],
+      [usdcAddress, wethAddress, usdcAddress, usdcAddress],
+      [ethPriceFeed, wsteth_ethPriceFeed, usdcePriceFeed, arbPriceFeed]
+    );
+    await priceConsumerContract.waitForDeployment();
+
+    console.log(
+      "Deployed price consumer contract at address %s",
+      await priceConsumerContract.getAddress()
+    );
+  }
 
   async function deployCamelotLiquidity() {
     const camelotLiquidity = await ethers.getContractFactory(
@@ -80,7 +102,7 @@ describe("RockOnyxStableCoinVault", function () {
 
   async function deployCamelotSwapContract() {
     const factory = await ethers.getContractFactory("CamelotSwap");
-    camelotSwapContract = await factory.deploy(swapRouterAddress);
+    camelotSwapContract = await factory.deploy(swapRouterAddress, priceConsumerContract.getAddress());
     await camelotSwapContract.waitForDeployment();
 
     console.log(
@@ -145,6 +167,7 @@ describe("RockOnyxStableCoinVault", function () {
     usdce = await ethers.getContractAt("IERC20", usdceAddress);
 
     wsteth = await ethers.getContractAt("IERC20", wstethAddress);
+    await deployPriceConsumerContract();
     await deployCamelotLiquidity();
     await deployCamelotSwapContract();
     await deployAevoContract();
@@ -197,7 +220,7 @@ describe("RockOnyxStableCoinVault", function () {
     await transferUsdceForUser(usdceSigner, optionsReceiver, 1000 * 1e6);
   });
 
-  it.skip("deposit to rockOnyxUSDTVault, WETH in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
+  it("deposit to rockOnyxUSDTVault, WETH in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
     console.log("-------------deposit to rockOnyxUSDTVault---------------");
     await deposit(user1, 10 * 1e6);
     await deposit(user2, 100 * 1e6);
@@ -257,7 +280,7 @@ describe("RockOnyxStableCoinVault", function () {
     );
   });
 
-  it.skip("deposit to rockOnyxUSDTVault, wstETH in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
+  it("deposit to rockOnyxUSDTVault, wstETH in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
     console.log("-------------deposit to rockOnyxUSDTVault---------------");
     await deposit(user1, 10 * 1e6);
     await deposit(user2, 100 * 1e6);
@@ -318,7 +341,7 @@ describe("RockOnyxStableCoinVault", function () {
     );
   });
 
-  it.skip("deposit to rockOnyxUSDTVault, USDC in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
+  it("deposit to rockOnyxUSDTVault, USDC in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
     console.log("-------------deposit to rockOnyxUSDTVault---------------");
     await deposit(user1, 10 * 1e6);
     await deposit(user2, 100 * 1e6);
@@ -376,7 +399,7 @@ describe("RockOnyxStableCoinVault", function () {
     );
   });
 
-  it.skip("calculate performance fee rockOnyxUSDTVault, USDC in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
+  it("calculate performance fee rockOnyxUSDTVault, USDC in pending amount, should handle acquireWithdrawalFunds correctly", async function () {
     console.log(
       "-------------calculate performance fee rockOnyxUSDTVault---------------"
     );
@@ -449,7 +472,7 @@ describe("RockOnyxStableCoinVault", function () {
     await completeWithdrawalTx.wait();
   });
 
-  it.skip("Full flow with multiple users deposit and withdraw all money", async function () {
+  it("Full flow with multiple users deposit and withdraw all money", async function () {
     console.log(
       "-------------calculate performance fee rockOnyxUSDTVault---------------"
     );
@@ -544,7 +567,7 @@ describe("RockOnyxStableCoinVault", function () {
     await completeWithdrawalTx.wait();
   });
 
-  it.skip("Full flow with multiple users deposit and withdraw all money in losses", async function () {
+  it("Full flow with multiple users deposit and withdraw all money in losses", async function () {
     console.log(
       "-------------calculate performance fee rockOnyxUSDTVault---------------"
     );
@@ -639,7 +662,7 @@ describe("RockOnyxStableCoinVault", function () {
     await completeWithdrawalTx.wait();
   });
 
-  it.skip("user deposit -> close round -> depoist -> init withdraw -> close round -> close round -> completed withdraw", async function () {
+  it("user deposit -> close round -> depoist -> init withdraw -> close round -> close round -> completed withdraw", async function () {
     console.log(
       "-------------calculate performance fee rockOnyxUSDTVault---------------"
     );
@@ -831,7 +854,7 @@ describe("RockOnyxStableCoinVault", function () {
     await deposit(user1, 50 * 1e6);
   });
 
-  it("user deposit -> deposit to eavo -> mint eth -> mint usd-> update profit -> close round -> decrease eth -> decrease usd", async function () {
+  it("user deposit -> deposit to eavo -> mint eth -> mint usd-> update profit -> close round -> decrease eth -> decrease usd -> mint new eth -> mint new usd", async function () {
     console.log("-------------deposit time: 50$---------------");
     const initialDepositAmount = 1000;
     await deposit(user1, 500 * 1e6);

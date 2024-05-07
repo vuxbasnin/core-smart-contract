@@ -1,3 +1,4 @@
+// Note: Should update priceConsumerAddress and redeploy camelotSwapContract before deploy the vault in next release
 import { ethers, network } from "hardhat";
 import * as Contracts from "../typechain-types";
 import { Signer } from "ethers";
@@ -14,6 +15,7 @@ import {
   AEVO_TRADER_ADDRESS,
   ARB_ADDRESS,
   ANGLE_REWARD_ADDRESS,
+  PRICE_CONSUMER_ADDRESS
 } from "../constants";
 
 const chainId: CHAINID = network.config.chainId ?? 0;
@@ -28,7 +30,9 @@ const nonfungiblePositionManager = NonfungiblePositionManager[chainId] ?? "";
 const rewardAddress = ANGLE_REWARD_ADDRESS[chainId] ?? "";
 const aevoAddress = AEVO_ADDRESS[chainId] ?? "";
 const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId] ?? "";
+
 let deployer: Signer;
+let priceConsumerContract: Contracts.PriceConsumer;
 
 const GAS_LIMIT = 100988531;
 
@@ -51,12 +55,12 @@ async function deployLiquidityContract() {
 }
 
 async function deployCamelotSwapContract() {
-  // Deploy the Contract
   const swapRouterAddress = SWAP_ROUTER_ADDRESS[chainId] ?? "";
+  const priceConsumerAddress = PRICE_CONSUMER_ADDRESS[chainId] || "";
   console.log("SwapRouter %s", swapRouterAddress);
 
   const factory = await ethers.getContractFactory("CamelotSwap");
-  const camelotSwapContract = await factory.deploy(swapRouterAddress, {
+  const camelotSwapContract = await factory.deploy(swapRouterAddress, priceConsumerAddress, {
     gasLimit: GAS_LIMIT,
   });
   await camelotSwapContract.waitForDeployment();
@@ -97,6 +101,7 @@ async function main() {
   );
 
   // const camelotLiquidityAddress = await deployLiquidityContract();
+  // const priceConsumerAddress = await deployPriceConsumerContract();
   // const camelotSwapAddress = await deployCamelotSwapContract();
   // const aevoProxyAddress = await deployAevoContract();
 

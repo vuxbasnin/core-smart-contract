@@ -6,7 +6,5 @@ interface ISwapProxy {
     function swapToWithOutput(address recipient, address tokenIn, uint256 amountOut, address tokenOut) external returns (uint256);
     function getPriceOf(address token0, address token1) external view returns (uint256);
     function getPoolCurrentTickOf(address token0, address token1) external view returns (int24);
-    function getLiquidityOf(address token0, address token1) external view returns (uint256);
-    function getPoolAddressOf(address token0, address token1) external view returns (address);
     function getSlippage() external view returns (uint256);
 }
