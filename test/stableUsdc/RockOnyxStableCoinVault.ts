@@ -17,7 +17,11 @@ import {
   USDC_IMPERSONATED_SIGNER_ADDRESS,
   USDCE_IMPERSONATED_SIGNER_ADDRESS,
   NFT_POSITION_ADDRESS,
-  ANGLE_REWARD_ADDRESS
+  ANGLE_REWARD_ADDRESS,
+  ETH_PRICE_FEED_ADDRESS,
+  WSTETH__ETH_PRICE_FEED_ADDRESS,
+  USDC_PRICE_FEED_ADDRESS,
+  ARB_PRICE_FEED_ADDRESS,
 } from "../../constants";
 import {
   Signer,
@@ -37,7 +41,7 @@ describe("RockOnyxStableCoinVault", function () {
     user4: Signer;
 
   let optionsReceiver: Signer;
-
+  let priceConsumerContract: Contracts.PriceConsumer;
   let camelotLiquidityContract: Contracts.CamelotLiquidity;
   let rockOnyxUSDTVaultContract: Contracts.RockOnyxUSDTVault;
 
@@ -68,7 +72,27 @@ describe("RockOnyxStableCoinVault", function () {
   const aevoAddress = AEVO_ADDRESS[chainId];
   const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId];
 
+  const ethPriceFeed = ETH_PRICE_FEED_ADDRESS[chainId];
+  const wsteth_ethPriceFeed = WSTETH__ETH_PRICE_FEED_ADDRESS[chainId];
+  const usdcePriceFeed = USDC_PRICE_FEED_ADDRESS[chainId];
+  const arbPriceFeed = ARB_PRICE_FEED_ADDRESS[chainId];
+
   let camelotSwapContract: Contracts.CamelotSwap;
+
+  async function deployPriceConsumerContract() {
+    const factory = await ethers.getContractFactory("PriceConsumer");
+    priceConsumerContract = await factory.deploy(
+      [wethAddress, wstethAddress, usdceAddress, arbAddress],
+      [usdcAddress, wethAddress, usdcAddress, usdcAddress],
+      [ethPriceFeed, wsteth_ethPriceFeed, usdcePriceFeed, arbPriceFeed]
+    );
+    await priceConsumerContract.waitForDeployment();
+
+    console.log(
+      "Deployed price consumer contract at address %s",
+      await priceConsumerContract.getAddress()
+    );
+  }
 
   async function deployCamelotLiquidity() {
     const camelotLiquidity = await ethers.getContractFactory("CamelotLiquidity");
@@ -85,7 +109,7 @@ describe("RockOnyxStableCoinVault", function () {
 
   async function deployCamelotSwapContract() {
     const factory = await ethers.getContractFactory("CamelotSwap");
-    camelotSwapContract = await factory.deploy(swapRouterAddress);
+    camelotSwapContract = await factory.deploy(swapRouterAddress, priceConsumerContract.getAddress());
     await camelotSwapContract.waitForDeployment();
 
     console.log(
@@ -151,13 +175,13 @@ describe("RockOnyxStableCoinVault", function () {
     )[index];
   }
 
-
   before(async function () {
     [admin, optionsReceiver, user1, user2, user3, user4] = await ethers.getSigners();
 
     usdc = await ethers.getContractAt("IERC20", usdcAddress);
     usdce = await ethers.getContractAt("IERC20", usdceAddress);
     arb = await ethers.getContractAt("IERC20", arbAddress);
+    await deployPriceConsumerContract();
     await deployCamelotLiquidity();
     await deployCamelotSwapContract();
     await deployAevoContract();

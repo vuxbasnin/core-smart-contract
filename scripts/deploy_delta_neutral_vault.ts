@@ -1,3 +1,4 @@
+// Note: Should update priceConsumerAddress and redeploy camelotSwapContract before deploy the vault in next release
 import { ethers, network } from "hardhat";
 
 import {
@@ -8,6 +9,7 @@ import {
   AEVO_ADDRESS,
   AEVO_CONNECTOR_ADDRESS,
   SWAP_ROUTER_ADDRESS,
+  PRICE_CONSUMER_ADDRESS
 } from "../constants";
 import * as Contracts from "../typechain-types";
 
@@ -43,8 +45,9 @@ let camelotSwapContract: Contracts.CamelotSwap;
 const swapRouterAddress = SWAP_ROUTER_ADDRESS[chainId] || "";
 
 async function deployCamelotSwapContract() {
+  const priceConsumerAddress = PRICE_CONSUMER_ADDRESS[chainId] || "";
   const factory = await ethers.getContractFactory("CamelotSwap");
-  camelotSwapContract = await factory.deploy(swapRouterAddress);
+  camelotSwapContract = await factory.deploy(swapRouterAddress, priceConsumerAddress);
   await camelotSwapContract.waitForDeployment();
 
   console.log(
