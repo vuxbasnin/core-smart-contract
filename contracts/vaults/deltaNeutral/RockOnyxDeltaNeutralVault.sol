@@ -165,7 +165,7 @@ contract RockOnyxDeltaNeutralVault is
     }
 
     function withdrawPerformanceFee() external nonReentrant {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
+        _auth(ROCK_ONYX_ADMIN_ROLE); 
 
         uint256 performanceFeeAmount = (_totalValueLocked() *
             vaultParams.managementFeeRate) /

@@ -19,6 +19,7 @@ abstract contract BaseRestakingStrategy is RockOnyxAccessControl, ReentrancyGuar
     address public admin;
     IERC20 internal restakingToken;
     ISwapProxy internal swapProxy;
+    address[] internal restakingPoolAddresses;
 
     EthRestakingState internal restakingStratState;
 
@@ -33,8 +34,8 @@ abstract contract BaseRestakingStrategy is RockOnyxAccessControl, ReentrancyGuar
         address _swapAddress,
         address _usdcAddress,
         address _ethAddress,
-        address[] memory _restakingPools
-    ) internal {
+        address[] memory _restakingPoolAddresses
+    ) internal virtual {
         _auth(ROCK_ONYX_ADMIN_ROLE);
         require(_restakingToken != address(ethToken), "Invalid token address");
 
@@ -42,6 +43,7 @@ abstract contract BaseRestakingStrategy is RockOnyxAccessControl, ReentrancyGuar
         usdcToken = IERC20(_usdcAddress);
         ethToken = IERC20(_ethAddress);
         restakingToken = IERC20(_restakingToken);
+        restakingPoolAddresses = _restakingPoolAddresses;
     }
 
     // Function to handle deposits to the staking strategies and allocate points

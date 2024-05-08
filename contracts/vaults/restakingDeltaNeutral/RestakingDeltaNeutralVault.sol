@@ -4,11 +4,11 @@ pragma solidity ^0.8.19;
 import "../deltaNeutral/RockOnyxDeltaNeutralVault.sol";
 import "../deltaNeutral/strategies/RockOynxPerpDexStrategy.sol";
 import "../deltaNeutral/BaseDeltaNeutralVault.sol";
-import "./strategies/RestakingStrategy.sol";
+import "./strategies/RenzoZircuitRestakingStrategy.sol";
 import "./structs/RestakingDeltaNeutralStruct.sol";
 
 contract RestakingDeltaNeutralVault is
-    RestakingStrategy,
+    RenzoZircuitRestakingStrategy,
     RockOynxPerpDexStrategy,
     BaseDeltaNeutralVault
 {
@@ -28,7 +28,7 @@ contract RestakingDeltaNeutralVault is
         uint256 _initialPPS,
         address[] memory _stakingProxies
     )
-        RestakingStrategy()
+        RenzoZircuitRestakingStrategy()
         RockOynxPerpDexStrategy()
         BaseDeltaNeutralVault(_usdc, _initialPPS)
     {

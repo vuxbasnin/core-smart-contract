@@ -14,17 +14,17 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
         address _swapAddress,
         address _usdcAddress,
         address _ethAddress,
-        address[] memory _restakingPools
+        address[] memory _restakingPoolAddresses
     ) internal override {
         // Call the parent method
-        super.ethRestaking_Initialize(_restakingToken, _swapAddress, _usdcAddress, _ethAddress, _restakingPools);
+        super.ethRestaking_Initialize(_restakingToken, _swapAddress, _usdcAddress, _ethAddress, _restakingPoolAddresses);
 
         renzoRestakingPool = new RenzoRestakingPool(
-            _restakingPools[0],
+            _restakingPoolAddresses[0],
             restakingToken
         );
         zircuitRestakingPool = new ZircuitRestakingPool(
-            _restakingPools[0],
+            _restakingPoolAddresses[1],
             restakingToken
         );
     }
