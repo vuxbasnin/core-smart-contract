@@ -22,6 +22,13 @@ contract MockAEVO is IAevo {
         address connector,
         bytes memory data
     ) external payable override {
-        emit DepositToAppChain(receiver, asset, amount, msgGasLimit, connector, data);
+        emit DepositToAppChain(
+            receiver,
+            asset,
+            amount,
+            msgGasLimit,
+            connector,
+            data
+        );
     }
 }

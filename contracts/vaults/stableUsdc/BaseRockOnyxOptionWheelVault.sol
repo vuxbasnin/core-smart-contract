@@ -10,9 +10,9 @@ import "./strategies/RockOnyxOptionsStrategy.sol";
 import "./strategies/RockOynxUsdLiquidityStrategy.sol";
 import "hardhat/console.sol";
 
-contract BaseRockOnyxOptionWheelVault is 
-    IERC721Receiver, 
-    RockOnyxAccessControl, 
+contract BaseRockOnyxOptionWheelVault is
+    IERC721Receiver,
+    RockOnyxAccessControl,
     RockOnyxEthLiquidityStrategy,
     RockOnyxOptionStrategy,
     RockOynxUsdLiquidityStrategy
@@ -50,7 +50,7 @@ contract BaseRockOnyxOptionWheelVault is
     // migration
     function updateDepositArr(DepositReceipt memory depositReceipt) internal {
         for (uint256 i = 0; i < depositReceiptArr.length; i++) {
-            if(depositReceiptArr[i].owner == msg.sender) {
+            if (depositReceiptArr[i].owner == msg.sender) {
                 depositReceiptArr[i].depositReceipt = depositReceipt;
                 return;
             }
@@ -61,7 +61,7 @@ contract BaseRockOnyxOptionWheelVault is
 
     function updateWithdrawalArr(Withdrawal memory withdrawal) internal {
         for (uint256 i = 0; i < withdrawalArr.length; i++) {
-            if(withdrawalArr[i].owner == msg.sender) {
+            if (withdrawalArr[i].owner == msg.sender) {
                 withdrawalArr[i].withdrawal = withdrawal;
                 return;
             }
@@ -70,17 +70,49 @@ contract BaseRockOnyxOptionWheelVault is
         withdrawalArr.push(WithdrawalArr(msg.sender, withdrawal));
     }
 
-    function exportVaultState() external view returns (uint256, uint256[] memory, uint256[] memory, DepositReceiptArr[] memory, WithdrawalArr[] memory, VaultParams memory, VaultState memory, AllocateRatio memory, EthLPState memory, UsdLPState memory, OptionsStrategyState memory) {
+    function exportVaultState()
+        external
+        view
+        returns (
+            uint256,
+            uint256[] memory,
+            uint256[] memory,
+            DepositReceiptArr[] memory,
+            WithdrawalArr[] memory,
+            VaultParams memory,
+            VaultState memory,
+            AllocateRatio memory,
+            EthLPState memory,
+            UsdLPState memory,
+            OptionsStrategyState memory
+        )
+    {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        
-        uint256[] memory exportRoundWithdrawalShares = new uint256[](currentRound);
-        uint256[] memory exportRoundPricePerShares = new uint256[](currentRound);
+
+        uint256[] memory exportRoundWithdrawalShares = new uint256[](
+            currentRound
+        );
+        uint256[] memory exportRoundPricePerShares = new uint256[](
+            currentRound
+        );
         for (uint256 i = 0; i < currentRound; i++) {
             exportRoundWithdrawalShares[i] = roundWithdrawalShares[i];
             exportRoundPricePerShares[i] = roundPricePerShares[i];
         }
 
-        return (currentRound, exportRoundWithdrawalShares, exportRoundPricePerShares, depositReceiptArr, withdrawalArr, vaultParams, vaultState, allocateRatio, ethLPState, usdLPState, optionsState);
+        return (
+            currentRound,
+            exportRoundWithdrawalShares,
+            exportRoundPricePerShares,
+            depositReceiptArr,
+            withdrawalArr,
+            vaultParams,
+            vaultState,
+            allocateRatio,
+            ethLPState,
+            usdLPState,
+            optionsState
+        );
     }
 
     function importVaultState(
@@ -95,23 +127,24 @@ contract BaseRockOnyxOptionWheelVault is
         EthLPState calldata _ethLPState,
         UsdLPState calldata _usdLPState,
         OptionsStrategyState calldata _optionsState
-         ) external nonReentrant{
+    ) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
         for (uint256 i = 0; i < currentRound; i++) {
             roundWithdrawalShares[i] = _roundWithdrawalShares[i];
             roundPricePerShares[i] = _roundPricePerShares[i];
         }
-        depositReceiptArr =_depositReceiptArr;
+        depositReceiptArr = _depositReceiptArr;
         for (uint256 i = 0; i < _depositReceiptArr.length; i++) {
-            depositReceipts[_depositReceiptArr[i].owner] = _depositReceiptArr[i].depositReceipt;
+            depositReceipts[_depositReceiptArr[i].owner] = _depositReceiptArr[i]
+                .depositReceipt;
         }
         withdrawalArr = _withdrawalArr;
         for (uint256 i = 0; i < _withdrawalArr.length; i++) {
             withdrawals[_withdrawalArr[i].owner] = _withdrawalArr[i].withdrawal;
         }
-        currentRound =_currentRound;
+        currentRound = _currentRound;
         vaultParams = _vaultParams;
-        vaultState =_vaultState;
+        vaultState = _vaultState;
         allocateRatio = _allocateRatio;
         ethLPState = _ethLPState;
         usdLPState = _usdLPState;

@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract RockOnyxAccessControl is AccessControl{
+contract RockOnyxAccessControl is AccessControl {
     bytes32 public constant LIDO_STAKE_ROLE =
         0xd075646a086a8ab150b1b694257cb718a3966ee806d131633b662a95710ec8e1; // keccak256("LIDO_STAKE_ROLE");
     bytes32 public constant ROCK_ONYX_ADMIN_ROLE =
@@ -18,7 +18,9 @@ contract RockOnyxAccessControl is AccessControl{
     constructor() {
         errors[LIDO_STAKE_ROLE] = "LIDO_STAKE_ROLE_ERROR";
         errors[ROCK_ONYX_ADMIN_ROLE] = "ROCK_ONYX_ADMIN_ROLE_ERROR";
-        errors[ROCK_ONYX_OPTIONS_TRADER_ROLE] = "ROCK_ONYX_OPTIONS_TRADER_ROLE_ERROR";
+        errors[
+            ROCK_ONYX_OPTIONS_TRADER_ROLE
+        ] = "ROCK_ONYX_OPTIONS_TRADER_ROLE_ERROR";
         paused = false;
     }
 
@@ -27,7 +29,10 @@ contract RockOnyxAccessControl is AccessControl{
     }
 
     function setPaused(bool _paused) external {
-        require(hasRole(ROCK_ONYX_ADMIN_ROLE, msg.sender), errors[ROCK_ONYX_ADMIN_ROLE]);
+        require(
+            hasRole(ROCK_ONYX_ADMIN_ROLE, msg.sender),
+            errors[ROCK_ONYX_ADMIN_ROLE]
+        );
 
         paused = _paused;
     }

@@ -4,6 +4,5 @@ pragma solidity ^0.8.19;
 import "../../lib/BaseSwap.sol";
 
 contract CamelotSwap is BaseSwap {
-    constructor(address _swapRouterAddress) BaseSwap(_swapRouterAddress){
-    }
+    constructor(address _swapRouterAddress) BaseSwap(_swapRouterAddress) {}
 }

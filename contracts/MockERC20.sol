@@ -4,9 +4,10 @@ pragma solidity ^0.8.19;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract MockStableCoin is ERC20 {
-
-    constructor(string memory token, string memory symbol) ERC20(token, symbol){
-
+    constructor(
+        string memory token,
+        string memory symbol
+    ) ERC20(token, symbol) {
         _mint(msg.sender, 1000000000000000000000000);
     }
 
@@ -21,9 +22,10 @@ contract MockStableCoin is ERC20 {
 }
 
 contract MockETH is ERC20 {
-
-    constructor(string memory token, string memory symbol) ERC20(token, symbol){
-
+    constructor(
+        string memory token,
+        string memory symbol
+    ) ERC20(token, symbol) {
         _mint(msg.sender, 1000000000000000000000000);
     }
 

@@ -54,7 +54,7 @@ struct UsdLPState {
     uint256 unAllocatedUsdceBalance;
 }
 
-struct AllocateRatio{
+struct AllocateRatio {
     uint256 ethLPRatio;
     uint256 usdLPRatio;
     uint256 optionsRatio;

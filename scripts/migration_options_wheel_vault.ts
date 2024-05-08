@@ -15,7 +15,7 @@ let newRockOnyxOptionWheelVaultContract: Contracts.RockOnyxUSDTVault;
 async function main() {
     console.log('-------------migration option wheel---------------');
     const admin = new ethers.Wallet(privateKey, ethers.provider);
-    const vaultAddress = "0x077835528875C27bFaCBc5d923C919BC56a9C250";
+    const vaultAddress = "0xEd7FB833e80467F730F80650359Bd1d4e85c7081";
     rockOnyxOptionWheelVaultContract = await ethers.getContractAt("RockOnyxUSDTVault", vaultAddress);
     
     const newVaultAddress = "0xDc7BCA217d22A221A67580611253f16412AF063D";
@@ -98,31 +98,31 @@ async function main() {
         unsettledLoss: exportVaultStateTx[10][3],
     };
 
-    const importVaultStateTx = await newRockOnyxOptionWheelVaultContract
-      .connect(admin)
-      .importVaultState(
-          _currentRound,
-          _roundWithdrawalShares,
-          _roundPricePerShares,
-          _depositReceiptArr,
-          _withdrawalArr,
-          _vaultParams,
-          _vaultState,
-          _allocateRatio,
-          _ethLPState,
-          _usdLPState,
-          _optiondsState
-      );
+    // const importVaultStateTx = await newRockOnyxOptionWheelVaultContract
+    //   .connect(admin)
+    //   .importVaultState(
+    //       _currentRound,
+    //       _roundWithdrawalShares,
+    //       _roundPricePerShares,
+    //       _depositReceiptArr,
+    //       _withdrawalArr,
+    //       _vaultParams,
+    //       _vaultState,
+    //       _allocateRatio,
+    //       _ethLPState,
+    //       _usdLPState,
+    //       _optiondsState
+    //   );
     
-    console.log("-------------export new vault state---------------");
-    exportVaultStateTx = await newRockOnyxOptionWheelVaultContract
-      .connect(admin)
-      .exportVaultState();
+    // console.log("-------------export new vault state---------------");
+    // exportVaultStateTx = await newRockOnyxOptionWheelVaultContract
+    //   .connect(admin)
+    //   .exportVaultState();
     
-    console.log(exportVaultStateTx);
-    console.log(exportVaultStateTx[3][0][1]);
-    console.log(exportVaultStateTx[3][1][1]);
-    console.log(exportVaultStateTx[3][2][1]);
+    // console.log(exportVaultStateTx);
+    // console.log(exportVaultStateTx[3][0][1]);
+    // console.log(exportVaultStateTx[3][1][1]);
+    // console.log(exportVaultStateTx[3][2][1]);
   }
 main().catch((error) => {
     console.error(error);

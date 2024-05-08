@@ -40,7 +40,11 @@ contract BaseSwap is ISwapProxy {
         );
         TransferHelper.safeApprove(tokenIn, address(swapRouter), amountIn);
 
-        uint256 amountOutMinimum = getAmountOutMinimum(tokenIn, tokenOut, amountIn);
+        uint256 amountOutMinimum = getAmountOutMinimum(
+            tokenIn,
+            tokenOut,
+            amountIn
+        );
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
                 tokenIn: tokenIn,
@@ -61,18 +65,26 @@ contract BaseSwap is ISwapProxy {
         uint256 amountOut,
         address tokenOut
     ) external returns (uint256) {
-        uint256 amountInMaximum = getAmountInMaximum(tokenIn, tokenOut, amountOut);
-        console.log('amountInMaximum %s', amountInMaximum);
+        uint256 amountInMaximum = getAmountInMaximum(
+            tokenIn,
+            tokenOut,
+            amountOut
+        );
+        console.log("amountInMaximum %s", amountInMaximum);
         TransferHelper.safeTransferFrom(
             tokenIn,
             msg.sender,
             address(this),
             amountInMaximum
         );
-        TransferHelper.safeApprove(tokenIn, address(swapRouter), amountInMaximum);
+        TransferHelper.safeApprove(
+            tokenIn,
+            address(swapRouter),
+            amountInMaximum
+        );
 
-        ISwapRouter.ExactOutputSingleParams memory params =
-            ISwapRouter.ExactOutputSingleParams({
+        ISwapRouter.ExactOutputSingleParams memory params = ISwapRouter
+            .ExactOutputSingleParams({
                 tokenIn: tokenIn,
                 tokenOut: tokenOut,
                 fee: 0,
@@ -87,7 +99,11 @@ contract BaseSwap is ISwapProxy {
 
         if (amountIn < amountInMaximum) {
             TransferHelper.safeApprove(tokenIn, address(swapRouter), 0);
-            TransferHelper.safeTransfer(tokenIn, msg.sender, amountInMaximum - amountIn);
+            TransferHelper.safeTransfer(
+                tokenIn,
+                msg.sender,
+                amountInMaximum - amountIn
+            );
         }
 
         return amountIn;
@@ -98,7 +114,7 @@ contract BaseSwap is ISwapProxy {
         address token1
     ) external view returns (uint256) {
         ISwapPool pool = ISwapPool(factory.poolByPair(token0, token1));
-        
+
         return pool.liquidity();
     }
 
@@ -107,7 +123,7 @@ contract BaseSwap is ISwapProxy {
         address token1
     ) external view returns (address) {
         ISwapPool pool = ISwapPool(factory.poolByPair(token0, token1));
-        
+
         return address(pool);
     }
 
@@ -132,7 +148,9 @@ contract BaseSwap is ISwapProxy {
         (uint160 sqrtPriceX96, , , , , , , ) = pool.globalState();
 
         if (poolToken0 != token0)
-            return 10 ** (token0Decimals + token1Decimals) / sqrtPriceX96ToPrice(sqrtPriceX96, token1Decimals);
+            return
+                10 ** (token0Decimals + token1Decimals) /
+                sqrtPriceX96ToPrice(sqrtPriceX96, token1Decimals);
 
         return sqrtPriceX96ToPrice(sqrtPriceX96, token0Decimals);
     }
@@ -147,21 +165,29 @@ contract BaseSwap is ISwapProxy {
     function getAmountOutMinimum(
         address token0,
         address token1,
-        uint256 amountIn) private view returns(uint256){
-            return amountIn * getPriceOf(token0, token1) * (1e4 - slippage) / (10 ** (ERC20(token0).decimals() + 4)); 
+        uint256 amountIn
+    ) private view returns (uint256) {
+        return
+            (amountIn * getPriceOf(token0, token1) * (1e4 - slippage)) /
+            (10 ** (ERC20(token0).decimals() + 4));
     }
 
     function getAmountInMaximum(
         address token0,
         address token1,
-        uint256 amountOut) private view returns(uint256){
-            console.log('amountOut %s', amountOut);
-            console.log('getPriceOf(token1, token0) %s', getPriceOf(token1, token0));
-            return amountOut * getPriceOf(token1, token0) * (1e4 + slippage) / (10 ** (ERC20(token1).decimals() + 4)); 
+        uint256 amountOut
+    ) private view returns (uint256) {
+        console.log("amountOut %s", amountOut);
+        console.log(
+            "getPriceOf(token1, token0) %s",
+            getPriceOf(token1, token0)
+        );
+        return
+            (amountOut * getPriceOf(token1, token0) * (1e4 + slippage)) /
+            (10 ** (ERC20(token1).decimals() + 4));
     }
 
-    function getSlippage(
-    ) external view returns (uint256) {
+    function getSlippage() external view returns (uint256) {
         return slippage;
     }
 }

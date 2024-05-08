@@ -67,7 +67,10 @@ contract MockSwapRouter is ISwapRouter {
         );
         // Assuming tokenOut is already approved to this contract
         require(
-            IERC20(params.tokenOut).transfer(params.recipient, params.amountOut),
+            IERC20(params.tokenOut).transfer(
+                params.recipient,
+                params.amountOut
+            ),
             "Transfer failed"
         );
         console.log("[MockSwapRouter] exactInputSingle transfered");

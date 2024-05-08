@@ -28,11 +28,12 @@ contract RockOynxPerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
         uint256 depositAmount
     );
 
-    event PerpDexBalanceChanged(uint256 unAllocatedBalance, uint256 amountWithdrawn);
-
-    event RequestFundsPerpDex(
-        uint256 acquireAmount
+    event PerpDexBalanceChanged(
+        uint256 unAllocatedBalance,
+        uint256 amountWithdrawn
     );
+
+    event RequestFundsPerpDex(uint256 acquireAmount);
 
     constructor() {
         perpDexState = PerpDexState(0, 0);
@@ -69,7 +70,11 @@ contract RockOynxPerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
         );
 
         perpDexState.perpDexBalance += amount;
-        emit PerpDexVendorDeposited(address(perpDexVendor), optionsReceiver, amount);
+        emit PerpDexVendorDeposited(
+            address(perpDexVendor),
+            optionsReceiver,
+            amount
+        );
     }
 
     function syncPerpDexBalance(uint256 balance) internal {
@@ -90,10 +95,12 @@ contract RockOynxPerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
      * Acquire the amount of USDC to allow user withdraw
      * @param amount the amount need to be acquired
      */
-    function acquireFundsFromPerpDex(uint256 amount) internal returns (uint256) {       
-        if(perpDexState.unAllocatedBalance > amount) {
+    function acquireFundsFromPerpDex(
+        uint256 amount
+    ) internal returns (uint256) {
+        if (perpDexState.unAllocatedBalance > amount) {
             perpDexState.unAllocatedBalance -= amount;
-            return amount;    
+            return amount;
         }
 
         uint256 unAllocatedBalance = perpDexState.unAllocatedBalance;
@@ -105,14 +112,22 @@ contract RockOynxPerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
      * @dev Handle the post withdraw process from Dex vendor
      * @param amount The amount of tokens to transfer.
      */
-    function handlePostWithdrawFromVendor(uint256 amount) external nonReentrant {
+    function handlePostWithdrawFromVendor(
+        uint256 amount
+    ) external nonReentrant {
         require(amount > 0, "INVALID_WITHDRAW_AMOUNT");
         _auth(ROCK_ONYX_OPTIONS_TRADER_ROLE);
 
-        IERC20(perpDexStrategyUsdc).safeTransferFrom(msg.sender, address(this), amount);
+        IERC20(perpDexStrategyUsdc).safeTransferFrom(
+            msg.sender,
+            address(this),
+            amount
+        );
 
         perpDexState.unAllocatedBalance += amount;
-        perpDexState.perpDexBalance = (amount <= perpDexState.perpDexBalance) ? perpDexState.perpDexBalance - amount : 0;
+        perpDexState.perpDexBalance = (amount <= perpDexState.perpDexBalance)
+            ? perpDexState.perpDexBalance - amount
+            : 0;
 
         emit PerpDexBalanceChanged(perpDexState.unAllocatedBalance, amount);
     }
@@ -122,8 +137,7 @@ contract RockOynxPerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
      * @return The total options amount.
      */
     function getTotalPerpDexAssets() internal view returns (uint256) {
-        return 
-            perpDexState.unAllocatedBalance + perpDexState.perpDexBalance;
+        return perpDexState.unAllocatedBalance + perpDexState.perpDexBalance;
     }
 
     function getPerpDexState() external view returns (uint256, uint256) {
