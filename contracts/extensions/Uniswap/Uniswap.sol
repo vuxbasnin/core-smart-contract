@@ -2,19 +2,30 @@
 pragma solidity ^0.8.19;
 
 import "../../lib/BaseSwap.sol";
-import "../../interfaces/CamelotSwap/ICamelotSwapRouter.sol";
+import "../../interfaces/UniSwap/IUniswapRouter.sol";
+import "../../interfaces/UniSwap/IUniSwapFactory.sol";
 
-contract CamelotSwap is BaseSwap {
-    ICamelotSwapRouter private swapRouter;
-    ICamelotSwapFactory private factory;
+
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+
+contract UniSwap is BaseSwap {
+    IUniSwapRouter private swapRouter;
+    IUniswapV3Factory private factory;
+    uint24 private poolFee = 1;  // 0.01%
 
     constructor(
         address _swapRouterAddress,
+        address _factoryAddress,
         address _priceConsumer
     ) BaseSwap(_priceConsumer) {
-        swapRouter = ICamelotSwapRouter(_swapRouterAddress);
-        console.log("swapRouter.factory() %s", swapRouter.factory());
-        factory = ICamelotSwapFactory(swapRouter.factory());
+        swapRouter = IUniSwapRouter(_swapRouterAddress);
+        factory = IUniswapV3Factory(_factoryAddress);
+    }
+
+    function setPoolFee(uint24 fee) external {
+        require(msg.sender == owner, "INVALID_ADMIN");
+        require(fee <= 100, "Fee must be less than or equal to 100");
+        poolFee = fee;
     }
 
     function swapTo(
@@ -36,15 +47,16 @@ contract CamelotSwap is BaseSwap {
             tokenOut,
             amountIn
         );
-        ICamelotSwapRouter.ExactInputSingleParams
-            memory params = ICamelotSwapRouter.ExactInputSingleParams({
+        IUniSwapRouter.ExactInputSingleParams memory params =
+            IUniSwapRouter.ExactInputSingleParams({
                 tokenIn: tokenIn,
                 tokenOut: tokenOut,
+                fee: poolFee,
                 recipient: recipient,
                 deadline: block.timestamp,
                 amountIn: amountIn,
                 amountOutMinimum: amountOutMinimum,
-                limitSqrtPrice: 0
+                sqrtPriceLimitX96: 0
             });
 
         return swapRouter.exactInputSingle(params);
@@ -73,16 +85,16 @@ contract CamelotSwap is BaseSwap {
             amountInMaximum
         );
 
-        ICamelotSwapRouter.ExactOutputSingleParams
-            memory params = ICamelotSwapRouter.ExactOutputSingleParams({
+        IUniSwapRouter.ExactOutputSingleParams memory params =
+            IUniSwapRouter.ExactOutputSingleParams({
                 tokenIn: tokenIn,
                 tokenOut: tokenOut,
-                fee: 0,
+                fee: poolFee,
                 recipient: recipient,
                 deadline: block.timestamp,
                 amountOut: amountOut,
                 amountInMaximum: amountInMaximum,
-                limitSqrtPrice: 0
+                sqrtPriceLimitX96: 0
             });
 
         uint256 amountIn = swapRouter.exactOutputSingle(params);
@@ -102,11 +114,9 @@ contract CamelotSwap is BaseSwap {
     function getPoolCurrentTickOf(
         address token0,
         address token1
-    ) external view override returns (int24) {
-        ICamelotSwapPool pool = ICamelotSwapPool(
-            factory.poolByPair(token0, token1)
-        );
-        (, int24 tick, , , , , , ) = pool.globalState();
+    ) external override view returns (int24) {
+        IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(token0, token1, poolFee));
+        (, int24 tick, , , , , ) = pool.slot0();
         return tick;
     }
 }

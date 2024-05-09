@@ -17,9 +17,9 @@ import {
 import {
   Signer,
 } from "ethers";
+import { network } from "hardhat";
 
-// const chainId: CHAINID = network.config.chainId;
-const chainId: CHAINID = 42161;
+const chainId: CHAINID = network.config.chainId as CHAINID;
 
 describe("PriceConsumer test", function () {
   let admin: Signer;

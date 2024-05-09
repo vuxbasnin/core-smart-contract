@@ -71,6 +71,17 @@ describe("RockOnyxStableCoinVault", function () {
     );
   }
 
+  async function deployUniswapContract() {
+    const factory = await ethers.getContractFactory("Uniswap");
+    camelotSwapContract = await factory.deploy(swapRouterAddress, priceConsumerContract.getAddress());
+    await camelotSwapContract.waitForDeployment();
+
+    console.log(
+      "Deployed Camelot Swap contract at address %s",
+      await camelotSwapContract.getAddress()
+    );
+  }
+
   beforeEach(async function () {
     [admin] = await ethers.getSigners();
 

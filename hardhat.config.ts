@@ -16,14 +16,19 @@ const config: HardhatUserConfig = {
     },
   },
   networks: {
+    // hardhat: {
+    //   forking: {
+    //     url: "https://arbitrum-mainnet.infura.io/v3/85cde589ce754dafa0a57001c326104d",
+    //     blockNumber: 201530661,
+    //   },
+    //   chainId: 42161
+    // },
     hardhat: {
       forking: {
-        url: "https://arbitrum-mainnet.infura.io/v3/85cde589ce754dafa0a57001c326104d",
-        blockNumber: 201530661,
+        url: "https://mainnet.infura.io/v3/9a0240f418834ce0bfc8c7d6b4ab0b72",
+        blockNumber: 19824697,
       },
-      chainId: 42161,
-      // allowUnlimitedContractSize: true,
-      // blockGasLimit: 2100000
+      chainId: 1
     },
     // hardhat: {
     //   forking: {

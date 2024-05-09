@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-import "../../interfaces/ISwapRouter.sol";
+import "../../interfaces/CamelotSwap/ICamelotSwapRouter.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "hardhat/console.sol";
 
-contract MockSwapRouter is ISwapRouter {
+contract MockSwapRouter is ICamelotSwapRouter {
     // Mock function to mimic swapping tokens at a 1:1 rate
     function exactInputSingle(
         ExactInputSingleParams calldata params

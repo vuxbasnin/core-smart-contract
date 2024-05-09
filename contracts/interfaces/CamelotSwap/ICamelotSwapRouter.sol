@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-interface ISwapPool {
+interface ICamelotSwapPool {
     function globalState()
         external
         view
@@ -21,14 +21,14 @@ interface ISwapPool {
     function liquidity() external view returns (uint256);
 }
 
-interface ISwapFactory {
+interface ICamelotSwapFactory {
     function poolByPair(
         address tokenA,
         address tokenB
     ) external view returns (address pool);
 }
 
-interface ISwapRouter {
+interface ICamelotSwapRouter {
     struct ExactInputSingleParams {
         address tokenIn;
         address tokenOut;
