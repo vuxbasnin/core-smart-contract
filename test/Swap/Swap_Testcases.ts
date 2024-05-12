@@ -21,7 +21,7 @@ import {
 // const chainId: CHAINID = network.config.chainId;
 const chainId: CHAINID = 42161;
 
-describe("RockOnyxStableCoinVault", function () {
+describe("CamelotSwap", function () {
   let admin: Signer;
   let priceConsumerContract: Contracts.PriceConsumer;
   let usdc: Contracts.IERC20;

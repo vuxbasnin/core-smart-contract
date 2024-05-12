@@ -2,5 +2,6 @@
 pragma solidity ^0.8.19;
 
 interface IZircuitRestakeProxy {
-    function depositFor(address _token, address _for, uint256 _amount) external;
+    function depositFor(address token, address to, uint256 amount) external;
+    function balanceOf(address token, address owner) external returns(uint256);
 }

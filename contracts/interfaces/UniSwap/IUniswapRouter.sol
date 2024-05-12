@@ -1,12 +1,34 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-pragma solidity >=0.7.5;
-pragma abicoder v2;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.19;
 
-import '@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.sol';
+interface IUniSwapPool {
+    function globalState()
+        external
+        view
+        returns (
+            uint160 price,
+            int24 tick,
+            uint16 feeZto,
+            uint16 feeOtz,
+            uint16 timepointIndex,
+            uint8 communityFeeToken0,
+            uint8 communityFeeToken1,
+            bool unlocked
+        );
 
-/// @title Router token swapping functionality
-/// @notice Functions for swapping tokens via Uniswap V3
-interface IUniSwapRouter is IUniswapV3SwapCallback {
+    function token0() external view returns (address);
+    function liquidity() external view returns (uint256);
+}
+
+interface IUniSwapFactory {
+    function poolByPair(
+        address tokenA,
+        address tokenB,
+        uint24 fee
+    ) external view returns (address pool);
+}
+
+interface IUniSwapRouter {
     struct ExactInputSingleParams {
         address tokenIn;
         address tokenOut;
@@ -17,24 +39,6 @@ interface IUniSwapRouter is IUniswapV3SwapCallback {
         uint256 amountOutMinimum;
         uint160 sqrtPriceLimitX96;
     }
-
-    /// @notice Swaps `amountIn` of one token for as much as possible of another token
-    /// @param params The parameters necessary for the swap, encoded as `ExactInputSingleParams` in calldata
-    /// @return amountOut The amount of the received token
-    function exactInputSingle(ExactInputSingleParams calldata params) external payable returns (uint256 amountOut);
-
-    struct ExactInputParams {
-        bytes path;
-        address recipient;
-        uint256 deadline;
-        uint256 amountIn;
-        uint256 amountOutMinimum;
-    }
-
-    /// @notice Swaps `amountIn` of one token for as much as possible of another along the specified path
-    /// @param params The parameters necessary for the multi-hop swap, encoded as `ExactInputParams` in calldata
-    /// @return amountOut The amount of the received token
-    function exactInput(ExactInputParams calldata params) external payable returns (uint256 amountOut);
 
     struct ExactOutputSingleParams {
         address tokenIn;
@@ -47,21 +51,16 @@ interface IUniSwapRouter is IUniswapV3SwapCallback {
         uint160 sqrtPriceLimitX96;
     }
 
-    /// @notice Swaps as little as possible of one token for `amountOut` of another token
-    /// @param params The parameters necessary for the swap, encoded as `ExactOutputSingleParams` in calldata
-    /// @return amountIn The amount of the input token
-    function exactOutputSingle(ExactOutputSingleParams calldata params) external payable returns (uint256 amountIn);
+    /// @notice Swaps amountIn of one token for as much as possible of another token
+    /// @param params The parameters necessary for the swap, encoded as ExactInputSingleParams in calldata
+    /// @return amountOut The amount of the received token
+    function exactInputSingle(
+        ExactInputSingleParams calldata params
+    ) external payable returns (uint amountOut);
 
-    struct ExactOutputParams {
-        bytes path;
-        address recipient;
-        uint256 deadline;
-        uint256 amountOut;
-        uint256 amountInMaximum;
-    }
+    function exactOutputSingle(
+        ExactOutputSingleParams calldata params
+    ) external payable returns (uint amountIn);
 
-    /// @notice Swaps as little as possible of one token for `amountOut` of another along the specified path (reversed)
-    /// @param params The parameters necessary for the multi-hop swap, encoded as `ExactOutputParams` in calldata
-    /// @return amountIn The amount of the input token
-    function exactOutput(ExactOutputParams calldata params) external payable returns (uint256 amountIn);
+    function factory() external view returns (address);
 }

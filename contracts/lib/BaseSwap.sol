@@ -7,7 +7,7 @@ import "../interfaces/IPriceConsumerProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "hardhat/console.sol";
 
-abstract contract BaseSwap is ISwapProxy {
+abstract contract BaseSwap {
     IPriceConsumerProxy internal priceConsumer;
     uint8 slippage;
     address internal owner;
@@ -23,20 +23,6 @@ abstract contract BaseSwap is ISwapProxy {
         require(msg.sender == owner, "INVALID_ADMIN");
         slippage = _slippage;
     }
-
-    function swapTo(
-        address recipient,
-        address tokenIn,
-        uint256 amountIn,
-        address tokenOut
-    ) external virtual returns (uint256) {}
-
-    function swapToWithOutput(
-        address recipient,
-        address tokenIn,
-        uint256 amountOut,
-        address tokenOut
-    ) external virtual returns (uint256) {}
 
     function getPoolCurrentTickOf(
         address token0,

@@ -22,7 +22,7 @@ contract CamelotSwap is BaseSwap {
         address tokenIn,
         uint256 amountIn,
         address tokenOut
-    ) external override returns (uint256) {
+    ) external returns (uint256) {
         TransferHelper.safeTransferFrom(
             tokenIn,
             msg.sender,
@@ -55,7 +55,7 @@ contract CamelotSwap is BaseSwap {
         address tokenIn,
         uint256 amountOut,
         address tokenOut
-    ) external override returns (uint256) {
+    ) external returns (uint256) {
         uint256 amountInMaximum = getAmountInMaximum(
             tokenIn,
             tokenOut,
