@@ -26,6 +26,9 @@ abstract contract BaseRestakingStrategy is RockOnyxAccessControl, ReentrancyGuar
     event Deposited(address indexed proxy, uint256 amount);
     event Withdrawn(address indexed proxy, uint256 amount);
 
+    event PositionOpened(uint256 usdcAmount, uint256 ethAmount);
+    event PositionClosed(uint256 ethAmount, uint256 usdcAmount);
+
     constructor() {}
 
     function ethRestaking_Initialize(
@@ -68,6 +71,8 @@ abstract contract BaseRestakingStrategy is RockOnyxAccessControl, ReentrancyGuar
 
         restakingStratState.unAllocatedBalance -= usedUsdAmount;
         depositToRestakingProxy(ethAmount);
+
+        emit PositionOpened(usedUsdAmount, ethAmount);
     }
 
     function closePosition(uint256 ethAmount, uint8 buffer, uint8 bufferDecimals) external nonReentrant {
@@ -84,6 +89,7 @@ abstract contract BaseRestakingStrategy is RockOnyxAccessControl, ReentrancyGuar
         );
 
         restakingStratState.unAllocatedBalance += actualUsdcAmount;
+        emit PositionClosed(ethAmount, actualUsdcAmount);
     }
 
     function depositToRestakingProxy(uint256 ethAmount) internal virtual nonReentrant {}
