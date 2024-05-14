@@ -28,6 +28,7 @@ contract UniSwap is BaseSwap {
             amountIn
         );
         TransferHelper.safeApprove(tokenIn, address(swapRouter), amountIn);
+        
         uint256 amountOutMinimum = getAmountOutMinimum(
             tokenIn,
             tokenOut,
@@ -46,7 +47,8 @@ contract UniSwap is BaseSwap {
                 sqrtPriceLimitX96: 0
             });
 
-        return swapRouter.exactInputSingle(params);
+        uint256 amoutOut = swapRouter.exactInputSingle(params);
+        return amoutOut;
     }
 
     function swapToWithOutput(
@@ -61,12 +63,14 @@ contract UniSwap is BaseSwap {
             tokenOut,
             amountOut
         );
+        
         TransferHelper.safeTransferFrom(
             tokenIn,
             msg.sender,
             address(this),
             amountInMaximum
         );
+        
         TransferHelper.safeApprove(
             tokenIn,
             address(swapRouter),
@@ -88,11 +92,7 @@ contract UniSwap is BaseSwap {
         uint256 amountIn = swapRouter.exactOutputSingle(params);
         if (amountIn < amountInMaximum) {
             TransferHelper.safeApprove(tokenIn, address(swapRouter), 0);
-            TransferHelper.safeTransfer(
-                tokenIn,
-                msg.sender,
-                amountInMaximum - amountIn
-            );
+            TransferHelper.safeTransfer(tokenIn, msg.sender, amountInMaximum - amountIn);
         }
 
         return amountIn;

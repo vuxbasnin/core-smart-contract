@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
+import "../../../../interfaces/IRenzoRestakeProxy.sol";
+import "../../../../interfaces/IZircuitRestakeProxy.sol";
 import "./../../Base/strategies/BaseRestakingStrategy.sol";
 
 contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
     IWithdrawRestakingPool private renzoWithdrawRestakingPool;
-    IWithdrawRestakingPool private zircuitwithdrawRestakingPool;
-
     IRenzoRestakeProxy private renzoRestakeProxy;
     IZircuitRestakeProxy private zircuitRestakeProxy;
     IERC20 private stakingToken;
@@ -16,20 +16,17 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
         address _swapAddress,
         address _usdcAddress,
         address _ethAddress,
-        address[] memory _restakingPoolAddresses,
-        address _zircuitwithdrawRestakingPoolAddress
+        address[] memory _restakingPoolAddresses
     ) internal {
         super.ethRestaking_Initialize(_restakingToken, _swapAddress, _usdcAddress, _ethAddress);
 
         renzoRestakeProxy = IRenzoRestakeProxy(_restakingPoolAddresses[0]);
         zircuitRestakeProxy = IZircuitRestakeProxy(_restakingPoolAddresses[1]);
-        zircuitwithdrawRestakingPool = IWithdrawRestakingPool(_zircuitwithdrawRestakingPoolAddress);
     }
 
     function syncRestakingBalance() internal override{
-        uint256 ezEthOnZircuit = zircuitRestakeProxy.balanceOf(address(restakingToken), address(this));
-        uint256 ezEthOnContract = restakingToken.balanceOf(address(this));
-        uint256 ethAmount = (ezEthOnZircuit + ezEthOnContract) * swapProxy.getPriceOf(address(restakingToken), address(ethToken)) / 1e18;
+        uint256 ethAmount = (zircuitRestakeProxy.balance(address(restakingToken), address(this)) + restakingToken.balanceOf(address(this))) 
+                                * swapProxy.getPriceOf(address(restakingToken), address(ethToken)) / 1e18;
         restakingStratState.totalBalance = restakingStratState.unAllocatedBalance + ethAmount * swapProxy.getPriceOf(address(ethToken), address(usdcToken)) / 1e18;
     }
 
@@ -37,7 +34,7 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         ethToken.approve(address(swapProxy), ethAmount);
-        uint256 ezEthAmount = swapProxy.swapTo(
+        swapProxy.swapTo(
             address(this),
             address(ethToken),
             ethAmount,
@@ -45,31 +42,29 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
             fees["RExTOKEN_ETH"]
         );
 
-        restakingToken.approve(address(zircuitRestakeProxy), ezEthAmount);
-        zircuitRestakeProxy.depositFor(address(restakingToken), address(this), ezEthAmount);
+        restakingToken.approve(address(zircuitRestakeProxy), restakingToken.balanceOf(address(this)));
+        zircuitRestakeProxy.depositFor(address(restakingToken), address(this), restakingToken.balanceOf(address(this)));
     }
 
-    function withdrawFromRestakingProxy(uint256 ethAmount, uint8 buffer, uint8 bufferDecimals) internal override {
+    function withdrawFromRestakingProxy(uint256 ethAmount) internal override {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        uint256 stakingTokenAmount = buffer * ethAmount * swapProxy.getPriceOf(address(restakingToken), address(ethToken)) / 10 ** (18 + bufferDecimals);
+        
+        uint256 stakingTokenAmount = swapProxy.getAmountInMaximum(address(restakingToken), address(ethToken), ethAmount);
 
-        zircuitwithdrawRestakingPool.withdraw(stakingTokenAmount);
-
-        // Swap exact output ethAmount from restakingToken withdrawn from zircuit
+        zircuitRestakeProxy.withdraw(address(restakingToken), stakingTokenAmount);
         restakingToken.approve(address(swapProxy), stakingTokenAmount);
-
         swapProxy.swapToWithOutput(
             address(this),
             address(restakingToken),
             ethAmount,
-            address(restakingToken),
+            address(ethToken),
             fees["RExTOKEN_ETH"]
         );
     }
 
-    function updateZircuitwithdrawRestaking(address _zircuitwithdrawRestakingPoolAddress) external nonReentrant {
+    function updateRenzoWithdrawRestaking(address _renzoWithdrawRestakingPoolAddress) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        zircuitwithdrawRestakingPool = IWithdrawRestakingPool(_zircuitwithdrawRestakingPoolAddress);
+        renzoWithdrawRestakingPool = IWithdrawRestakingPool(_renzoWithdrawRestakingPoolAddress);
     }
 }

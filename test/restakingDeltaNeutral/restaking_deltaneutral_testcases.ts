@@ -11,7 +11,7 @@ import {
   AEVO_CONNECTOR_ADDRESS,
   USDC_IMPERSONATED_SIGNER_ADDRESS,
   ETH_PRICE_FEED_ADDRESS,
-  EZTETH__ETH_PRICE_FEED_ADDRESS,
+  EZTETH_ETH_PRICE_FEED_ADDRESS,
   EZETH_ADDRESS,
   ZIRCUIT_DEPOSIT_ADDRESS,
   RENZO_DEPOSIT_ADDRESS,
@@ -29,11 +29,8 @@ describe("RockOnyxDeltaNeutralVault", function () {
     user3: Signer,
     user4: Signer;
 
-  let optionsReceiver: Signer;
-
   let renzoRestakingDNVault: Contracts.RenzoRestakingDeltaNeutralVault;
   let usdc: Contracts.IERC20;
-  let weth: Contracts.IERC20;
 
   const usdcImpersonatedSigner = USDC_IMPERSONATED_SIGNER_ADDRESS[chainId];
   const usdcAddress = USDC_ADDRESS[chainId] || "";
@@ -43,7 +40,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
   const aevoAddress = AEVO_ADDRESS[chainId];
   const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId];
   const ethPriceFeed = ETH_PRICE_FEED_ADDRESS[chainId];
-  const ezEth_EthPriceFeed = EZTETH__ETH_PRICE_FEED_ADDRESS[chainId];
+  const ezEth_EthPriceFeed = EZTETH_ETH_PRICE_FEED_ADDRESS[chainId];
   const renzoDepositAddress = RENZO_DEPOSIT_ADDRESS[chainId];
   const zircuitDepositAddress = ZIRCUIT_DEPOSIT_ADDRESS[chainId];
 
@@ -103,17 +100,15 @@ describe("RockOnyxDeltaNeutralVault", function () {
   }
 
   beforeEach(async function () {
-    [admin, optionsReceiver, user1, user2, user3, user4] =
+    [admin, user1, user2, user3, user4] =
       await ethers.getSigners();
 
     usdc = await ethers.getContractAt("IERC20", usdcAddress);
-    weth = await ethers.getContractAt("IERC20", wethAddress);
     await deployPriceConsumerContract();
     await deployUniSwapContract();
     await deployRenzoRestakingDeltaNeutralVault();
   });
 
-  // Helper function for deposit
   async function deposit(sender: Signer, amount: BigNumberish) {
     await usdc
       .connect(sender)
@@ -137,18 +132,6 @@ describe("RockOnyxDeltaNeutralVault", function () {
     return totalValueLocked;
   }
 
-  async function getEthPrice() {
-    // get current priceOf from uniSwapContract
-    const _ethPrice = await uniSwapContract.getPriceOf(
-      wethAddress,
-      usdcAddress
-    );
-    // parse priceOf to float
-    const ethPrice = parseFloat(_ethPrice.toString()) / 1e6;
-    console.log("ethPrice %s", ethPrice);
-    return ethPrice;
-  }
-
   it("seed data", async function () {
     const usdcSigner = await ethers.getImpersonatedSigner(
       usdcImpersonatedSigner
@@ -158,12 +141,48 @@ describe("RockOnyxDeltaNeutralVault", function () {
     await transferUsdcForUser(usdcSigner, user2, 100000 * 1e6);
     await transferUsdcForUser(usdcSigner, user3, 100000 * 1e6);
     await transferUsdcForUser(usdcSigner, user4, 100000 * 1e6);
-    await transferUsdcForUser(usdcSigner, optionsReceiver, 10000 * 1e6);
+    await transferUsdcForUser(usdcSigner, admin, 10000 * 1e6);
   });
 
-  it("user deposit -> deposit to perp dex -> deposit to renzo -> deposit to zircuit", async function () {
+  it.skip("user deposit -> withdraw", async function () {
     console.log(
-      "-------------deposit to vault---------------"
+      "-------------deposit to restakingDeltaNeutralVault---------------"
+    );
+    await deposit(user1, 10 * 1e6);
+    await deposit(user2, 100 * 1e6);
+
+    let totalValueLock = await logAndReturnTotalValueLock();
+    expect(totalValueLock).to.approximately(110 * 1e6, PRECISION);
+
+    console.log("-------------Users initial withdrawals---------------");
+    const initiateWithdrawalTx1 = await renzoRestakingDNVault
+      .connect(user2)
+      .initiateWithdrawal(100 * 1e6);
+    await initiateWithdrawalTx1.wait();
+
+    console.log("-------------handleWithdrawalFunds---------------");
+    const handleWithdrawalFundsTx = await renzoRestakingDNVault
+      .connect(admin)
+      .acquireWithdrawalFunds(100 * 1e6);
+    await handleWithdrawalFundsTx.wait();
+
+    console.log("-------------complete withdrawals---------------");
+    let user2Balance = await usdc.connect(user2).balanceOf(user2);
+    console.log("usdc of user before withdraw %s", user2Balance);
+
+    const completeWithdrawalTx = await renzoRestakingDNVault
+      .connect(user2)
+      .completeWithdrawal(100 * 1e6);
+    await completeWithdrawalTx.wait();
+
+    let user1BalanceAfterWithdraw = await usdc.connect(user2).balanceOf(user2);
+    console.log("usdc of user after withdraw %s", user1BalanceAfterWithdraw);
+    expect(user1BalanceAfterWithdraw).to.approximately(user2Balance + BigInt(95 * 1e6),PRECISION);
+  });
+
+  it.skip("user deposit -> deposit to perp dex -> deposit to renzo -> deposit to zircuit", async function () {
+    console.log(
+      "-------------deposit to restakingDeltaNeutralVault---------------"
     );
     await deposit(user1, 10 * 1e6);
     await deposit(user2, 100 * 1e6);
@@ -181,5 +200,121 @@ describe("RockOnyxDeltaNeutralVault", function () {
       .connect(admin)
       .openPosition(BigInt(0.01 * 1e18));
     await openPositionTx.wait();
+  });
+
+  it("user deposit -> deposit to perp dex -> open position -> close position -> sync restaking balance -> withdraw", async function () {
+    console.log(
+      "-------------deposit to restakingDeltaNeutralVault---------------"
+    );
+    await deposit(user1, 100 * 1e6);
+    await deposit(user2, 200 * 1e6);
+
+    let totalValueLock = await logAndReturnTotalValueLock();
+    expect(totalValueLock).to.approximately(300 * 1e6, PRECISION);
+
+    console.log("-------------deposit to vendor on aevo---------------");
+    await renzoRestakingDNVault.connect(admin).depositToVendor(500000);
+    totalValueLock = await logAndReturnTotalValueLock();
+    expect(totalValueLock).to.approximately(300 * 1e6, PRECISION);
+
+    console.log("-------------open position---------------");
+    const openPositionTx = await renzoRestakingDNVault
+      .connect(admin)
+      .openPosition(BigInt(0.02 * 1e18));
+    await openPositionTx.wait();
+
+    console.log("-------------sync restaking balance---------------");
+    const syncBalanceTx = await renzoRestakingDNVault
+      .connect(admin)
+      .syncBalance(150*1e6);
+    await syncBalanceTx.wait();
+
+    console.log("-------------close position---------------");
+    const closePositionTx = await renzoRestakingDNVault
+      .connect(admin)
+      .closePosition(BigInt(0.01 * 1e18));
+    await closePositionTx.wait();
+
+    console.log("-------------Users initial withdrawals---------------");
+    const initiateWithdrawalTx1 = await renzoRestakingDNVault
+      .connect(user2)
+      .initiateWithdrawal(100 * 1e6);
+    await initiateWithdrawalTx1.wait();
+
+    await usdc.connect(admin).approve(await renzoRestakingDNVault.getAddress(), 50 * 1e6);
+    const handlePostWithdrawTx = await renzoRestakingDNVault
+      .connect(admin)
+      .handlePostWithdrawFromVendor(50*1e6);
+    await handlePostWithdrawTx.wait();
+    
+    console.log("-------------handleWithdrawalFunds---------------");
+    const handleWithdrawalFundsTx = await renzoRestakingDNVault
+      .connect(admin)
+      .acquireWithdrawalFunds(100*1e6);
+    await initiateWithdrawalTx1.wait();
+
+    console.log("-------------complete withdrawals---------------");
+    let user2Balance = await usdc.connect(user2).balanceOf(user2);
+    console.log("usdc of user before withdraw %s", user2Balance);
+
+    const completeWithdrawalTx = await renzoRestakingDNVault
+      .connect(user2)
+      .completeWithdrawal(100 * 1e6);
+    await completeWithdrawalTx.wait();
+
+    let user1BalanceAfterWithdraw = await usdc.connect(user2).balanceOf(user2);
+    console.log("usdc of user after withdraw %s", user1BalanceAfterWithdraw);
+    expect(user1BalanceAfterWithdraw).to.approximately(
+      user2Balance + BigInt(95 * 1e6),
+      PRECISION
+    );
+  });
+
+  it.skip("user deposit -> deposit to perp dex -> withdraw", async function () {
+    console.log("-------------deposit to restakingDeltaNeutralVault---------------"
+    );
+    await deposit(user1, 100 * 1e6);
+    await deposit(user2, 200 * 1e6);
+
+    let totalValueLock = await logAndReturnTotalValueLock();
+    expect(totalValueLock).to.approximately(300 * 1e6, PRECISION);
+
+    console.log("-------------deposit to vendor on aevo---------------");
+    await renzoRestakingDNVault.connect(admin).depositToVendor(500000);
+    totalValueLock = await logAndReturnTotalValueLock();
+    expect(totalValueLock).to.approximately(300 * 1e6, PRECISION);
+
+    console.log("-------------Users initial withdrawals---------------");
+    const initiateWithdrawalTx1 = await renzoRestakingDNVault
+      .connect(user2)
+      .initiateWithdrawal(100 * 1e6);
+    await initiateWithdrawalTx1.wait();
+
+    await usdc.connect(admin).approve(await renzoRestakingDNVault.getAddress(), 50 * 1e6);
+    const handlePostWithdrawTx = await renzoRestakingDNVault
+      .connect(admin)
+      .handlePostWithdrawFromVendor(50*1e6);
+    await handlePostWithdrawTx.wait();
+
+    console.log("-------------handleWithdrawalFunds---------------");
+    const handleWithdrawalFundsTx = await renzoRestakingDNVault
+      .connect(admin)
+      .acquireWithdrawalFunds(100*1e6);
+    await initiateWithdrawalTx1.wait();
+
+    console.log("-------------complete withdrawals---------------");
+    let user2Balance = await usdc.connect(user2).balanceOf(user2);
+    console.log("usdc of user before withdraw %s", user2Balance);
+
+    const completeWithdrawalTx = await renzoRestakingDNVault
+      .connect(user2)
+      .completeWithdrawal(100 * 1e6);
+    await completeWithdrawalTx.wait();
+
+    let user1BalanceAfterWithdraw = await usdc.connect(user2).balanceOf(user2);
+    console.log("usdc of user after withdraw %s", user1BalanceAfterWithdraw);
+    expect(user1BalanceAfterWithdraw).to.approximately(user2Balance + BigInt(95 * 1e6), PRECISION);
+    totalValueLock = await logAndReturnTotalValueLock();
+    expect(totalValueLock).to.approximately(200 * 1e6, PRECISION);
   });
 });

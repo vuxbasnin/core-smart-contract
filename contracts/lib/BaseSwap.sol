@@ -9,7 +9,7 @@ import "hardhat/console.sol";
 
 abstract contract BaseSwap {
     IPriceConsumerProxy internal priceConsumer;
-    uint8 slippage;
+    uint8 private slippage;
     address internal owner;
 
     constructor(address _priceConsumer) {
@@ -51,7 +51,7 @@ abstract contract BaseSwap {
         address token0,
         address token1,
         uint256 amountOut
-    ) internal view returns (uint256) {
+    ) public view returns (uint256) {
         return
             (amountOut *
                 priceConsumer.getPriceOf(token1, token0) *

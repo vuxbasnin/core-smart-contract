@@ -5,9 +5,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "../../../../interfaces/IWithdrawRestakingPool.sol";
+import "../../../../interfaces/IWithdrawRestakingPool.sol";
 import "../../../../extensions/RockOnyxAccessControl.sol";
-import "../../../../extensions/Restaking/RenzoWithdrawRestakingPool.sol";
-import "../../../../extensions/Restaking/ZircuitWithdrawRestakingPool.sol";
 import "../../../../extensions/Uniswap/Uniswap.sol";
 import "../../structs/RestakingDeltaNeutralStruct.sol";
 import "hardhat/console.sol";
@@ -70,10 +69,10 @@ abstract contract BaseRestakingStrategy is RockOnyxAccessControl, ReentrancyGuar
         depositToRestakingProxy(ethAmount);
     }
 
-    function closePosition(uint256 ethAmount, uint8 buffer, uint8 bufferDecimals) external nonReentrant {
+    function closePosition(uint256 ethAmount) external nonReentrant {
         _auth(ROCK_ONYX_OPTIONS_TRADER_ROLE);
 
-        withdrawFromRestakingProxy(ethAmount, buffer, bufferDecimals);
+        withdrawFromRestakingProxy(ethAmount);
         ethToken.approve(address(swapProxy), ethAmount);
         uint256 actualUsdcAmount = swapProxy.swapTo(
             address(this),
@@ -88,7 +87,7 @@ abstract contract BaseRestakingStrategy is RockOnyxAccessControl, ReentrancyGuar
 
     function depositToRestakingProxy(uint256 ethAmount) internal virtual nonReentrant {}
     
-    function withdrawFromRestakingProxy(uint256 ethAmount, uint8 buffer, uint8 bufferDecimals) internal virtual nonReentrant {}
+    function withdrawFromRestakingProxy(uint256 ethAmount) internal virtual nonReentrant {}
 
     function syncRestakingBalance() internal virtual{
 

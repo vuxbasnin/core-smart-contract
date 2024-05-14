@@ -10,5 +10,5 @@ interface IWithdrawRestakingPool {
      * @notice Withdraws a specified amount of tokens from the staking contract.
      * @param amount The amount of tokens to withdraw.
      */
-    function withdraw(uint256 amount) external;
+    function withdraw(address token, uint256 amount) external;
 }

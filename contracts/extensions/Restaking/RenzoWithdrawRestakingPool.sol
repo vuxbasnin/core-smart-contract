@@ -11,6 +11,6 @@ contract RenzoWithdrawRestakingPool is IWithdrawRestakingPool {
     constructor(address _renzoDepositAddress, IERC20 _stakingToken) {
     }
 
-    function withdraw(uint256 amount) external {
+    function withdraw(address token, uint256 amount) external {
     }
 }

@@ -19,7 +19,7 @@ import {
   NFT_POSITION_ADDRESS,
   ANGLE_REWARD_ADDRESS,
   ETH_PRICE_FEED_ADDRESS,
-  WSTETH__ETH_PRICE_FEED_ADDRESS,
+  WSTETH_ETH_PRICE_FEED_ADDRESS,
   USDC_PRICE_FEED_ADDRESS,
   ARB_PRICE_FEED_ADDRESS
 } from "../../constants";
@@ -66,7 +66,7 @@ describe("RockOnyxStableCoinVault", function () {
   const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId];
 
   const ethPriceFeed = ETH_PRICE_FEED_ADDRESS[chainId];
-  const wsteth_ethPriceFeed = WSTETH__ETH_PRICE_FEED_ADDRESS[chainId];
+  const wsteth_ethPriceFeed = WSTETH_ETH_PRICE_FEED_ADDRESS[chainId];
   const usdcePriceFeed = USDC_PRICE_FEED_ADDRESS[chainId];
   const arbPriceFeed = ARB_PRICE_FEED_ADDRESS[chainId];
 

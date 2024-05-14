@@ -10,7 +10,7 @@ import {
   WSTETH_ADDRESS,
   ARB_ADDRESS,
   ETH_PRICE_FEED_ADDRESS,
-  WSTETH__ETH_PRICE_FEED_ADDRESS,
+  WSTETH_ETH_PRICE_FEED_ADDRESS,
   USDC_PRICE_FEED_ADDRESS,
   ARB_PRICE_FEED_ADDRESS
 } from "../constants";
@@ -28,7 +28,7 @@ const usdcAddress = USDC_ADDRESS[chainId] ?? '';
 const arbAddress = ARB_ADDRESS[chainId] ?? '';
 
 const ethPriceFeed = ETH_PRICE_FEED_ADDRESS[chainId] ?? '';
-const steth_ethPriceFeed = WSTETH__ETH_PRICE_FEED_ADDRESS[chainId] ?? '';
+const steth_ethPriceFeed = WSTETH_ETH_PRICE_FEED_ADDRESS[chainId] ?? '';
 const usdcePriceFeed = USDC_PRICE_FEED_ADDRESS[chainId] ?? '';
 const arbPriceFeed = ARB_PRICE_FEED_ADDRESS[chainId] ?? '';
 

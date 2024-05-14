@@ -13,7 +13,6 @@ contract CamelotSwap is BaseSwap {
         address _priceConsumer
     ) BaseSwap(_priceConsumer) {
         swapRouter = ICamelotSwapRouter(_swapRouterAddress);
-        console.log("swapRouter.factory() %s", swapRouter.factory());
         factory = ICamelotSwapFactory(swapRouter.factory());
     }
 

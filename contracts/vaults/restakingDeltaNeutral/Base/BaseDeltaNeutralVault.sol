@@ -13,7 +13,7 @@ abstract contract BaseDeltaNeutralVault is
     RockOnyxAccessControl,
     ReentrancyGuard
 {
-    uint256 private constant NETWORK_COST = 10e6;
+    uint256 private constant NETWORK_COST = 5*1e6;
     uint256 internal initialPPS;
     using ShareMath for uint256;
     using SafeERC20 for IERC20;
