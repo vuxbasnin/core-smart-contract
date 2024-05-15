@@ -15,7 +15,10 @@ contract PerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
     address perpDexAsset;
     PerpDexState internal perpDexState;
     address perpDexReceiver;
+    address private perpDexConnector;
     IAevo private AEVO;
+
+    // USDC
     address l1Token = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address l2Token = 0x643aaB1618c600229785A5E06E4b2d13946F7a1A;
 
@@ -30,21 +33,20 @@ contract PerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
     function perpDex_Initialize(
         address _perpDexAddress,
         address _perpDexReceiver,
-        address _usdc
+        address _usdc,
+        address _perpDexConnector
     ) internal {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         perpDexAsset = _usdc;
         AEVO = IAevo(_perpDexAddress);
         perpDexReceiver = _perpDexReceiver;
-
+        perpDexConnector = _perpDexConnector;
+        
         _grantRole(ROCK_ONYX_OPTIONS_TRADER_ROLE, msg.sender);
         _grantRole(ROCK_ONYX_OPTIONS_TRADER_ROLE, perpDexReceiver);
     }
-
-    /**
-     * @notice submit amount to deposit to Vendor
-     */
+    
     function depositToVendor(uint32 gasLimit) external payable nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
         
@@ -59,6 +61,27 @@ contract PerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
             perpDexReceiver,
             amount,
             gasLimit,
+            data
+        );
+
+        perpDexState.perpDexBalance += amount;
+        emit PerpDexVendorDeposited(amount);
+    }
+
+    function depositToVendorL2(uint32 gasLimit) external payable nonReentrant {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+        
+        bytes memory data = "";
+        uint256 amount = perpDexState.unAllocatedBalance;
+        perpDexState.unAllocatedBalance -= amount;
+        IERC20(perpDexAsset).approve(address(AEVO), amount);
+
+        AEVO.depositToAppChain{value: msg.value}(
+            perpDexReceiver,
+            perpDexAsset,
+            amount,
+            gasLimit,
+            perpDexConnector,
             data
         );
 

@@ -25,25 +25,36 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
     }
 
     function syncRestakingBalance() internal override{
-        uint256 ethAmount = (zircuitRestakeProxy.balance(address(restakingToken), address(this)) + restakingToken.balanceOf(address(this))) 
-                                * swapProxy.getPriceOf(address(restakingToken), address(ethToken)) / 1e18;
+        uint256 restakingTokenAmount = restakingToken.balanceOf(address(this));
+        if(address(zircuitRestakeProxy) != address(0)){
+            restakingTokenAmount += zircuitRestakeProxy.balance(address(restakingToken), address(this));
+        }
+
+        uint256 ethAmount = restakingTokenAmount * swapProxy.getPriceOf(address(restakingToken), address(ethToken)) / 1e18;
         restakingStratState.totalBalance = restakingStratState.unAllocatedBalance + ethAmount * swapProxy.getPriceOf(address(ethToken), address(usdcToken)) / 1e18;
     }
 
     function depositToRestakingProxy(uint256 ethAmount) internal override {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        ethToken.approve(address(swapProxy), ethAmount);
-        swapProxy.swapTo(
-            address(this),
-            address(ethToken),
-            ethAmount,
-            address(restakingToken),
-            fees["RExTOKEN_ETH"]
-        );
-
-        restakingToken.approve(address(zircuitRestakeProxy), restakingToken.balanceOf(address(this)));
-        zircuitRestakeProxy.depositFor(address(restakingToken), address(this), restakingToken.balanceOf(address(this)));
+        if(address(renzoRestakeProxy) != address(0)) {
+            ethToken.approve(address(renzoRestakeProxy), ethAmount);            
+            renzoRestakeProxy.deposit(address(ethToken), ethAmount);
+        }else{
+            ethToken.approve(address(swapProxy), ethAmount);
+            swapProxy.swapTo(
+                address(this),
+                address(ethToken),
+                ethAmount,
+                address(restakingToken),
+                fees["RExTOKEN_ETH"]
+            );
+        }
+        
+        if(address(zircuitRestakeProxy) != address(0)){
+            restakingToken.approve(address(zircuitRestakeProxy), restakingToken.balanceOf(address(this)));
+            zircuitRestakeProxy.depositFor(address(restakingToken), address(this), restakingToken.balanceOf(address(this)));
+        }
     }
 
     function withdrawFromRestakingProxy(uint256 ethAmount) internal override {
@@ -51,15 +62,24 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
         
         uint256 stakingTokenAmount = swapProxy.getAmountInMaximum(address(restakingToken), address(ethToken), ethAmount);
 
-        zircuitRestakeProxy.withdraw(address(restakingToken), stakingTokenAmount);
-        restakingToken.approve(address(swapProxy), stakingTokenAmount);
-        swapProxy.swapToWithOutput(
-            address(this),
-            address(restakingToken),
-            ethAmount,
-            address(ethToken),
-            fees["RExTOKEN_ETH"]
-        );
+        if(address(zircuitRestakeProxy) != address(0)){
+            zircuitRestakeProxy.withdraw(address(restakingToken), stakingTokenAmount);
+        }
+
+        if(address(renzoRestakeProxy) != address(0) && address(renzoWithdrawRestakingPool) != address(0)) {
+            restakingToken.approve(address(swapProxy), stakingTokenAmount);
+            renzoWithdrawRestakingPool.withdraw(address(restakingToken), stakingTokenAmount);
+        }else{
+            restakingToken.approve(address(swapProxy), stakingTokenAmount);
+            swapProxy.swapToWithOutput(
+                address(this),
+                address(restakingToken),
+                ethAmount,
+                address(ethToken),
+                fees["RExTOKEN_ETH"]
+            );
+        }
+        
     }
 
     function updateRenzoWithdrawRestaking(address _renzoWithdrawRestakingPoolAddress) external nonReentrant {
