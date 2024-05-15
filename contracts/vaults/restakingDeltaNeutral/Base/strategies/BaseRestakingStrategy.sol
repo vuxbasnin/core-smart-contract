@@ -34,7 +34,8 @@ abstract contract BaseRestakingStrategy is RockOnyxAccessControl, ReentrancyGuar
         address _restakingToken,
         address _swapAddress,
         address _usdcAddress,
-        address _ethAddress
+        address _ethAddress,
+        uint24[] memory _fees
     ) internal virtual {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
@@ -42,8 +43,15 @@ abstract contract BaseRestakingStrategy is RockOnyxAccessControl, ReentrancyGuar
         usdcToken = IERC20(_usdcAddress);
         ethToken = IERC20(_ethAddress);
         restakingToken = IERC20(_restakingToken);
-        fees["ETH_USD"] = 500;
-        fees["RExTOKEN_ETH"] = 100;
+        fees["ETH_USD"] = _fees[0];
+        fees["RExTOKEN_ETH"] = _fees[1];
+    }
+
+    function updateFee(uint24[] memory _fees) external nonReentrant {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        fees["ETH_USD"] = _fees[0];
+        fees["RExTOKEN_ETH"] = _fees[1];
     }
 
     // Function to handle deposits to the staking strategies and allocate points

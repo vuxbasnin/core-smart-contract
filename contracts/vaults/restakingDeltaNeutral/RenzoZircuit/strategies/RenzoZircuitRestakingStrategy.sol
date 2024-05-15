@@ -16,9 +16,10 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
         address _swapAddress,
         address _usdcAddress,
         address _ethAddress,
-        address[] memory _restakingPoolAddresses
+        address[] memory _restakingPoolAddresses,
+        uint24[] memory _fees
     ) internal {
-        super.ethRestaking_Initialize(_restakingToken, _swapAddress, _usdcAddress, _ethAddress);
+        super.ethRestaking_Initialize(_restakingToken, _swapAddress, _usdcAddress, _ethAddress, _fees);
 
         renzoRestakeProxy = IRenzoRestakeProxy(_restakingPoolAddresses[0]);
         zircuitRestakeProxy = IZircuitRestakeProxy(_restakingPoolAddresses[1]);

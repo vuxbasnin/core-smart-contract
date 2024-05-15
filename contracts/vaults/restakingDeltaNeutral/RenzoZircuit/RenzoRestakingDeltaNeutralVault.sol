@@ -20,14 +20,15 @@ contract RenzoRestakingDeltaNeutralVault is
         address _perpDexConnector,
         address _restakingToken,
         uint256 _initialPPS,
-        address[] memory _stakingProxies
+        address[] memory _stakingProxies,
+        uint24[] memory _fees
     )
         RenzoZircuitRestakingStrategy()
         PerpDexStrategy()
         BaseDeltaNeutralVault(_usdc, _initialPPS)
     {
         _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
-        ethRestaking_Initialize(_restakingToken, _swapProxy, _usdc, _weth, _stakingProxies);
+        ethRestaking_Initialize(_restakingToken, _swapProxy, _usdc, _weth, _stakingProxies, _fees);
         perpDex_Initialize(_perpDexAddress, _perpDexReceiver, _usdc, _perpDexConnector);
         initialPPS = _initialPPS;
     }

@@ -95,7 +95,8 @@ describe("RockOnyxDeltaNeutralVault", function () {
       aevoConnectorAddress,
       ezEthAddress,
       BigInt(1 * 1e6),
-      [renzoDepositAddress, zircuitDepositAddress]
+      [renzoDepositAddress, zircuitDepositAddress],
+      [500, 100]
     );
     await renzoRestakingDNVault.waitForDeployment();
 
