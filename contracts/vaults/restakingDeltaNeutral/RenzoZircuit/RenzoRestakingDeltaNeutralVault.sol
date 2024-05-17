@@ -79,7 +79,7 @@ contract RenzoRestakingDeltaNeutralVault is
     function transferAssetToEthSpot(uint256 amount) internal {
         require(amount <= getTotalPerpDexAssets(), "INVALID_TRANSFER_AMOUNT");
         uint256 depositAmount = acquireFundsFromPerpDex(amount);
-        depositToPerpDexStrategy(depositAmount);
+        depositToRestakingStrategy(depositAmount);
     }
 
     /**

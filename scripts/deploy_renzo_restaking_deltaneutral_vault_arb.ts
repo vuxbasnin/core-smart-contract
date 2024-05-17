@@ -52,16 +52,20 @@ async function deployRenzoRestakingDeltaNeutralVault() {
       "RenzoRestakingDeltaNeutralVault"
     );
 
+    // const uniswapContract = await uniSwapContract.getAddress();
+    const uniswapContract = "0x29253ff85A972D6582CaCC16424744705C5BAF3b";
+
     renzoRestakingDNVault = await renzoRestakingDeltaNeutralVault.deploy(
       usdcAddress,
       wethAddress,
-      await uniSwapContract.getAddress(),
+      uniswapContract,
       aevoAddress,
       aevoRecipientAddress,
       aevoConnectorAddress,
       ezEthAddress,
       BigInt(1 * 1e6),
-      [renzoDepositAddress, zircuitDepositAddress]
+      [renzoDepositAddress, zircuitDepositAddress],
+      [500, 100]
     );
     await renzoRestakingDNVault.waitForDeployment();
 
@@ -81,8 +85,8 @@ async function main() {
 
   // MAINNET
   
-  await deployUniSwapContract();
-
+  // await deployUniSwapContract();
+  
   await deployRenzoRestakingDeltaNeutralVault();
 }
 
