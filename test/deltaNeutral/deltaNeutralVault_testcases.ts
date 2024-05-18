@@ -14,7 +14,7 @@ import {
   USDC_IMPERSONATED_SIGNER_ADDRESS,
   USDCE_IMPERSONATED_SIGNER_ADDRESS,
   ETH_PRICE_FEED_ADDRESS,
-  WSTETH__ETH_PRICE_FEED_ADDRESS,
+  WSTETH_ETH_PRICE_FEED_ADDRESS,
   USDC_PRICE_FEED_ADDRESS,
   ARB_PRICE_FEED_ADDRESS,
 } from "../../constants";
@@ -53,7 +53,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
   const aevoAddress = AEVO_ADDRESS[chainId];
   const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId];
   const ethPriceFeed = ETH_PRICE_FEED_ADDRESS[chainId];
-  const wsteth_ethPriceFeed = WSTETH__ETH_PRICE_FEED_ADDRESS[chainId];
+  const wsteth_ethPriceFeed = WSTETH_ETH_PRICE_FEED_ADDRESS[chainId];
   const usdcePriceFeed = USDC_PRICE_FEED_ADDRESS[chainId];
 
   let priceConsumerContract: Contracts.PriceConsumer;

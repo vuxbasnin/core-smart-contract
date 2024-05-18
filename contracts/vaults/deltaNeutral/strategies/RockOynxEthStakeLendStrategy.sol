@@ -32,8 +32,21 @@ contract RockOynxEthStakeLendStrategy is
     /************************************************
      *  EVENTS
      ***********************************************/
-    event PositionOpened(uint256 inputUsdAmount, uint256 ethPrice, uint256 wethAmount, uint256 wstEthAmount);
-    event PositionClosed(uint256 usdAmount, uint256 wstEthEthPrice, uint256 ethToUsdPrice, uint256 ethAmountFomUsd, uint256 wstEthAmountFomEth, uint256 convertedWEthAmount, uint256 convertedUsdAmount);
+    event PositionOpened(
+        uint256 inputUsdAmount,
+        uint256 ethPrice,
+        uint256 wethAmount,
+        uint256 wstEthAmount
+    );
+    event PositionClosed(
+        uint256 usdAmount,
+        uint256 wstEthEthPrice,
+        uint256 ethToUsdPrice,
+        uint256 ethAmountFomUsd,
+        uint256 wstEthAmountFomEth,
+        uint256 convertedWEthAmount,
+        uint256 convertedUsdAmount
+    );
 
     constructor() {
         ethStakeLendState = EthStakeLendState(0, 0);
@@ -53,14 +66,20 @@ contract RockOynxEthStakeLendStrategy is
         wstEth = _wstEth;
     }
 
-
     function openPosition(uint256 ethAmount) external nonReentrant {
         _auth(ROCK_ONYX_OPTIONS_TRADER_ROLE);
 
         uint256 ethPrice = ethSwapProxy.getPriceOf(weth, usd);
-        uint256 usdcAmount = ethAmount * ethPrice / 1e18;
-        require(usdcAmount < ethStakeLendState.unAllocatedBalance, "INVALID_REACH_UNALLOCATED_BALANCE");
-        uint256 usedUsdAmount = _ethStakeLendSwapToWithOutput(usd, ethAmount, weth);
+        uint256 usdcAmount = (ethAmount * ethPrice) / 1e18;
+        require(
+            usdcAmount < ethStakeLendState.unAllocatedBalance,
+            "INVALID_REACH_UNALLOCATED_BALANCE"
+        );
+        uint256 usedUsdAmount = _ethStakeLendSwapToWithOutput(
+            usd,
+            ethAmount,
+            weth
+        );
         ethStakeLendState.unAllocatedBalance -= usedUsdAmount;
         uint256 wstEthAmount = _ethStakeLendSwapTo(weth, ethAmount, wstEth);
         emit PositionOpened(usdcAmount, ethPrice, ethAmount, wstEthAmount);
@@ -70,24 +89,43 @@ contract RockOynxEthStakeLendStrategy is
         _auth(ROCK_ONYX_OPTIONS_TRADER_ROLE);
 
         uint256 ethPrice = ethSwapProxy.getPriceOf(weth, usd);
-        uint256 usdcAmount = ethAmount * ethPrice / 1e18;
+        uint256 usdcAmount = (ethAmount * ethPrice) / 1e18;
         uint256 ethWstEthPrice = ethSwapProxy.getPriceOf(weth, wstEth);
-        uint256 wstEthAmount = ethAmount * ethWstEthPrice / 1e18;
-        if(IERC20(wstEth).balanceOf(address(this)) < wstEthAmount * ( 1e4 + ethSwapProxy.getSlippage())  / 1e4) {
-          ethAmount = _ethStakeLendSwapTo(wstEth, IERC20(wstEth).balanceOf(address(this)), weth);
-        }else{
-          _ethStakeLendSwapToWithOutput(wstEth, ethAmount, weth);    
+        uint256 wstEthAmount = (ethAmount * ethWstEthPrice) / 1e18;
+        if (
+            IERC20(wstEth).balanceOf(address(this)) <
+            (wstEthAmount * (1e4 + ethSwapProxy.getSlippage())) / 1e4
+        ) {
+            ethAmount = _ethStakeLendSwapTo(
+                wstEth,
+                IERC20(wstEth).balanceOf(address(this)),
+                weth
+            );
+        } else {
+            _ethStakeLendSwapToWithOutput(wstEth, ethAmount, weth);
         }
         uint256 receivedUsdAmount = _ethStakeLendSwapTo(weth, ethAmount, usd);
         ethStakeLendState.unAllocatedBalance += receivedUsdAmount;
-        emit PositionClosed(usdcAmount, ethWstEthPrice, ethPrice, ethAmount, wstEthAmount, ethAmount, receivedUsdAmount);
+        emit PositionClosed(
+            usdcAmount,
+            ethWstEthPrice,
+            ethPrice,
+            ethAmount,
+            wstEthAmount,
+            ethAmount,
+            receivedUsdAmount
+        );
     }
 
     /**
      * @dev Retrieves the current state of the Ethereum liquidity position.
      * @return The current state of the Ethereum liquidity position.
      */
-    function getEthStakeLendState() external view returns (EthStakeLendState memory) {
+    function getEthStakeLendState()
+        external
+        view
+        returns (EthStakeLendState memory)
+    {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         return ethStakeLendState;
@@ -103,15 +141,20 @@ contract RockOynxEthStakeLendStrategy is
     }
 
     function syncEthStakeLendBalance() internal {
-        uint256 wstEthPrice = ethSwapProxy.getPriceOf(wstEth, weth) * ethSwapProxy.getPriceOf(weth, usd) / 1e18;
-        ethStakeLendState.totalBalance = 
-            ethStakeLendState.unAllocatedBalance + IERC20(wstEth).balanceOf(address(this)) * wstEthPrice / 1e18;
+        uint256 wstEthPrice = (ethSwapProxy.getPriceOf(wstEth, weth) *
+            ethSwapProxy.getPriceOf(weth, usd)) / 1e18;
+        ethStakeLendState.totalBalance =
+            ethStakeLendState.unAllocatedBalance +
+            (IERC20(wstEth).balanceOf(address(this)) * wstEthPrice) /
+            1e18;
     }
 
-    function acquireFundsFromEthStakeLend(uint256 amount) internal returns (uint256) {
+    function acquireFundsFromEthStakeLend(
+        uint256 amount
+    ) internal returns (uint256) {
         uint256 unAllocatedBalance = ethStakeLendState.unAllocatedBalance;
         require(amount <= unAllocatedBalance, "INVALID_ACQUIRE_AMOUNT");
-        
+
         ethStakeLendState.unAllocatedBalance -= amount;
         ethStakeLendState.totalBalance -= amount;
         return amount;
@@ -121,7 +164,7 @@ contract RockOynxEthStakeLendStrategy is
      * @dev Calculates the total assets in the Ethereum liquidity position.
      * @return The total value of assets in the Ethereum liquidity position.
      */
-    function getTotalEthStakeLendAssets() internal view returns (uint256) { 
+    function getTotalEthStakeLendAssets() internal view returns (uint256) {
         return ethStakeLendState.totalBalance;
     }
     /**
@@ -153,7 +196,16 @@ contract RockOynxEthStakeLendStrategy is
         uint256 amountOut,
         address tokenOut
     ) private returns (uint256 amountIn) {
-        IERC20(tokenIn).approve(address(ethSwapProxy), IERC20(tokenIn).balanceOf(address(this)));
-        return ethSwapProxy.swapToWithOutput(address(this), tokenIn, amountOut, tokenOut);
+        IERC20(tokenIn).approve(
+            address(ethSwapProxy),
+            IERC20(tokenIn).balanceOf(address(this))
+        );
+        return
+            ethSwapProxy.swapToWithOutput(
+                address(this),
+                tokenIn,
+                amountOut,
+                tokenOut
+            );
     }
 }

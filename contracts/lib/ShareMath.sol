@@ -2,7 +2,6 @@
 pragma solidity ^0.8.19;
 
 library ShareMath {
-
     uint256 internal constant PLACEHOLDER_UINT = 1;
 
     function assetToShares(
@@ -12,7 +11,7 @@ library ShareMath {
     ) internal pure returns (uint256) {
         require(assetPerShare > PLACEHOLDER_UINT, "Invalid assetPerShare");
 
-        return assetAmount * (10**decimals) / (assetPerShare);
+        return (assetAmount * (10 ** decimals)) / (assetPerShare);
     }
 
     function sharesToAsset(
@@ -22,7 +21,7 @@ library ShareMath {
     ) internal pure returns (uint256) {
         require(assetPerShare > PLACEHOLDER_UINT, "Invalid assetPerShare");
 
-        return shares * (assetPerShare) / (10**decimals);
+        return (shares * (assetPerShare)) / (10 ** decimals);
     }
 
     function pricePerShare(
@@ -31,6 +30,8 @@ library ShareMath {
         uint256 decimals
     ) internal pure returns (uint256) {
         return
-            totalShares > 0 ? totalAssets * (10**decimals) / totalShares : (10**decimals);
+            totalShares > 0
+                ? (totalAssets * (10 ** decimals)) / totalShares
+                : (10 ** decimals);
     }
 }

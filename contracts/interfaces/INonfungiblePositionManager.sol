@@ -20,7 +20,12 @@ interface INonfungiblePositionManager {
     )
         external
         payable
-        returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1);
+        returns (
+            uint256 tokenId,
+            uint128 liquidity,
+            uint256 amount0,
+            uint256 amount1
+        );
 
     struct IncreaseLiquidityParams {
         uint256 tokenId;
@@ -33,7 +38,10 @@ interface INonfungiblePositionManager {
 
     function increaseLiquidity(
         IncreaseLiquidityParams calldata params
-    ) external payable returns (uint128 liquidity, uint256 amount0, uint256 amount1);
+    )
+        external
+        payable
+        returns (uint128 liquidity, uint256 amount0, uint256 amount1);
 
     struct DecreaseLiquidityParams {
         uint tokenId;
@@ -58,7 +66,9 @@ interface INonfungiblePositionManager {
         CollectParams calldata params
     ) external payable returns (uint256 amount0, uint256 amount1);
 
-    function positions(uint256 tokenId)
+    function positions(
+        uint256 tokenId
+    )
         external
         view
         returns (
@@ -75,5 +85,5 @@ interface INonfungiblePositionManager {
             uint128 tokensOwed1
         );
 
-    function ownerOf(uint256 tokenId) external view returns(address);
+    function ownerOf(uint256 tokenId) external view returns (address);
 }

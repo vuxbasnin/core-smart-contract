@@ -10,11 +10,18 @@ contract BaseProxy is ReentrancyGuard, RockOnyxAccessControl {
         _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
     }
 
-    function withdraw(address receiver, address tokenAddress, uint256 amount) public nonReentrant {
+    function withdraw(
+        address receiver,
+        address tokenAddress,
+        uint256 amount
+    ) public nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
         IERC20 token = IERC20(tokenAddress);
         require(amount > 0, "Amount must be greater than 0");
-        require(token.balanceOf(address(this)) >= amount, "Insufficient balance in contract");
+        require(
+            token.balanceOf(address(this)) >= amount,
+            "Insufficient balance in contract"
+        );
 
         bool sent = token.transfer(receiver, amount);
         require(sent, "Token transfer failed");

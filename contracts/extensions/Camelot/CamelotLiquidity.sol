@@ -11,13 +11,17 @@ import "../../interfaces/IVenderLiquidityProxy.sol";
 import "../../lib/BaseProxy.sol";
 import "hardhat/console.sol";
 
-contract CamelotLiquidity is IVenderLiquidityProxy, RockOnyxAccessControl, ReentrancyGuard {
+contract CamelotLiquidity is
+    IVenderLiquidityProxy,
+    RockOnyxAccessControl,
+    ReentrancyGuard
+{
     INonfungiblePositionManager private nonfungiblePositionManager;
     address ethWstEthPoolAddress;
 
     /************************************************
-    *  EVENTS
-    ***********************************************/
+     *  EVENTS
+     ***********************************************/
     event VendorPositionMintted(
         uint256 owner,
         uint128 liquidity,
@@ -33,7 +37,9 @@ contract CamelotLiquidity is IVenderLiquidityProxy, RockOnyxAccessControl, Reent
     );
 
     constructor(address _nonfungiblePositionManager) {
-        nonfungiblePositionManager = INonfungiblePositionManager(_nonfungiblePositionManager);
+        nonfungiblePositionManager = INonfungiblePositionManager(
+            _nonfungiblePositionManager
+        );
     }
 
     function mintPosition(
@@ -43,12 +49,27 @@ contract CamelotLiquidity is IVenderLiquidityProxy, RockOnyxAccessControl, Reent
         uint256 amount0ToAdd,
         address token1,
         uint256 amount1ToAdd
-    ) external nonReentrant returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) {
+    )
+        external
+        nonReentrant
+        returns (
+            uint256 tokenId,
+            uint128 liquidity,
+            uint256 amount0,
+            uint256 amount1
+        )
+    {
         IERC20(token0).transferFrom(msg.sender, address(this), amount0ToAdd);
         IERC20(token1).transferFrom(msg.sender, address(this), amount1ToAdd);
 
-        IERC20(token0).approve(address(nonfungiblePositionManager), amount0ToAdd);
-        IERC20(token1).approve(address(nonfungiblePositionManager), amount1ToAdd);
+        IERC20(token0).approve(
+            address(nonfungiblePositionManager),
+            amount0ToAdd
+        );
+        IERC20(token1).approve(
+            address(nonfungiblePositionManager),
+            amount1ToAdd
+        );
 
         INonfungiblePositionManager.MintParams
             memory params = INonfungiblePositionManager.MintParams({
@@ -64,7 +85,8 @@ contract CamelotLiquidity is IVenderLiquidityProxy, RockOnyxAccessControl, Reent
                 deadline: block.timestamp
             });
 
-        (tokenId, liquidity, amount0, amount1) = nonfungiblePositionManager.mint(params);
+        (tokenId, liquidity, amount0, amount1) = nonfungiblePositionManager
+            .mint(params);
 
         if (amount0 < amount0ToAdd) {
             IERC20(token0).approve(address(nonfungiblePositionManager), 0);
@@ -87,26 +109,41 @@ contract CamelotLiquidity is IVenderLiquidityProxy, RockOnyxAccessControl, Reent
         uint amount0ToAdd,
         address token1,
         uint amount1ToAdd
-    ) external nonReentrant returns (uint128 liquidity, uint256 amount0, uint256 amount1) {
-        require(nonfungiblePositionManager.ownerOf(tokenId) == msg.sender, "INVALID_TOKENID_OWNER");
-        
+    )
+        external
+        nonReentrant
+        returns (uint128 liquidity, uint256 amount0, uint256 amount1)
+    {
+        require(
+            nonfungiblePositionManager.ownerOf(tokenId) == msg.sender,
+            "INVALID_TOKENID_OWNER"
+        );
+
         IERC20(token0).transferFrom(msg.sender, address(this), amount0ToAdd);
         IERC20(token1).transferFrom(msg.sender, address(this), amount1ToAdd);
-        
-        IERC20(token0).approve(address(nonfungiblePositionManager), amount0ToAdd);
-        IERC20(token1).approve(address(nonfungiblePositionManager), amount1ToAdd);
+
+        IERC20(token0).approve(
+            address(nonfungiblePositionManager),
+            amount0ToAdd
+        );
+        IERC20(token1).approve(
+            address(nonfungiblePositionManager),
+            amount1ToAdd
+        );
 
         INonfungiblePositionManager.IncreaseLiquidityParams
-            memory params = INonfungiblePositionManager.IncreaseLiquidityParams({
-                tokenId: tokenId,
-                amount0Desired: amount0ToAdd,
-                amount1Desired: amount1ToAdd,
-                amount0Min: 0,
-                amount1Min: 0,
-                deadline: block.timestamp
-            });
+            memory params = INonfungiblePositionManager
+                .IncreaseLiquidityParams({
+                    tokenId: tokenId,
+                    amount0Desired: amount0ToAdd,
+                    amount1Desired: amount1ToAdd,
+                    amount0Min: 0,
+                    amount1Min: 0,
+                    deadline: block.timestamp
+                });
 
-        (liquidity, amount0, amount1) = nonfungiblePositionManager.increaseLiquidity(params);
+        (liquidity, amount0, amount1) = nonfungiblePositionManager
+            .increaseLiquidity(params);
 
         if (amount0 < amount0ToAdd) {
             IERC20(token0).approve(address(nonfungiblePositionManager), 0);
@@ -123,27 +160,39 @@ contract CamelotLiquidity is IVenderLiquidityProxy, RockOnyxAccessControl, Reent
         return (liquidity, amount0, amount1);
     }
 
-    function decreaseLiquidityCurrentRange(uint256 tokenId, uint128 liquidity) external returns (uint256 amount0, uint256 amount1) {
-        require(nonfungiblePositionManager.ownerOf(tokenId) == msg.sender, "INVALID_TOKENID_OWNER");
+    function decreaseLiquidityCurrentRange(
+        uint256 tokenId,
+        uint128 liquidity
+    ) external returns (uint256 amount0, uint256 amount1) {
+        require(
+            nonfungiblePositionManager.ownerOf(tokenId) == msg.sender,
+            "INVALID_TOKENID_OWNER"
+        );
 
-        INonfungiblePositionManager.DecreaseLiquidityParams memory params =
-            INonfungiblePositionManager.DecreaseLiquidityParams({
-                tokenId: tokenId,
-                liquidity: liquidity,
-                amount0Min: 0,
-                amount1Min: 0,
-                deadline: block.timestamp
-            });
+        INonfungiblePositionManager.DecreaseLiquidityParams
+            memory params = INonfungiblePositionManager
+                .DecreaseLiquidityParams({
+                    tokenId: tokenId,
+                    liquidity: liquidity,
+                    amount0Min: 0,
+                    amount1Min: 0,
+                    deadline: block.timestamp
+                });
 
-        (amount0, amount1) = nonfungiblePositionManager.decreaseLiquidity(params);
+        (amount0, amount1) = nonfungiblePositionManager.decreaseLiquidity(
+            params
+        );
     }
 
     function collectAllFees(
         uint tokenId
     ) external nonReentrant returns (uint256 amount0, uint256 amount1) {
-        require(nonfungiblePositionManager.ownerOf(tokenId) == msg.sender, "INVALID_TOKENID_OWNER");
+        require(
+            nonfungiblePositionManager.ownerOf(tokenId) == msg.sender,
+            "INVALID_TOKENID_OWNER"
+        );
 
-        INonfungiblePositionManager.CollectParams 
+        INonfungiblePositionManager.CollectParams
             memory params = INonfungiblePositionManager.CollectParams({
                 tokenId: tokenId,
                 recipient: msg.sender,

@@ -1,4 +1,4 @@
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import * as Contracts from "../typechain-types";
 import { Signer } from "ethers";
 
@@ -9,35 +9,39 @@ import {
   USDCE_ADDRESS,
   WSTETH_ADDRESS,
   ARB_ADDRESS,
+  EZETH_ADDRESS,
   ETH_PRICE_FEED_ADDRESS,
-  WSTETH__ETH_PRICE_FEED_ADDRESS,
-  USDC_PRICE_FEED_ADDRESS,
+  WSTETH_ETH_PRICE_FEED_ADDRESS,
+  EZTETH_ETH_PRICE_FEED_ADDRESS,
+  USDCE_USDC_PRICE_FEED_ADDRESS,
   ARB_PRICE_FEED_ADDRESS
 } from "../constants";
 
-// const chainId: CHAINID = network.config.chainId;
-const chainId: CHAINID = 42161;
+const chainId: CHAINID = network.config.chainId as CHAINID;
+// const chainId: CHAINID = 42161;
 
 let deployer: Signer;
 let contract: Contracts.PriceConsumer;
 
 const wethAddress = WETH_ADDRESS[chainId] ?? '';
 const wstethAddress = WSTETH_ADDRESS[chainId] ?? '';
+const ezEthAddress = EZETH_ADDRESS[chainId] || "";
 const usdceAddress = USDCE_ADDRESS[chainId] ?? '';
 const usdcAddress = USDC_ADDRESS[chainId] ?? '';
 const arbAddress = ARB_ADDRESS[chainId] ?? '';
 
 const ethPriceFeed = ETH_PRICE_FEED_ADDRESS[chainId] ?? '';
-const steth_ethPriceFeed = WSTETH__ETH_PRICE_FEED_ADDRESS[chainId] ?? '';
-const usdcePriceFeed = USDC_PRICE_FEED_ADDRESS[chainId] ?? '';
+const steth_ethPriceFeed = WSTETH_ETH_PRICE_FEED_ADDRESS[chainId] ?? '';
+const usdcePriceFeed = USDCE_USDC_PRICE_FEED_ADDRESS[chainId] ?? '';
 const arbPriceFeed = ARB_PRICE_FEED_ADDRESS[chainId] ?? '';
+const ezEth_EthPriceFeed = EZTETH_ETH_PRICE_FEED_ADDRESS[chainId] ?? '';
 
 async function deployPriceConsumerContract() {
     const factory = await ethers.getContractFactory("PriceConsumer");
     contract = await factory.deploy(
-      [wethAddress, wstethAddress, usdceAddress, arbAddress],
-      [usdcAddress, wethAddress, usdcAddress, usdcAddress],
-      [ethPriceFeed, steth_ethPriceFeed, usdcePriceFeed, arbPriceFeed]
+      [wethAddress, wstethAddress, usdceAddress, arbAddress, ezEthAddress],
+      [usdcAddress, wethAddress, usdcAddress, usdcAddress, wethAddress],
+      [ethPriceFeed, steth_ethPriceFeed, usdcePriceFeed, arbPriceFeed, ezEth_EthPriceFeed]
     );
     await contract.waitForDeployment();
 

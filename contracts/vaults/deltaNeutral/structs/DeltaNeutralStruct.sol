@@ -41,7 +41,7 @@ struct EthStakeLendState {
     uint256 totalBalance;
 }
 
-struct DeltaNeutralAllocateRatio{
+struct DeltaNeutralAllocateRatio {
     uint256 ethStakeLendRatio;
     uint256 perpDexRatio;
     uint8 decimals;

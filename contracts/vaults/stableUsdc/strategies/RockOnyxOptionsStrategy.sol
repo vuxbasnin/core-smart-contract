@@ -62,12 +62,14 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
      * @notice Acquires withdrawal funds in USDC options
      * @param withdrawUsdOptionsAmount The requested withdrawal amount in USDC
      */
-    function acquireWithdrawalFundsUsdOptions(uint256 withdrawUsdOptionsAmount) internal returns (uint256) {
+    function acquireWithdrawalFundsUsdOptions(
+        uint256 withdrawUsdOptionsAmount
+    ) internal returns (uint256) {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        
-        if(optionsState.unAllocatedUsdcBalance > withdrawUsdOptionsAmount){
+
+        if (optionsState.unAllocatedUsdcBalance > withdrawUsdOptionsAmount) {
             optionsState.unAllocatedUsdcBalance -= withdrawUsdOptionsAmount;
-            return withdrawUsdOptionsAmount;    
+            return withdrawUsdOptionsAmount;
         }
 
         uint256 unAllocatedUsdcBalance = optionsState.unAllocatedUsdcBalance;
@@ -91,7 +93,11 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         );
 
         optionsState.allocatedUsdcBalance += amount;
-        emit OptionsVendorDeposited(address(optionsVendor), optionsReceiver, amount);
+        emit OptionsVendorDeposited(
+            address(optionsVendor),
+            optionsReceiver,
+            amount
+        );
     }
 
     /**
@@ -104,12 +110,19 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         require(amount > 0, "INVALID_WITHDRAW_AMOUNT");
         _auth(ROCK_ONYX_OPTIONS_TRADER_ROLE);
 
-        IERC20(vaultAssetAddress).safeTransferFrom(msg.sender, address(this), amount);
+        IERC20(vaultAssetAddress).safeTransferFrom(
+            msg.sender,
+            address(this),
+            amount
+        );
 
         optionsState.unAllocatedUsdcBalance += amount;
         optionsState.allocatedUsdcBalance -= amount;
 
-        emit OptionsBalanceChanged(optionsState.unAllocatedUsdcBalance, optionsState.unAllocatedUsdcBalance + amount);
+        emit OptionsBalanceChanged(
+            optionsState.unAllocatedUsdcBalance,
+            optionsState.unAllocatedUsdcBalance + amount
+        );
     }
 
     /**
@@ -120,9 +133,9 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
 
         if (optionsState.unsettledProfit > 0) {
             optionsState.allocatedUsdcBalance += optionsState.unsettledProfit;
-            optionsState.unsettledProfit = 0;    
+            optionsState.unsettledProfit = 0;
         }
-        
+
         if (optionsState.unsettledLoss > 0) {
             optionsState.allocatedUsdcBalance -= optionsState.unsettledLoss;
             optionsState.unsettledLoss = 0;
@@ -136,8 +149,13 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     function updateProfitFromVendor(uint256 balance) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        optionsState.unsettledProfit = balance > optionsState.allocatedUsdcBalance ? balance - optionsState.allocatedUsdcBalance : 0;
-        optionsState.unsettledLoss = balance < optionsState.allocatedUsdcBalance ? optionsState.allocatedUsdcBalance - balance : 0;
+        optionsState.unsettledProfit = balance >
+            optionsState.allocatedUsdcBalance
+            ? balance - optionsState.allocatedUsdcBalance
+            : 0;
+        optionsState.unsettledLoss = balance < optionsState.allocatedUsdcBalance
+            ? optionsState.allocatedUsdcBalance - balance
+            : 0;
     }
 
     /**
@@ -153,7 +171,7 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
      * @return The total options amount.
      */
     function getTotalOptionsAmount() internal view returns (uint256) {
-        return 
+        return
             optionsState.unAllocatedUsdcBalance +
             optionsState.allocatedUsdcBalance;
     }
