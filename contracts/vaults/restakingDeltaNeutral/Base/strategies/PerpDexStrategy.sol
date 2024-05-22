@@ -26,10 +26,6 @@ contract PerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
     event PerpDexBalanceChanged(uint256 unAllocatedBalance, uint256 amountWithdrawn);
     event RequestFundsPerpDex(uint256 acquireAmount);
 
-    constructor() {
-        perpDexState = PerpDexState(0, 0);
-    }
-
     function perpDex_Initialize(
         address _perpDexAddress,
         address _perpDexReceiver,
@@ -38,6 +34,7 @@ contract PerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
     ) internal {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
+        perpDexState = PerpDexState(0, 0);
         perpDexAsset = _usdc;
         AEVO = IAevo(_perpDexAddress);
         perpDexReceiver = _perpDexReceiver;
