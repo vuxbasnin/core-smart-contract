@@ -2,12 +2,12 @@
 pragma solidity ^0.8.19;
 
 import "../Base/BaseDeltaNeutralVault.sol";
-import "./strategies/RenzoZircuitRestakingStrategy.sol";
+import "./strategies/KelpZircuitRestakingStrategy.sol";
 import "./../Base/strategies/PerpDexStrategy.sol";
 import "./../structs/RestakingDeltaNeutralStruct.sol";
 
-contract RenzoRestakingDeltaNeutralVault is
-    RenzoZircuitRestakingStrategy,
+contract KelpRestakingDeltaNeutralVault is
+    KelpZircuitRestakingStrategy,
     PerpDexStrategy,
     BaseDeltaNeutralVault
 {
@@ -25,7 +25,7 @@ contract RenzoRestakingDeltaNeutralVault is
         address[] memory _token1s,
         uint24[] memory _fees
     )
-        RenzoZircuitRestakingStrategy()
+        KelpZircuitRestakingStrategy()
         PerpDexStrategy()
         BaseDeltaNeutralVault()
     {

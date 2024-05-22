@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-import "../../../../interfaces/IRenzoRestakeProxy.sol";
+import "../../../../interfaces/IKelpRestakeProxy.sol";
 import "../../../../interfaces/IZircuitRestakeProxy.sol";
 import "./../../Base/strategies/BaseRestakingStrategy.sol";
 import "./../../Base/BaseSwapVault.sol";
 
-contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
-    IWithdrawRestakingPool private renzoWithdrawRestakingPool;
-    IRenzoRestakeProxy private renzoRestakeProxy;
+contract KelpZircuitRestakingStrategy is BaseRestakingStrategy {
+    IWithdrawRestakingPool private kelpWithdrawRestakingPool;
+    IKelpRestakeProxy private kelpRestakeProxy;
     IZircuitRestakeProxy private zircuitRestakeProxy;
     IERC20 private stakingToken;
 
@@ -24,7 +24,7 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
     ) internal {
         super.ethRestaking_Initialize(_restakingToken, _usdcAddress, _ethAddress, _swapAddress, _token0s, _token1s, _fees);
 
-        renzoRestakeProxy = IRenzoRestakeProxy(_restakingPoolAddresses[0]);
+        kelpRestakeProxy = IKelpRestakeProxy(_restakingPoolAddresses[0]);
         zircuitRestakeProxy = IZircuitRestakeProxy(_restakingPoolAddresses[1]);
     }
 
@@ -39,10 +39,9 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
     }
 
     function depositToRestakingProxy(uint256 ethAmount) internal override {
-
-        if(address(renzoRestakeProxy) != address(0)) {
-            ethToken.approve(address(renzoRestakeProxy), ethAmount);            
-            renzoRestakeProxy.deposit(address(ethToken), ethAmount);
+        if(address(kelpRestakeProxy) != address(0)) {
+            ethToken.approve(address(kelpRestakeProxy), ethAmount);            
+            kelpRestakeProxy.deposit(address(ethToken), ethAmount);
         }else{
             ethToken.approve(address(swapProxy), ethAmount);
             swapProxy.swapTo(
@@ -61,16 +60,15 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
     }
 
     function withdrawFromRestakingProxy(uint256 ethAmount) internal override {
-        
         uint256 stakingTokenAmount = swapProxy.getAmountInMaximum(address(restakingToken), address(ethToken), ethAmount);
 
         if(address(zircuitRestakeProxy) != address(0)){
             zircuitRestakeProxy.withdraw(address(restakingToken), stakingTokenAmount);
         }
 
-        if(address(renzoRestakeProxy) != address(0) && address(renzoWithdrawRestakingPool) != address(0)) {
+        if(address(kelpRestakeProxy) != address(0) && address(kelpWithdrawRestakingPool) != address(0)) {
             restakingToken.approve(address(swapProxy), stakingTokenAmount);
-            renzoWithdrawRestakingPool.withdraw(address(restakingToken), stakingTokenAmount);
+            kelpWithdrawRestakingPool.withdraw(address(restakingToken), stakingTokenAmount);
         }else{
             restakingToken.approve(address(swapProxy), stakingTokenAmount);
             swapProxy.swapToWithOutput(
@@ -84,9 +82,9 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
         
     }
 
-    function updateRenzoWithdrawRestaking(address _renzoWithdrawRestakingPoolAddress) external nonReentrant {
+    function updateKelpWithdrawRestaking(address _kelpWithdrawRestakingPoolAddress) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        renzoWithdrawRestakingPool = IWithdrawRestakingPool(_renzoWithdrawRestakingPoolAddress);
+        kelpWithdrawRestakingPool = IWithdrawRestakingPool(_kelpWithdrawRestakingPoolAddress);
     }
 }
