@@ -18,7 +18,7 @@ import * as Contracts from "../typechain-types";
 const chainId: CHAINID = network.config.chainId ?? 0;
 console.log("chainId ",chainId);
 
-const aevoRecipientAddress = "0x0aDf03D895617a95F317892125Cd6fb9ca3b99c1";
+const aevoRecipientAddress = "0xF4aF6504462E5D574EDBdB161F1063633CCa0274";
 const usdcAddress = USDC_ADDRESS[chainId] || "";
 const wethAddress = WETH_ADDRESS[chainId] || "";
 const ezEthAddress = EZETH_ADDRESS[chainId] || "";
