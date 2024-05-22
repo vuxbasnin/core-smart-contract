@@ -134,7 +134,6 @@ contract RockOnyxDeltaNeutralVault is
             pps,
             vaultParams.decimals
         );
-        vaultState.totalShares -= shares;
 
         emit RequestFunds(
             msg.sender,
@@ -249,6 +248,8 @@ contract RockOnyxDeltaNeutralVault is
         vaultState.withdrawPoolAmount -= withdrawAmount;
         withdrawals[msg.sender].withdrawAmount -= withdrawAmount;
         withdrawals[msg.sender].shares -= shares;
+        vaultState.totalShares -= shares;
+
         IERC20(vaultParams.asset).safeTransfer(msg.sender, withdrawAmount);
         emit Withdrawn(
             msg.sender,
@@ -455,6 +456,7 @@ contract RockOnyxDeltaNeutralVault is
     function _totalValueLocked() private view returns (uint256) {
         return
             vaultState.pendingDepositAmount +
+            vaultState.withdrawPoolAmount +
             getTotalEthStakeLendAssets() +
             getTotalPerpDexAssets();
     }

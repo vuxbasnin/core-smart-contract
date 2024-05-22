@@ -140,8 +140,7 @@ abstract contract BaseDeltaNeutralVault is
         withdrawals[msg.sender].profit = withdrawProfit;
         withdrawals[msg.sender].performanceFee = performanceFee;
         withdrawals[msg.sender].withdrawAmount = ShareMath.sharesToAsset(shares, pps, vaultParams.decimals);
-        vaultState.totalShares -= shares;
-
+        
         emit RequestFunds(msg.sender, withdrawals[msg.sender].withdrawAmount, shares);
 
         // migration
@@ -194,6 +193,7 @@ abstract contract BaseDeltaNeutralVault is
         vaultState.withdrawPoolAmount -= withdrawAmount;
         withdrawals[msg.sender].withdrawAmount -= withdrawAmount;
         withdrawals[msg.sender].shares -= shares;
+        vaultState.totalShares -= shares;
         IERC20(vaultParams.asset).safeTransfer(msg.sender, withdrawAmount);
         emit Withdrawn(msg.sender, withdrawAmount, withdrawals[msg.sender].shares);
         // migration
