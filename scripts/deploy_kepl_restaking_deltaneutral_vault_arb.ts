@@ -9,9 +9,9 @@ import {
     DAI_ADDRESS,
     AEVO_ADDRESS,
     AEVO_CONNECTOR_ADDRESS,
-    EZETH_ADDRESS,
+    RSETH_ADDRESS,
     ZIRCUIT_DEPOSIT_ADDRESS,
-    RENZO_DEPOSIT_ADDRESS,
+    KELP_DEPOSIT_ADDRESS,
     UNI_SWAP_ADDRESS
 } from "../constants";
 import * as Contracts from "../typechain-types";
@@ -24,39 +24,39 @@ const usdcAddress = USDC_ADDRESS[chainId] || "";
 const usdtAddress = USDT_ADDRESS[chainId] || "";
 const daiAddress = DAI_ADDRESS[chainId] || "";
 const wethAddress = WETH_ADDRESS[chainId] || "";
-const ezEthAddress = EZETH_ADDRESS[chainId] || "";
+const rsEthAddress = RSETH_ADDRESS[chainId] || "";
 const uniSwapAddress = UNI_SWAP_ADDRESS[chainId] || "";
 const aevoAddress = AEVO_ADDRESS[chainId] || "";
 const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId] || "";
-const renzoDepositAddress = RENZO_DEPOSIT_ADDRESS[chainId] || "";
+const kelpDepositAddress = KELP_DEPOSIT_ADDRESS[chainId] || "";
 const zircuitDepositAddress = ZIRCUIT_DEPOSIT_ADDRESS[chainId] || "";
   
-let renzoRestakingDNVault: Contracts.RenzoRestakingDeltaNeutralVault;
+let kelpRestakingDNVault: Contracts.KelpRestakingDeltaNeutralVault;
 
-async function deployRenzoRestakingDeltaNeutralVault() {
-    const renzoRestakingDeltaNeutralVault = await ethers.getContractFactory(
-      "RenzoRestakingDeltaNeutralVault"
+async function deployKelpRestakingDeltaNeutralVault() {
+    const kelpRestakingDeltaNeutralVault = await ethers.getContractFactory(
+      "KelpRestakingDeltaNeutralVault"
     );
 
-    renzoRestakingDNVault = await renzoRestakingDeltaNeutralVault.deploy(
+    kelpRestakingDNVault = await kelpRestakingDeltaNeutralVault.deploy(
       usdcAddress,
       wethAddress,
       aevoAddress,
       aevoRecipientAddress,
       aevoConnectorAddress,
-      ezEthAddress,
+      rsEthAddress,
       BigInt(1 * 1e6),
-      [renzoDepositAddress, zircuitDepositAddress],
+      [kelpDepositAddress, zircuitDepositAddress],
       uniSwapAddress,
-      [usdcAddress, ezEthAddress, usdtAddress, daiAddress],
+      [usdcAddress, rsEthAddress, usdtAddress, daiAddress],
       [wethAddress, wethAddress, usdcAddress, usdtAddress],
       [500, 100, 100, 100]
     );
-    await renzoRestakingDNVault.waitForDeployment();
+    await kelpRestakingDNVault.waitForDeployment();
 
     console.log(
-      "deploy rockOnyxDeltaNeutralVaultContract successfully: %s",
-      await renzoRestakingDNVault.getAddress()
+      "deploy kelpRestakingDNVault successfully: %s",
+      await kelpRestakingDNVault.getAddress()
     );
 }
 
@@ -69,7 +69,7 @@ async function main() {
   );
 
   // MAINNET 
-  await deployRenzoRestakingDeltaNeutralVault();
+  await deployKelpRestakingDeltaNeutralVault();
 }
 
 main()

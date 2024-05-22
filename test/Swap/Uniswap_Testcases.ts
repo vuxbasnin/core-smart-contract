@@ -8,7 +8,7 @@ import {
   SWAP_ROUTER_ADDRESS,
   ETH_PRICE_FEED_ADDRESS,
   EZETH_ADDRESS,
-  EZTETH_ETH_PRICE_FEED_ADDRESS,
+  EZETH_ETH_PRICE_FEED_ADDRESS,
 } from "../../constants";
 import { network } from "hardhat";
 import {
@@ -31,7 +31,7 @@ describe("UniSwap", function () {
   const swapRouterAddress = SWAP_ROUTER_ADDRESS[chainId];
 
   const ethPriceFeed = ETH_PRICE_FEED_ADDRESS[chainId];
-  const ezEth_ethPriceFeed = EZTETH_ETH_PRICE_FEED_ADDRESS[chainId];
+  const ezEth_ethPriceFeed = EZETH_ETH_PRICE_FEED_ADDRESS[chainId];
 
   let uniswapContract: Contracts.UniSwap;
 

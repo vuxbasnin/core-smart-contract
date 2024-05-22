@@ -93,7 +93,6 @@ abstract contract BaseRestakingStrategy is BaseSwapVault, RockOnyxAccessControl,
     function withdrawFromRestakingProxy(uint256 ethAmount) internal virtual nonReentrant {}
 
     function syncRestakingBalance() internal virtual{
-
         uint256 ethAmount = restakingToken.balanceOf(address(this)) * swapProxy.getPriceOf(address(restakingToken), address(ethToken)) / 1e18;
         restakingStratState.totalBalance = restakingStratState.unAllocatedBalance + ethAmount * swapProxy.getPriceOf(address(restakingToken), address(ethToken)) / 1e18;
     }
