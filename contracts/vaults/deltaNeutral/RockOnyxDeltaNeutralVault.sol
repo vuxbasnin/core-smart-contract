@@ -405,7 +405,7 @@ contract RockOnyxDeltaNeutralVault is
     function rebalanceAssetToEthStakeLend(uint256 amount) private {
         require(amount <= getTotalPerpDexAssets(), "INVALID_PERPDEX_ASSETS");
         uint256 depositToEthStakeLendAmount = acquireFundsFromPerpDex(amount);
-        depositToPerpDexStrategy(depositToEthStakeLendAmount);
+        depositToEthStakeLendStrategy(depositToEthStakeLendAmount);
     }
 
     /**

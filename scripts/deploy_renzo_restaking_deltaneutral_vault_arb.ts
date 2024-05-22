@@ -38,6 +38,9 @@ async function deployRenzoRestakingDeltaNeutralVault() {
       "RenzoRestakingDeltaNeutralVault"
     );
 
+    // const uniswapContract = await uniSwapContract.getAddress();
+    const uniswapContract = "0x29253ff85A972D6582CaCC16424744705C5BAF3b";
+
     renzoRestakingDNVault = await renzoRestakingDeltaNeutralVault.deploy(
       usdcAddress,
       wethAddress,

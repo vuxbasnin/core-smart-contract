@@ -39,7 +39,6 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
     }
 
     function depositToRestakingProxy(uint256 ethAmount) internal override {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
 
         if(address(renzoRestakeProxy) != address(0)) {
             ethToken.approve(address(renzoRestakeProxy), ethAmount);            
@@ -62,7 +61,6 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
     }
 
     function withdrawFromRestakingProxy(uint256 ethAmount) internal override {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
         
         uint256 stakingTokenAmount = swapProxy.getAmountInMaximum(address(restakingToken), address(ethToken), ethAmount);
 

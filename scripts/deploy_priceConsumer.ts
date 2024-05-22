@@ -1,4 +1,4 @@
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import * as Contracts from "../typechain-types";
 import { Signer } from "ethers";
 
@@ -13,12 +13,12 @@ import {
   ETH_PRICE_FEED_ADDRESS,
   WSTETH_ETH_PRICE_FEED_ADDRESS,
   EZTETH_ETH_PRICE_FEED_ADDRESS,
-  USDC_PRICE_FEED_ADDRESS,
+  USDCE_USDC_PRICE_FEED_ADDRESS,
   ARB_PRICE_FEED_ADDRESS
 } from "../constants";
 
-// const chainId: CHAINID = network.config.chainId;
-const chainId: CHAINID = 42161;
+const chainId: CHAINID = network.config.chainId as CHAINID;
+// const chainId: CHAINID = 42161;
 
 let deployer: Signer;
 let contract: Contracts.PriceConsumer;
@@ -32,7 +32,7 @@ const arbAddress = ARB_ADDRESS[chainId] ?? '';
 
 const ethPriceFeed = ETH_PRICE_FEED_ADDRESS[chainId] ?? '';
 const steth_ethPriceFeed = WSTETH_ETH_PRICE_FEED_ADDRESS[chainId] ?? '';
-const usdcePriceFeed = USDC_PRICE_FEED_ADDRESS[chainId] ?? '';
+const usdcePriceFeed = USDCE_USDC_PRICE_FEED_ADDRESS[chainId] ?? '';
 const arbPriceFeed = ARB_PRICE_FEED_ADDRESS[chainId] ?? '';
 const ezEth_EthPriceFeed = EZTETH_ETH_PRICE_FEED_ADDRESS[chainId] ?? '';
 
