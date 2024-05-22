@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 import "../../../../interfaces/IRenzoRestakeProxy.sol";
 import "../../../../interfaces/IZircuitRestakeProxy.sol";
 import "./../../Base/strategies/BaseRestakingStrategy.sol";
+import "./../../Base/BaseSwapVault.sol";
 
 contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
     IWithdrawRestakingPool private renzoWithdrawRestakingPool;
@@ -13,13 +14,15 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
 
     function ethRestaking_Initialize(
         address _restakingToken,
-        address _swapAddress,
         address _usdcAddress,
         address _ethAddress,
         address[] memory _restakingPoolAddresses,
+        address _swapAddress,
+        address[] memory _token0s,
+        address[] memory _token1s,
         uint24[] memory _fees
     ) internal {
-        super.ethRestaking_Initialize(_restakingToken, _swapAddress, _usdcAddress, _ethAddress, _fees);
+        super.ethRestaking_Initialize(_restakingToken, _usdcAddress, _ethAddress, _swapAddress, _token0s, _token1s, _fees);
 
         renzoRestakeProxy = IRenzoRestakeProxy(_restakingPoolAddresses[0]);
         zircuitRestakeProxy = IZircuitRestakeProxy(_restakingPoolAddresses[1]);
@@ -48,7 +51,7 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
                 address(ethToken),
                 ethAmount,
                 address(restakingToken),
-                fees["RExTOKEN_ETH"]
+                getFee(address(ethToken), address(restakingToken))
             );
         }
         
@@ -77,7 +80,7 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
                 address(restakingToken),
                 ethAmount,
                 address(ethToken),
-                fees["RExTOKEN_ETH"]
+                getFee(address(restakingToken), address(ethToken))
             );
         }
         

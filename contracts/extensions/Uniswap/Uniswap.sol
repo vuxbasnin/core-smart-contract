@@ -28,7 +28,6 @@ contract UniSwap is BaseSwap {
             amountIn
         );
         TransferHelper.safeApprove(tokenIn, address(swapRouter), amountIn);
-        
         uint256 amountOutMinimum = getAmountOutMinimum(
             tokenIn,
             tokenOut,
@@ -47,8 +46,7 @@ contract UniSwap is BaseSwap {
                 sqrtPriceLimitX96: 0
             });
 
-        uint256 amoutOut = swapRouter.exactInputSingle(params);
-        return amoutOut;
+        return swapRouter.exactInputSingle(params);
     }
 
     function swapToWithOutput(

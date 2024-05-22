@@ -5,13 +5,14 @@ import {
     CHAINID,
     WETH_ADDRESS,
     USDC_ADDRESS,
-    UNISWAP_ROUTER_ADDRESS,
+    USDT_ADDRESS,
+    DAI_ADDRESS,
     AEVO_ADDRESS,
     AEVO_CONNECTOR_ADDRESS,
     EZETH_ADDRESS,
     ZIRCUIT_DEPOSIT_ADDRESS,
     RENZO_DEPOSIT_ADDRESS,
-    PRICE_CONSUMER_ADDRESS
+    UNI_SWAP_ADDRESS
 } from "../constants";
 import * as Contracts from "../typechain-types";
 
@@ -20,32 +21,17 @@ console.log("chainId ",chainId);
 
 const aevoRecipientAddress = "0x0aDf03D895617a95F317892125Cd6fb9ca3b99c1";
 const usdcAddress = USDC_ADDRESS[chainId] || "";
+const usdtAddress = USDT_ADDRESS[chainId] || "";
+const daiAddress = DAI_ADDRESS[chainId] || "";
 const wethAddress = WETH_ADDRESS[chainId] || "";
 const ezEthAddress = EZETH_ADDRESS[chainId] || "";
-const swapRouterAddress = UNISWAP_ROUTER_ADDRESS[chainId] || "";
+const uniSwapAddress = UNI_SWAP_ADDRESS[chainId] || "";
 const aevoAddress = AEVO_ADDRESS[chainId] || "";
 const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId] || "";
 const renzoDepositAddress = RENZO_DEPOSIT_ADDRESS[chainId] || "";
 const zircuitDepositAddress = ZIRCUIT_DEPOSIT_ADDRESS[chainId] || "";
   
 let renzoRestakingDNVault: Contracts.RenzoRestakingDeltaNeutralVault;
-let uniSwapContract: Contracts.UniSwap;
-
-async function deployUniSwapContract() {
-    const priceConsumerAddress = PRICE_CONSUMER_ADDRESS[chainId] || "";
-
-    const factory = await ethers.getContractFactory("UniSwap");
-    uniSwapContract = await factory.deploy(
-      swapRouterAddress,
-      priceConsumerAddress
-    );
-    await uniSwapContract.waitForDeployment();
-
-    console.log(
-      "Deployed uni swap contract at address %s",
-      await uniSwapContract.getAddress()
-    );
-}
 
 async function deployRenzoRestakingDeltaNeutralVault() {
     const renzoRestakingDeltaNeutralVault = await ethers.getContractFactory(
@@ -55,13 +41,16 @@ async function deployRenzoRestakingDeltaNeutralVault() {
     renzoRestakingDNVault = await renzoRestakingDeltaNeutralVault.deploy(
       usdcAddress,
       wethAddress,
-      await uniSwapContract.getAddress(),
       aevoAddress,
       aevoRecipientAddress,
       aevoConnectorAddress,
       ezEthAddress,
       BigInt(1 * 1e6),
-      [renzoDepositAddress, zircuitDepositAddress]
+      [renzoDepositAddress, zircuitDepositAddress],
+      uniSwapAddress,
+      [usdcAddress, ezEthAddress, usdtAddress, daiAddress],
+      [wethAddress, wethAddress, usdcAddress, usdtAddress],
+      [500, 100, 100, 100]
     );
     await renzoRestakingDNVault.waitForDeployment();
 
@@ -79,10 +68,7 @@ async function main() {
     await deployer.getAddress()
   );
 
-  // MAINNET
-  
-  await deployUniSwapContract();
-
+  // MAINNET 
   await deployRenzoRestakingDeltaNeutralVault();
 }
 

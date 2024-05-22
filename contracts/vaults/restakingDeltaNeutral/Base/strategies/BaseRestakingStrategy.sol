@@ -8,17 +8,15 @@ import "../../../../interfaces/IWithdrawRestakingPool.sol";
 import "../../../../interfaces/IWithdrawRestakingPool.sol";
 import "../../../../extensions/RockOnyxAccessControl.sol";
 import "../../../../extensions/Uniswap/Uniswap.sol";
+import "./../../Base/BaseSwapVault.sol";
 import "../../structs/RestakingDeltaNeutralStruct.sol";
 import "hardhat/console.sol";
 
-abstract contract BaseRestakingStrategy is RockOnyxAccessControl, ReentrancyGuard {
+abstract contract BaseRestakingStrategy is BaseSwapVault, RockOnyxAccessControl, ReentrancyGuard {
     IERC20 usdcToken;
     IERC20 ethToken;
     IERC20 internal restakingToken;
-    UniSwap internal swapProxy;
     address[] internal restakingPoolAddresses;
-    // [ETH_USD, EZETH_ETH]
-    mapping(string => uint24) internal fees;
     EthRestakingState internal restakingStratState;
 
     // Events
@@ -28,30 +26,21 @@ abstract contract BaseRestakingStrategy is RockOnyxAccessControl, ReentrancyGuar
     event PositionOpened(uint256 usdcAmount, uint256 ethAmount);
     event PositionClosed(uint256 ethAmount, uint256 usdcAmount);
 
-    constructor() {}
-
     function ethRestaking_Initialize(
         address _restakingToken,
-        address _swapAddress,
         address _usdcAddress,
         address _ethAddress,
+        address _swapAddress,
+        address[] memory _token0s,
+        address[] memory _token1s,
         uint24[] memory _fees
     ) internal virtual {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        swapProxy = UniSwap(_swapAddress);
         usdcToken = IERC20(_usdcAddress);
         ethToken = IERC20(_ethAddress);
         restakingToken = IERC20(_restakingToken);
-        fees["ETH_USD"] = _fees[0];
-        fees["RExTOKEN_ETH"] = _fees[1];
-    }
-
-    function updateFee(uint24[] memory _fees) external nonReentrant {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
-
-        fees["ETH_USD"] = _fees[0];
-        fees["RExTOKEN_ETH"] = _fees[1];
+        baseSwapVault_Initialize(_swapAddress, _token0s, _token1s, _fees);
     }
 
     // Function to handle deposits to the staking strategies and allocate points
@@ -73,7 +62,7 @@ abstract contract BaseRestakingStrategy is RockOnyxAccessControl, ReentrancyGuar
             address(usdcToken),
             ethAmount,
             address(ethToken), 
-            fees["ETH_USD"]
+            getFee(address(usdcToken), address(ethToken))
         );
 
         restakingStratState.unAllocatedBalance -= usedUsdAmount;
@@ -92,7 +81,7 @@ abstract contract BaseRestakingStrategy is RockOnyxAccessControl, ReentrancyGuar
             address(ethToken),
             ethAmount,
             address(usdcToken),
-            fees["ETH_USD"]
+            getFee(address(usdcToken), address(ethToken))
         );
 
         restakingStratState.unAllocatedBalance += actualUsdcAmount;

@@ -2,14 +2,18 @@
 pragma solidity ^0.8.19;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "../../../extensions/RockOnyxAccessControl.sol";
+import "../../../extensions/Uniswap/Uniswap.sol";
 import "../../../lib/ShareMath.sol";
+import "../Base/BaseSwapVault.sol";
 import "./../structs/RestakingDeltaNeutralStruct.sol";
 import "hardhat/console.sol";
 
 abstract contract BaseDeltaNeutralVault is
+    BaseSwapVault,
     RockOnyxAccessControl,
     ReentrancyGuard
 {
@@ -34,27 +38,74 @@ abstract contract BaseDeltaNeutralVault is
     event FeeRatesUpdated(uint256 performanceFee, uint256 managementFee);
     event RequestFunds(address indexed account, uint256 withdrawalAmount, uint256 shares);
 
-    constructor(address _usdc, uint256 _initialPPS) {
-        _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
+    function baseDeltaNeutralVault_Initialize(
+        address _usdc, 
+        uint256 _initialPPS,
+        address _swapAddress,
+        address[] memory _token0s,
+        address[] memory _token1s,
+        uint24[] memory _fees
+    ) internal virtual {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
         vaultParams = VaultParams(6, _usdc, 5_000_000, 1_000_000 * 1e6, 10, 1);
         vaultState = VaultState(0, 0, 0, 0, 0);
         initialPPS = _initialPPS;
+        baseSwapVault_Initialize(_swapAddress, _token0s, _token1s, _fees);
+    }
+
+    function updateFee(
+        address[] memory _token0s,
+        address[] memory _token1s,
+        uint24[] memory _fees) external nonReentrant {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        for (uint8 i = 0; i < _fees.length; i++) {
+            fees[_token0s[i]][_token1s[i]] = _fees[i];
+        }
     }
 
     /**
      * @notice Mints the vault shares for depositor
-     * @param amount is the amount of `asset` deposited
+     * @param amount is the amount of `dasset` deposited
      */
-    function deposit(uint256 amount) external nonReentrant {
+    function deposit(uint256 amount, address tokenIn, address transitToken) external nonReentrant {
         require(paused == false, "VAULT_PAUSED");
-        require(amount >= vaultParams.minimumSupply, "MIN_AMOUNT");
-        require(_totalValueLocked() + amount <= vaultParams.cap, "EXCEED_CAP");
+        uint256 assetDepositAmount = (tokenIn == vaultParams.asset) ? amount : 
+                            (tokenIn == transitToken) ? amount * swapProxy.getPriceOf(tokenIn, vaultParams.asset) / 10 ** (ERC20(tokenIn).decimals()) :
+                            (amount * swapProxy.getPriceOf(tokenIn, transitToken) * swapProxy.getPriceOf(transitToken, vaultParams.asset)) / 10 ** (ERC20(tokenIn).decimals() + (ERC20(transitToken).decimals()));
 
-        IERC20(vaultParams.asset).safeTransferFrom(msg.sender, address(this), amount);
-        uint256 shares = _issueShares(amount);
+        require(assetDepositAmount >= vaultParams.minimumSupply, "MIN_AMOUNT");
+        require(_totalValueLocked() + assetDepositAmount <= vaultParams.cap, "EXCEED_CAP");
+
+        IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amount);
+        uint256 assetAmount = amount;
+        if(tokenIn != vaultParams.asset){
+            if(tokenIn != transitToken){
+                IERC20(tokenIn).approve(address(swapProxy), assetAmount);
+                assetAmount = swapProxy.swapTo(
+                    address(this),
+                    address(tokenIn),
+                    amount,
+                    address(transitToken),
+                    getFee(address(tokenIn), address(transitToken))
+                );
+            }
+
+            IERC20(transitToken).approve(address(swapProxy), amount);
+            assetAmount = swapProxy.swapTo(
+                address(this),
+                address(transitToken),
+                assetAmount,
+                address(vaultParams.asset),
+                getFee(address(transitToken), address(vaultParams.asset))
+            );
+        }
+
+        uint256 shares = _issueShares(assetAmount);
         depositReceipts[msg.sender].shares += shares;
-        depositReceipts[msg.sender].depositAmount += amount;
-        vaultState.pendingDepositAmount += amount;
+        depositReceipts[msg.sender].depositAmount += assetAmount;
+        vaultState.pendingDepositAmount += assetAmount;
         vaultState.totalShares += shares;
 
         allocateAssets();
