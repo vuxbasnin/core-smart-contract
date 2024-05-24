@@ -51,8 +51,6 @@ contract KelpZircuitRestakingStrategy is BaseRestakingStrategy {
 
             // ethereum
             kelpRestakeProxy.depositETH{value: ethAmount}(0, refId);
-
-            console.log("restakingToken balance %s", restakingToken.balanceOf(address(this)));
         }else{
             ethToken.approve(address(swapProxy), ethAmount);
             swapProxy.swapTo(
@@ -67,9 +65,9 @@ contract KelpZircuitRestakingStrategy is BaseRestakingStrategy {
         if(address(zircuitRestakeProxy) != address(0)){
             restakingToken.approve(address(zircuitRestakeProxy), restakingToken.balanceOf(address(this)));
             zircuitRestakeProxy.depositFor(address(restakingToken), address(this), restakingToken.balanceOf(address(this)));
-            console.log("restakingToken balance %s", restakingToken.balanceOf(address(this)));
         }
     }
+
     function withdrawFromRestakingProxy(uint256 ethAmount) internal override {
         
         uint256 stakingTokenAmount = swapProxy.getAmountInMaximum(address(restakingToken), address(ethToken), ethAmount);
@@ -91,7 +89,6 @@ contract KelpZircuitRestakingStrategy is BaseRestakingStrategy {
                 getFee(address(restakingToken), address(ethToken))
             );
         }
-        
     }
 
     function updateKelpWithdrawRestaking(address _kelpWithdrawRestakingPoolAddress) external nonReentrant {

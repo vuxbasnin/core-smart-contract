@@ -44,7 +44,6 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
         if(address(renzoRestakeProxy) != address(0)) {
             IWETH(address(ethToken)).withdraw(ethAmount);
 
-            console.log("depositToRestakingProxy %s");
             // arbitrum
             renzoRestakeProxy.depositETH{value: ethAmount}(0, block.timestamp + 10 seconds);
 
@@ -64,7 +63,6 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
         if(address(zircuitRestakeProxy) != address(0)){
             restakingToken.approve(address(zircuitRestakeProxy), restakingToken.balanceOf(address(this)));
             zircuitRestakeProxy.depositFor(address(restakingToken), address(this), restakingToken.balanceOf(address(this)));
-            console.log("restakingToken balance %s", restakingToken.balanceOf(address(this)));
         }
     }
 
@@ -74,7 +72,6 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
 
         if(address(zircuitRestakeProxy) != address(0)){
             zircuitRestakeProxy.withdraw(address(restakingToken), stakingTokenAmount);
-            console.log("restakingToken balance %s", restakingToken.balanceOf(address(this)));
         }
 
         if(address(renzoRestakeProxy) != address(0) && address(renzoWithdrawRestakingPool) != address(0)) {
@@ -90,7 +87,6 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
                 getFee(address(restakingToken), address(ethToken))
             );
         }
-        
     }
 
     function updateRenzoWithdrawRestaking(address _renzoWithdrawRestakingPoolAddress) external nonReentrant {
