@@ -3,6 +3,7 @@ pragma solidity ^0.8.19;
 
 import "../../../../interfaces/IRenzoRestakeProxy.sol";
 import "../../../../interfaces/IZircuitRestakeProxy.sol";
+import "../../../../interfaces/IWETH.sol";
 import "./../../Base/strategies/BaseRestakingStrategy.sol";
 import "./../../Base/BaseSwapVault.sol";
 
@@ -11,6 +12,7 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
     IRenzoRestakeProxy private renzoRestakeProxy;
     IZircuitRestakeProxy private zircuitRestakeProxy;
     IERC20 private stakingToken;
+    string private refId;
 
     function ethRestaking_Initialize(
         address _restakingToken,
@@ -39,10 +41,15 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
     }
 
     function depositToRestakingProxy(uint256 ethAmount) internal override {
-
         if(address(renzoRestakeProxy) != address(0)) {
-            ethToken.approve(address(renzoRestakeProxy), ethAmount);            
-            renzoRestakeProxy.deposit(address(ethToken), ethAmount);
+            IWETH(address(ethToken)).withdraw(ethAmount);
+
+            console.log("depositToRestakingProxy %s");
+            // arbitrum
+            renzoRestakeProxy.depositETH{value: ethAmount}(0, block.timestamp + 10 seconds);
+
+            // ethereum
+            // renzoRestakeProxy.depositETH{value: ethAmount}();
         }else{
             ethToken.approve(address(swapProxy), ethAmount);
             swapProxy.swapTo(
@@ -57,6 +64,7 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
         if(address(zircuitRestakeProxy) != address(0)){
             restakingToken.approve(address(zircuitRestakeProxy), restakingToken.balanceOf(address(this)));
             zircuitRestakeProxy.depositFor(address(restakingToken), address(this), restakingToken.balanceOf(address(this)));
+            console.log("restakingToken balance %s", restakingToken.balanceOf(address(this)));
         }
     }
 
@@ -66,6 +74,7 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
 
         if(address(zircuitRestakeProxy) != address(0)){
             zircuitRestakeProxy.withdraw(address(restakingToken), stakingTokenAmount);
+            console.log("restakingToken balance %s", restakingToken.balanceOf(address(this)));
         }
 
         if(address(renzoRestakeProxy) != address(0) && address(renzoWithdrawRestakingPool) != address(0)) {

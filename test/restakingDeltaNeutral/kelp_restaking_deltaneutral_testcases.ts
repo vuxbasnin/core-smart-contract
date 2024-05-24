@@ -21,6 +21,7 @@ import {
   RSETH_ADDRESS,
   ZIRCUIT_DEPOSIT_ADDRESS,
   KELP_DEPOSIT_ADDRESS,
+  KELP_DEPOSIT_REF_ID
 } from "../../constants";
 import { BigNumberish, Signer } from "ethers";
 
@@ -30,7 +31,7 @@ let aevoRecipientAddress : string;
 
 const PRECISION = 2 * 1e6;
 
-describe("RockOnyxDeltaNeutralVault", function () {
+describe("KelpDaRestakingDeltaNeutralVault", function () {
   let admin: Signer,
     user1: Signer,
     user2: Signer,
@@ -42,23 +43,24 @@ describe("RockOnyxDeltaNeutralVault", function () {
   let usdt: Contracts.IERC20;
   let dai: Contracts.IERC20;
 
-  const usdcImpersonatedSigner = USDC_IMPERSONATED_SIGNER_ADDRESS[chainId];
-  const usdtImpersonatedSigner = USDT_IMPERSONATED_SIGNER_ADDRESS[chainId];
-  const daiImpersonatedSigner = DAI_IMPERSONATED_SIGNER_ADDRESS[chainId];
+  const usdcImpersonatedSigner = USDC_IMPERSONATED_SIGNER_ADDRESS[chainId] || "";
+  const usdtImpersonatedSigner = USDT_IMPERSONATED_SIGNER_ADDRESS[chainId] || "";
+  const daiImpersonatedSigner = DAI_IMPERSONATED_SIGNER_ADDRESS[chainId] || "";
   const usdcAddress = USDC_ADDRESS[chainId] || "";
   const usdtAddress = USDT_ADDRESS[chainId] || "";
   const daiAddress = DAI_ADDRESS[chainId] || "";
   const wethAddress = WETH_ADDRESS[chainId] || "";
   const rsEthAddress = RSETH_ADDRESS[chainId] || "";
-  const swapRouterAddress = UNISWAP_ROUTER_ADDRESS[chainId];
-  const aevoAddress = AEVO_ADDRESS[chainId];
-  const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId];
-  const ethPriceFeed = ETH_PRICE_FEED_ADDRESS[chainId];
-  const rsEth_EthPriceFeed = RSETH_ETH_PRICE_FEED_ADDRESS[chainId];
-  const usdtPriceFeed = USDT_PRICE_FEED_ADDRESS[chainId];
-  const daiPriceFeed = DAI_PRICE_FEED_ADDRESS[chainId];
-  const kelpDepositAddress = KELP_DEPOSIT_ADDRESS[chainId];
-  const zircuitDepositAddress = ZIRCUIT_DEPOSIT_ADDRESS[chainId];
+  const swapRouterAddress = UNISWAP_ROUTER_ADDRESS[chainId] || "";
+  const aevoAddress = AEVO_ADDRESS[chainId] || "";
+  const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId] || "";
+  const ethPriceFeed = ETH_PRICE_FEED_ADDRESS[chainId] || "";
+  const rsEth_EthPriceFeed = RSETH_ETH_PRICE_FEED_ADDRESS[chainId] || "";
+  const usdtPriceFeed = USDT_PRICE_FEED_ADDRESS[chainId] || "";
+  const daiPriceFeed = DAI_PRICE_FEED_ADDRESS[chainId] || "";
+  const kelpDepositAddress = KELP_DEPOSIT_ADDRESS[chainId] || "";
+  const kelpDepositRefId = KELP_DEPOSIT_REF_ID[chainId] || "";
+  const zircuitDepositAddress = ZIRCUIT_DEPOSIT_ADDRESS[chainId] || "";
 
   let priceConsumerContract: Contracts.PriceConsumer;
   let uniSwapContract: Contracts.UniSwap;
@@ -107,10 +109,14 @@ describe("RockOnyxDeltaNeutralVault", function () {
       rsEthAddress,
       BigInt(1 * 1e6),
       [kelpDepositAddress, zircuitDepositAddress],
+      kelpDepositRefId,
       await uniSwapContract.getAddress(),
       [usdcAddress, rsEthAddress, usdtAddress, daiAddress],
       [wethAddress, wethAddress, usdcAddress, usdtAddress],
-      [500, 100, 100, 100]
+      // ethereum
+      [500, 500, 100, 100]
+      // arbitrum
+      // [500, 100, 100, 100]
     );
     await kelpRestakingDNVault.waitForDeployment();
 
@@ -171,7 +177,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     await transferForUser(dai, daiSigner, user2, BigInt(100000 * 1e18));
   });
 
-  it("user deposit -> withdraw", async function () {
+  it.skip("user deposit -> withdraw", async function () {
     console.log(
       "-------------deposit to restakingDeltaNeutralVault---------------"
     );
@@ -236,7 +242,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     await openPositionTx.wait();
   });
 
-  it.skip("user deposit -> deposit to perp dex -> open position -> close position -> sync restaking balance -> withdraw", async function () {
+  it("user deposit -> deposit to perp dex -> open position -> close position -> sync restaking balance -> withdraw", async function () {
     console.log(
       "-------------deposit to restakingDeltaNeutralVault---------------"
     );
@@ -362,5 +368,31 @@ describe("RockOnyxDeltaNeutralVault", function () {
     expect(user1BalanceAfterWithdraw).to.approximately(user2Balance + BigInt(95 * 1e6), PRECISION);
     totalValueLock = await logAndReturnTotalValueLock();
     expect(totalValueLock).to.approximately(200 * 1e6, PRECISION);
+  });
+
+  it.skip("migration, export and import data to new delta neutral vault - 213900665", async function () {
+    const contractAdmin = await ethers.getImpersonatedSigner("0xc8cdE2212bf6fDfDE6bcC7df0A3f0f4B82fDd240");
+    const contract = await ethers.getContractAt("KelpRestakingDeltaNeutralVault", "0x140F9F419D8E0BF13f29FC7A10ff9c487a3237C0");
+
+    let getUserStateTx = await contract
+    .connect(contractAdmin)
+    .getUserVaultState();
+    console.log(getUserStateTx);
+
+    // console.log("-------------export old vault state---------------");
+    // let exportVaultStateTx = await contract
+    // .connect(contractAdmin)
+    // .exportVaultState();
+    // console.log(exportVaultStateTx);
+
+    // console.log("Deposit ");
+    // exportVaultStateTx[0].forEach((element: any[][]) => {
+    //   console.log(element);
+    // });
+
+    // console.log("withdraw ");
+    // exportVaultStateTx[1].forEach((element: any[][]) => {
+    //   console.log(element);
+    // });
   });
 });

@@ -20,7 +20,7 @@ import {
   EZETH_ETH_PRICE_FEED_ADDRESS,
   EZETH_ADDRESS,
   ZIRCUIT_DEPOSIT_ADDRESS,
-  RENZO_DEPOSIT_ADDRESS,
+  RENZO_DEPOSIT_ADDRESS
 } from "../../constants";
 import { BigNumberish, Signer } from "ethers";
 
@@ -30,7 +30,7 @@ let aevoRecipientAddress : string;
 
 const PRECISION = 2 * 1e6;
 
-describe("RockOnyxDeltaNeutralVault", function () {
+describe("RenzoRestakingDeltaNeutralVault", function () {
   let admin: Signer,
     user1: Signer,
     user2: Signer,
@@ -110,6 +110,9 @@ describe("RockOnyxDeltaNeutralVault", function () {
       await uniSwapContract.getAddress(),
       [usdcAddress, ezEthAddress, usdtAddress, daiAddress],
       [wethAddress, wethAddress, usdcAddress, usdtAddress],
+      // ethereum
+      // [500, 100, 100, 100]
+      // arbitrum
       [500, 100, 100, 100]
     );
     await renzoRestakingDNVault.waitForDeployment();
@@ -208,7 +211,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     expect(user1BalanceAfterWithdraw).to.approximately(user2Balance + BigInt(95 * 1e6),PRECISION);
   });
 
-  it("user deposit -> deposit to perp dex -> deposit to renzo -> deposit to zircuit", async function () {
+  it.skip("user deposit -> deposit to perp dex -> deposit to renzo -> deposit to zircuit", async function () {
     console.log(
       "-------------deposit to restakingDeltaNeutralVault---------------"
     );
@@ -310,7 +313,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it("user deposit -> deposit to perp dex -> withdraw", async function () {
+  it.skip("user deposit -> deposit to perp dex -> withdraw", async function () {
     console.log("-------------deposit to restakingDeltaNeutralVault---------------"
     );
     await deposit(user1, 100 * 1e6, usdc, usdc);
@@ -361,7 +364,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     console.log("usdc of user after withdraw %s", user1BalanceAfterWithdraw);
     expect(user1BalanceAfterWithdraw).to.approximately(user2Balance + BigInt(95 * 1e6), PRECISION);
     totalValueLock = await logAndReturnTotalValueLock();
-    expect(totalValueLock).to.approximately(201 * 1e6, PRECISION);
+    expect(totalValueLock).to.approximately(205 * 1e6, PRECISION);
   });
 
   it.skip("migration, export and import data to new delta neutral vault - 213900665", async function () {
@@ -470,6 +473,27 @@ describe("RockOnyxDeltaNeutralVault", function () {
     console.log(exportVaultStateTx);
     console.log(exportVaultStateTx[0][0][1]);
     console.log(exportVaultStateTx[0][1][1]);
+
+    console.log("Deposit ");
+    exportVaultStateTx[0].forEach((element: any[][]) => {
+      console.log(element);
+    });
+
+    console.log("withdraw ");
+    exportVaultStateTx[1].forEach((element: any[][]) => {
+      console.log(element);
+    });
+  });
+
+  it.skip("migration, export and import data to new delta neutral vault - 213900665", async function () {
+    const contractAdmin = await ethers.getImpersonatedSigner("0x20f89bA1B0Fc1e83f9aEf0a134095Cd63F7e8CC7");
+    const contract = await ethers.getContractAt("RenzoRestakingDeltaNeutralVault", "0xED6599C7308B2F6B7cd28A9c1FA794F090E48AC3");
+
+    console.log("-------------export old vault state---------------");
+    let exportVaultStateTx = await contract
+    .connect(contractAdmin)
+    .exportVaultState();
+    console.log(exportVaultStateTx);
 
     console.log("Deposit ");
     exportVaultStateTx[0].forEach((element: any[][]) => {

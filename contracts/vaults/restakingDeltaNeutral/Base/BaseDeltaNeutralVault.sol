@@ -65,6 +65,8 @@ abstract contract BaseDeltaNeutralVault is
         }
     }
 
+    receive() external payable {}
+
     /**
      * @notice Mints the vault shares for depositor
      * @param amount is the amount of `dasset` deposited

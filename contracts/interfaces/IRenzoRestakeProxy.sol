@@ -2,5 +2,6 @@
 pragma solidity ^0.8.19;
 
 interface IRenzoRestakeProxy {
-    function deposit(address collateralToken, uint256 amount) external;
+    function depositETH() external payable ;
+    function depositETH(uint256 minOut, uint256 deadline) external payable;
 }
