@@ -107,20 +107,14 @@ abstract contract BaseDeltaNeutralVault is
             ? (withdrawProfit * vaultParams.performanceFeeRate) / 1e14
             : 0;
 
-        depositReceipt.depositAmount -=
-            (depositReceipt.depositAmount * shares) /
-            depositReceipt.shares;
+        depositReceipt.depositAmount -= (depositReceipt.depositAmount * shares) / depositReceipt.shares;
         depositReceipt.shares -= shares;
 
         withdrawals[msg.sender].shares = shares;
         withdrawals[msg.sender].pps = pps;
         withdrawals[msg.sender].profit = withdrawProfit;
         withdrawals[msg.sender].performanceFee = performanceFee;
-        withdrawals[msg.sender].withdrawAmount = ShareMath.sharesToAsset(
-            shares,
-            pps,
-            vaultParams.decimals
-        );
+        withdrawals[msg.sender].withdrawAmount = ShareMath.sharesToAsset(shares, pps, vaultParams.decimals);
         vaultState.totalShares -= shares;
 
         emit RequestFunds(

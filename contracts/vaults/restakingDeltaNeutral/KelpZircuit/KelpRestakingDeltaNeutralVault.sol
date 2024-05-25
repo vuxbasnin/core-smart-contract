@@ -20,6 +20,7 @@ contract KelpRestakingDeltaNeutralVault is
         address _restakingToken,
         uint256 _initialPPS,
         address[] memory _stakingProxies,
+        string memory _refId,
         address _swapProxy,
         address[] memory _token0s,
         address[] memory _token1s,
@@ -32,7 +33,7 @@ contract KelpRestakingDeltaNeutralVault is
         _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
 
         baseDeltaNeutralVault_Initialize(_usdc, _initialPPS, _swapProxy, _token0s, _token1s, _fees);
-        ethRestaking_Initialize(_restakingToken, _usdc, _weth, _stakingProxies, _swapProxy, _token0s, _token1s, _fees);
+        ethRestaking_Initialize(_restakingToken, _usdc, _weth, _stakingProxies, _refId, _swapProxy, _token0s, _token1s, _fees);
         perpDex_Initialize(_perpDexAddress, _perpDexReceiver, _usdc, _perpDexConnector);
     }
 
@@ -110,8 +111,10 @@ contract KelpRestakingDeltaNeutralVault is
     function _totalValueLocked() internal view override returns (uint256) {
         return
             vaultState.pendingDepositAmount +
+            vaultState.withdrawPoolAmount +
             getTotalRestakingTvl() +
-            getTotalPerpDexAssets();
+            getTotalPerpDexAssets() -
+            vaultState.managementFeeAmount;
     }
 
     /**
