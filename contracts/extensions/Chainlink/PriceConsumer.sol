@@ -11,11 +11,12 @@ contract PriceConsumer is IPriceConsumerProxy {
     address owner;
 
     constructor(
+        address _admin,
         address[] memory _token1PriceFeeds,
         address[] memory _token2PriceFeeds,
         address[] memory _priceFeeds)
     {
-        owner = msg.sender;
+        owner = _admin;
 
         for (uint8 i = 0; i < _priceFeeds.length; i++) {
             priceFeeds[_token1PriceFeeds[i]][_token2PriceFeeds[i]] = AggregatorV3Interface(_priceFeeds[i]);

@@ -82,6 +82,7 @@ describe("RockOnyxStableCoinVault", function () {
   async function deployPriceConsumerContract() {
     const factory = await ethers.getContractFactory("PriceConsumer");
     priceConsumerContract = await factory.deploy(
+      admin,
       [wethAddress, wstethAddress, usdceAddress, arbAddress],
       [usdcAddress, wethAddress, usdcAddress, usdcAddress],
       [ethPriceFeed, wsteth_ethPriceFeed, usdcePriceFeed, arbPriceFeed]
@@ -109,7 +110,7 @@ describe("RockOnyxStableCoinVault", function () {
 
   async function deployCamelotSwapContract() {
     const factory = await ethers.getContractFactory("CamelotSwap");
-    camelotSwapContract = await factory.deploy(swapRouterAddress, priceConsumerContract.getAddress());
+    camelotSwapContract = await factory.deploy(admin, swapRouterAddress, priceConsumerContract.getAddress());
     await camelotSwapContract.waitForDeployment();
 
     console.log(
@@ -139,6 +140,7 @@ describe("RockOnyxStableCoinVault", function () {
     );
 
     rockOnyxUSDTVaultContract = await rockOnyxUSDTVault.deploy(
+      admin,
       usdcAddress,
       await camelotLiquidityContract.getAddress(),
       rewardAddress,
@@ -632,6 +634,7 @@ describe("RockOnyxStableCoinVault", function () {
       "RockOnyxUSDTVault"
     );
     const newRockOnyxUSDTVaultContract = await rockOnyxUSDTVault.deploy(
+      admin,
       usdcAddress,
       await camelotLiquidityContract.getAddress(),
       rewardAddress,

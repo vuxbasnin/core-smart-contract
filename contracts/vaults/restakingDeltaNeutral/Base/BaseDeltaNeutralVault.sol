@@ -39,6 +39,7 @@ abstract contract BaseDeltaNeutralVault is
     event RequestFunds(address indexed account, uint256 withdrawalAmount, uint256 shares);
 
     function baseDeltaNeutralVault_Initialize(
+        address _admin,
         address _usdc, 
         uint256 _initialPPS,
         address _swapAddress,
@@ -46,11 +47,13 @@ abstract contract BaseDeltaNeutralVault is
         address[] memory _token1s,
         uint24[] memory _fees
     ) internal virtual {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
-
         vaultParams = VaultParams(6, _usdc, 5_000_000, 1_000_000 * 1e6, 10, 1);
         vaultState = VaultState(0, 0, 0, 0, 0);
         initialPPS = _initialPPS;
+
+        _grantRole(ROCK_ONYX_ADMIN_ROLE, _admin);
+        _grantRole(ROCK_ONYX_OPTIONS_TRADER_ROLE, _admin);
+        
         baseSwapVault_Initialize(_swapAddress, _token0s, _token1s, _fees);
     }
 

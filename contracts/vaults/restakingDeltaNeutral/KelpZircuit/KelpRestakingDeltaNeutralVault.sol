@@ -12,6 +12,7 @@ contract KelpRestakingDeltaNeutralVault is
     BaseDeltaNeutralVault
 {
     constructor(
+        address _admin,
         address _usdc,
         address _weth,
         address _perpDexAddress,
@@ -30,9 +31,7 @@ contract KelpRestakingDeltaNeutralVault is
         PerpDexStrategy()
         BaseDeltaNeutralVault()
     {
-        _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
-
-        baseDeltaNeutralVault_Initialize(_usdc, _initialPPS, _swapProxy, _token0s, _token1s, _fees);
+        baseDeltaNeutralVault_Initialize(_admin, _usdc, _initialPPS, _swapProxy, _token0s, _token1s, _fees);
         ethRestaking_Initialize(_restakingToken, _usdc, _weth, _stakingProxies, _refId, _swapProxy, _token0s, _token1s, _fees);
         perpDex_Initialize(_perpDexAddress, _perpDexReceiver, _usdc, _perpDexConnector);
     }

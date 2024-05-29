@@ -17,7 +17,6 @@ contract UsdceUsdcPriceFeedOracle is AggregatorV3Interface{
 
     function setLatestPrice(uint256 _price) external {
         require(msg.sender == owner, "INVALID_ADMIN");
-        require(_price > 0, "INVALID_PRICE");
 
         uint256 oldPrice = lastestPrice;
         lastestPrice = _price;

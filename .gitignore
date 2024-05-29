@@ -30,3 +30,5 @@ contracts/vaults/deltaNeutral/strategies/artifacts
 contracts/vaults/deltaNeutral/artifacts
 contracts/vaults/stableUsdc/artifacts
 .states
+hardhat.config.ts
+contracts/vaults/restakingDeltaNeutral/KelpZircuit/artifacts

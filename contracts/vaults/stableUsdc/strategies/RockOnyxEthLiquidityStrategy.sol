@@ -47,8 +47,6 @@ contract RockOnyxEthLiquidityStrategy is
         address _wstEth,
         address _arb
     ) internal {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
-
         ethLPProvider = IVenderLiquidityProxy(_LiquidityProviderAddress);
         ethReward = IRewardVendor(_rewardAddress);
         ethNftPositionAddress = _ethNftPositionAddress;

@@ -49,6 +49,7 @@ contract RockOnyxDeltaNeutralVault is
     );
 
     constructor(
+        address _admin,
         address _usdc,
         address _swapProxy,
         address _perpDexProxy,
@@ -57,16 +58,16 @@ contract RockOnyxDeltaNeutralVault is
         address _wstEth,
         uint256 _initialPPS
     ) RockOynxEthStakeLendStrategy() RockOynxPerpDexStrategy() {
-        _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
-
         vaultParams = VaultParams(6, _usdc, 5_000_000, 1_000_000 * 1e6, 10, 1);
         vaultState = VaultState(0, 0, 0, 0, 0);
         allocateRatio = DeltaNeutralAllocateRatio(5000, 5000, 4);
 
+        _grantRole(ROCK_ONYX_ADMIN_ROLE, _admin);
+        _grantRole(ROCK_ONYX_OPTIONS_TRADER_ROLE, _admin);
+        _grantRole(ROCK_ONYX_OPTIONS_TRADER_ROLE, _perpDexReceiver);
+
         ethStakeLend_Initialize(_swapProxy, _usdc, _weth, _wstEth);
-
         perpDex_Initialize(_perpDexProxy, _perpDexReceiver, _usdc);
-
         initialPPS = _initialPPS;
     }
 

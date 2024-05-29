@@ -35,8 +35,6 @@ abstract contract BaseRestakingStrategy is BaseSwapVault, RockOnyxAccessControl,
         address[] memory _token1s,
         uint24[] memory _fees
     ) internal virtual {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
-
         usdcToken = IERC20(_usdcAddress);
         ethToken = IERC20(_ethAddress);
         restakingToken = IERC20(_restakingToken);

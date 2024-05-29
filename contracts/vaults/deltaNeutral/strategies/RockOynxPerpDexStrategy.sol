@@ -44,14 +44,9 @@ contract RockOynxPerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
         address _optionsReceiver,
         address _usdc
     ) internal {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
-
         perpDexStrategyUsdc = _usdc;
         perpDexVendor = IOptionsVendorProxy(_perpDexAddress);
         optionsReceiver = _optionsReceiver;
-
-        _grantRole(ROCK_ONYX_OPTIONS_TRADER_ROLE, msg.sender);
-        _grantRole(ROCK_ONYX_OPTIONS_TRADER_ROLE, optionsReceiver);
     }
 
     /**

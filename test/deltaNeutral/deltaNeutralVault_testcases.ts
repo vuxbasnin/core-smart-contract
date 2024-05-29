@@ -106,6 +106,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
 
     rockOnyxDeltaNeutralVaultContract = await rockOnyxDeltaNeutralVault.deploy(
+      admin,
       usdcAddress,
       await camelotSwapContract.getAddress(),
       await aevoContract.getAddress(),
@@ -930,6 +931,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
 
     const newRockOnyxDeltaNeutralVaultContract =
       await newRockOnyxDeltaNeutralVault.deploy(
+        admin,
         usdcAddress,
         await camelotSwapContract.getAddress(),
         await aevoContract.getAddress(),
@@ -1155,6 +1157,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
 
     const newRockOnyxDeltaNeutralVaultContract =
       await newRockOnyxDeltaNeutralVault.deploy(
+        admin,
         usdcAddress,
         await camelotSwapContract.getAddress(),
         await aevoContract.getAddress(),

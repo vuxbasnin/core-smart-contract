@@ -99,6 +99,7 @@ describe("RenzoRestakingDeltaNeutralVault", function () {
     );
 
     renzoRestakingDNVault = await renzoRestakingDeltaNeutralVault.deploy(
+      admin,
       usdcAddress,
       wethAddress,
       aevoAddress,
@@ -110,9 +111,6 @@ describe("RenzoRestakingDeltaNeutralVault", function () {
       await uniSwapContract.getAddress(),
       [usdcAddress, ezEthAddress, usdtAddress, daiAddress],
       [wethAddress, wethAddress, usdcAddress, usdtAddress],
-      // ethereum
-      // [500, 100, 100, 100]
-      // arbitrum
       [500, 100, 100, 100]
     );
     await renzoRestakingDNVault.waitForDeployment();

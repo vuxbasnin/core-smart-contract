@@ -48,8 +48,6 @@ abstract contract BaseDeltaNeutralVault is
     );
 
     constructor(address _usdc, uint256 _initialPPS) {
-        _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
-
         vaultParams = VaultParams(6, _usdc, 5_000_000, 1_000_000 * 1e6, 10, 1);
         vaultState = VaultState(0, 0, 0, 0, 0);
         allocateRatio = DeltaNeutralAllocateRatio(5000, 5000, 4);

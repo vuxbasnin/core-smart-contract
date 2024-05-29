@@ -101,6 +101,7 @@ describe("KelpDaRestakingDeltaNeutralVault", function () {
     );
 
     kelpRestakingDNVault = await kelpRestakingDeltaNeutralVault.deploy(
+      admin,
       usdcAddress,
       wethAddress,
       aevoAddress,
@@ -114,9 +115,9 @@ describe("KelpDaRestakingDeltaNeutralVault", function () {
       [usdcAddress, rsEthAddress, usdtAddress, daiAddress],
       [wethAddress, wethAddress, usdcAddress, usdtAddress],
       // ethereum
-      [500, 500, 100, 100]
+      // [500, 500, 100, 100]
       // arbitrum
-      // [500, 100, 100, 100]
+      [500, 100, 100, 100]
     );
     await kelpRestakingDNVault.waitForDeployment();
 

@@ -41,8 +41,6 @@ contract RockOynxUsdLiquidityStrategy is
         address _usdc,
         address _usdce
     ) internal {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
-
         usdLPProvider = IVenderLiquidityProxy(_usdLPProviderAddress);
         usdNftPositionAddress = _usdNftPositionAddress;
         usdSwapProxy = ISwapProxy(_swapAddress);

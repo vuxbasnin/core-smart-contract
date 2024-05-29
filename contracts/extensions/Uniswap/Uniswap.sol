@@ -8,9 +8,10 @@ contract UniSwap is BaseSwap {
     IUniSwapRouter private swapRouter;
 
     constructor(
+        address _admin,
         address _swapRouterAddress,
         address _priceConsumer
-    ) BaseSwap(_priceConsumer) {
+    ) BaseSwap(_admin, _priceConsumer) {
         swapRouter = IUniSwapRouter(_swapRouterAddress);
     }
 
