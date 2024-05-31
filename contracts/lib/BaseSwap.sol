@@ -12,10 +12,12 @@ abstract contract BaseSwap {
     uint8 private slippage;
     address internal owner;
 
-    constructor(address _priceConsumer) {
+    constructor(
+        address _admin,
+        address _priceConsumer) {
         priceConsumer = IPriceConsumerProxy(_priceConsumer);
         slippage = 50;
-        owner = msg.sender;
+        owner = _admin;
     }
 
     // slippage decimals: 4 ---- ex: 50 mean 0.5%

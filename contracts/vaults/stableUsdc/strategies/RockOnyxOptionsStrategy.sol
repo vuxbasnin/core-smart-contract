@@ -40,14 +40,9 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         address _optionsReceiver,
         address _vaultAssetAddress
     ) internal {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
-
         optionsVendor = IOptionsVendorProxy(_vendorAddress);
         optionsReceiver = _optionsReceiver;
         vaultAssetAddress = _vaultAssetAddress;
-
-        _grantRole(ROCK_ONYX_OPTIONS_TRADER_ROLE, msg.sender);
-        _grantRole(ROCK_ONYX_OPTIONS_TRADER_ROLE, optionsReceiver);
     }
 
     /**

@@ -30,6 +30,7 @@ const nonfungiblePositionManager = NonfungiblePositionManager[chainId] ?? "";
 const rewardAddress = ANGLE_REWARD_ADDRESS[chainId] ?? "";
 const aevoAddress = AEVO_ADDRESS[chainId] ?? "";
 const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId] ?? "";
+const admin = '0x0cD2568E24Ed7Ed47E42075545D49C21e895B54c';
 
 let deployer: Signer;
 let priceConsumerContract: Contracts.PriceConsumer;
@@ -60,7 +61,7 @@ async function deployCamelotSwapContract() {
   console.log("SwapRouter %s", swapRouterAddress);
 
   const factory = await ethers.getContractFactory("CamelotSwap");
-  const camelotSwapContract = await factory.deploy(swapRouterAddress, priceConsumerAddress, {
+  const camelotSwapContract = await factory.deploy(admin, swapRouterAddress, priceConsumerAddress, {
     gasLimit: GAS_LIMIT,
   });
   await camelotSwapContract.waitForDeployment();
@@ -100,14 +101,14 @@ async function main() {
     await deployer.getAddress()
   );
 
+  const camelotLiquidityAddress = "0x05AAe168AEB8516a068D9DED91F56f81C76706Eb";
+  const camelotSwapAddress = "0x5c2fEC58221daC4d3945Dd4Ac7a956d6C965ba1c";
+  const aevoProxyAddress = "0xE1D5Bfe0665177986D3CAB8c27A19827570710eE";
+  
   // const camelotLiquidityAddress = await deployLiquidityContract();
   // const priceConsumerAddress = await deployPriceConsumerContract();
   // const camelotSwapAddress = await deployCamelotSwapContract();
   // const aevoProxyAddress = await deployAevoContract();
-
-  const camelotLiquidityAddress = "0x05AAe168AEB8516a068D9DED91F56f81C76706Eb";
-  const camelotSwapAddress = "0x6aCa558d06f5149A4118FbD5218F2a430e3e48cF";
-  const aevoProxyAddress = "0xE1D5Bfe0665177986D3CAB8c27A19827570710eE";
 
   // mainnet
   const aevoTrader = AEVO_TRADER_ADDRESS[chainId] ?? "";
@@ -119,6 +120,7 @@ async function main() {
     "RockOnyxUSDTVault"
   );
   const rockOnyxUSDTVault = await RockOnyxUSDTVaultFactory.deploy(
+    admin,
     usdcAddress,
     camelotLiquidityAddress,
     rewardAddress,

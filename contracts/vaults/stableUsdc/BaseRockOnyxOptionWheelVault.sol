@@ -129,7 +129,7 @@ contract BaseRockOnyxOptionWheelVault is
         OptionsStrategyState calldata _optionsState
     ) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        for (uint256 i = 0; i < currentRound; i++) {
+        for (uint256 i = 0; i < _currentRound; i++) {
             roundWithdrawalShares[i] = _roundWithdrawalShares[i];
             roundPricePerShares[i] = _roundPricePerShares[i];
         }

@@ -9,9 +9,10 @@ contract CamelotSwap is BaseSwap {
     ICamelotSwapFactory private factory;
 
     constructor(
+        address _admin,
         address _swapRouterAddress,
         address _priceConsumer
-    ) BaseSwap(_priceConsumer) {
+    ) BaseSwap(_admin, _priceConsumer) {
         swapRouter = ICamelotSwapRouter(_swapRouterAddress);
         factory = ICamelotSwapFactory(swapRouter.factory());
     }

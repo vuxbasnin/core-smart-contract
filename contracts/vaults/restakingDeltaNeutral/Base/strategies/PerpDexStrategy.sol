@@ -32,15 +32,12 @@ contract PerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
         address _usdc,
         address _perpDexConnector
     ) internal {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
-
         perpDexState = PerpDexState(0, 0);
         perpDexAsset = _usdc;
         AEVO = IAevo(_perpDexAddress);
         perpDexReceiver = _perpDexReceiver;
         perpDexConnector = _perpDexConnector;
         
-        _grantRole(ROCK_ONYX_OPTIONS_TRADER_ROLE, msg.sender);
         _grantRole(ROCK_ONYX_OPTIONS_TRADER_ROLE, perpDexReceiver);
     }
     
@@ -137,7 +134,7 @@ contract PerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
      * @dev Calculates the total options amount based on allocated and unallocated balances.
      * @return The total options amount.
      */
-    function getTotalPerpDexAssets() internal view returns (uint256) {
+    function getTotalPerpDexTvl() internal view returns (uint256) {
         return perpDexState.unAllocatedBalance + perpDexState.perpDexBalance;
     }
 

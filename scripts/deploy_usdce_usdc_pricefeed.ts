@@ -5,6 +5,7 @@ import { Signer } from "ethers";
 
 let deployer: Signer;
 let contract: Contracts.UsdceUsdcPriceFeedOracle;
+const admin = '0xAD38f5DD867EF07B8Fe7dF685F28743922Bb33C4';
 
 async function UsdceUsdcPriceFeedOracle() {
   const factory = await ethers.getContractFactory("UsdceUsdcPriceFeedOracle");

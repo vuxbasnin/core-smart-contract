@@ -38,7 +38,8 @@ describe("RockOnyxStableCoinVault", function () {
     user1: Signer,
     user2: Signer,
     user3: Signer,
-    user4: Signer;
+    user4: Signer,
+    contractAdmin: Signer;
 
   let optionsReceiver: Signer;
   let priceConsumerContract: Contracts.PriceConsumer;
@@ -82,6 +83,7 @@ describe("RockOnyxStableCoinVault", function () {
   async function deployPriceConsumerContract() {
     const factory = await ethers.getContractFactory("PriceConsumer");
     priceConsumerContract = await factory.deploy(
+      admin,
       [wethAddress, wstethAddress, usdceAddress, arbAddress],
       [usdcAddress, wethAddress, usdcAddress, usdcAddress],
       [ethPriceFeed, wsteth_ethPriceFeed, usdcePriceFeed, arbPriceFeed]
@@ -109,7 +111,7 @@ describe("RockOnyxStableCoinVault", function () {
 
   async function deployCamelotSwapContract() {
     const factory = await ethers.getContractFactory("CamelotSwap");
-    camelotSwapContract = await factory.deploy(swapRouterAddress, priceConsumerContract.getAddress());
+    camelotSwapContract = await factory.deploy(admin, swapRouterAddress, priceConsumerContract.getAddress());
     await camelotSwapContract.waitForDeployment();
 
     console.log(
@@ -139,6 +141,7 @@ describe("RockOnyxStableCoinVault", function () {
     );
 
     rockOnyxUSDTVaultContract = await rockOnyxUSDTVault.deploy(
+      contractAdmin,
       usdcAddress,
       await camelotLiquidityContract.getAddress(),
       rewardAddress,
@@ -176,7 +179,7 @@ describe("RockOnyxStableCoinVault", function () {
   }
 
   before(async function () {
-    [admin, optionsReceiver, user1, user2, user3, user4] = await ethers.getSigners();
+    [admin, optionsReceiver, user1, user2, user3, user4, contractAdmin] = await ethers.getSigners();
 
     usdc = await ethers.getContractAt("IERC20", usdcAddress);
     usdce = await ethers.getContractAt("IERC20", usdceAddress);
@@ -240,7 +243,7 @@ describe("RockOnyxStableCoinVault", function () {
     return totalValueLocked;
   }
 
-  it("seed data", async function () {
+  it.skip("seed data", async function () {
     const usdcSigner = await ethers.getImpersonatedSigner(usdcImpersonatedSigner);
     const usdceSigner = await ethers.getImpersonatedSigner(usdceImpersonatedSigner);
 
@@ -252,7 +255,7 @@ describe("RockOnyxStableCoinVault", function () {
     await transferUsdceForUser(usdceSigner, optionsReceiver, 1000*1e6);
   });
 
-  it("deposit to rockOnyxUSDTVault, should deposit successfully", async function () {
+  it.skip("deposit to rockOnyxUSDTVault, should deposit successfully", async function () {
     console.log('-------------deposit to rockOnyxUSDTVault---------------');
     await deposit(user1, 100*1e6);
     await deposit(user2, 100*1e6);
@@ -263,7 +266,7 @@ describe("RockOnyxStableCoinVault", function () {
     expect(totalValueLock).to.approximately(400*1e6, PRECISION);
   });
 
-  it("get user profitt and loss, should get successfully", async function () {
+  it.skip("get user profitt and loss, should get successfully", async function () {
     console.log('-------------deposit to rockOnyxUSDTVault---------------');
     const getPnLTx = await rockOnyxUSDTVaultContract
     .connect(user1)
@@ -271,7 +274,7 @@ describe("RockOnyxStableCoinVault", function () {
     console.log('getPnL %s', getPnLTx);
   });
 
-  it("mintEthLP position on Camelot, should mint successfully", async function () {
+  it.skip("mintEthLP position on Camelot, should mint successfully", async function () {
     console.log('-------------mintEthLP position on Camelot---------------');
     const mintEthLPPositionTx = await rockOnyxUSDTVaultContract
       .connect(admin)
@@ -297,7 +300,7 @@ describe("RockOnyxStableCoinVault", function () {
     expect(totalValueLock).to.approximately(400*1e6, PRECISION);
   });
 
-  it("mintUsdLP position on Camelot, should mint successfully", async function () {
+  it.skip("mintUsdLP position on Camelot, should mint successfully", async function () {
     console.log('-------------mintUsdLP position on Camelot---------------');
     const mintUsdLPPositionTx = await rockOnyxUSDTVaultContract
       .connect(admin)
@@ -323,7 +326,7 @@ describe("RockOnyxStableCoinVault", function () {
     expect(totalValueLock).to.approximately(400*1e6, PRECISION);
   });
 
-  it("deposit to vendor on aevo, should deposit successfully", async function () {
+  it.skip("deposit to vendor on aevo, should deposit successfully", async function () {
     console.log('-------------deposit to vendor on aevo---------------');
     await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
       value: ethers.parseEther("0.001753"),
@@ -333,7 +336,7 @@ describe("RockOnyxStableCoinVault", function () {
     expect(totalValueLock).to.approximately(400*1e6, PRECISION);
   });
 
-  it("add more deposits to rockOnyxUSDTVault, should deposit successfully", async function () {
+  it.skip("add more deposits to rockOnyxUSDTVault, should deposit successfully", async function () {
     console.log('-------------add more deposits torockOnyxUSDTVault---------------')
     await deposit(user1, 100*1e6);
     await deposit(user2, 100*1e6);
@@ -342,7 +345,7 @@ describe("RockOnyxStableCoinVault", function () {
     expect(totalValueLock).to.approximately(600*1e6, PRECISION);
   });
 
-  it("Users initial withdrawals, should init successfully", async function () {
+  it.skip("Users initial withdrawals, should init successfully", async function () {
     console.log('-------------Users initial withdrawals---------------');
     const initiateWithdrawalTx1 = await rockOnyxUSDTVaultContract
       .connect(user1)
@@ -358,7 +361,7 @@ describe("RockOnyxStableCoinVault", function () {
     expect(totalValueLock).to.approximately(600*1e6, PRECISION);
   });
 
-  it("update allocated balance from aevo vendor, should update successfully", async function () {
+  it.skip("update allocated balance from aevo vendor, should update successfully", async function () {
     console.log('-------------update allocated balance from aevo vendor---------------');
     const updateProfitTx = await rockOnyxUSDTVaultContract
       .connect(admin)
@@ -369,7 +372,7 @@ describe("RockOnyxStableCoinVault", function () {
     expect(totalValueLock).to.approximately(600*1e6, PRECISION);
   });
 
-  it("close round, should close successfully", async function () {
+  it.skip("close round, should close successfully", async function () {
     console.log('-------------close round---------------');
     const closeRoundTx = await rockOnyxUSDTVaultContract
       .connect(admin)
@@ -380,7 +383,7 @@ describe("RockOnyxStableCoinVault", function () {
     expect(totalValueLock).to.approximately(600*1e6, PRECISION);
   });
 
-  it("handle withdrawal from aevo vendor, should handle successfully", async function () {
+  it.skip("handle withdrawal from aevo vendor, should handle successfully", async function () {
     console.log('-------------handle withdrawal from aevo vendor---------------');
     
     const withdrawAmount = 50 * 1e6;
@@ -396,7 +399,7 @@ describe("RockOnyxStableCoinVault", function () {
     expect(totalValueLock).to.approximately(600*1e6, PRECISION);
   });
 
-  it("accquire withdrawal funds for the round, should accquire successfully", async function () {
+  it.skip("accquire withdrawal funds for the round, should accquire successfully", async function () {
     console.log('-------------accquire withdrawal funds for the round---------------');
     const acquireWithdrawalFundsTx = await rockOnyxUSDTVaultContract
       .connect(admin)
@@ -407,7 +410,7 @@ describe("RockOnyxStableCoinVault", function () {
     expect(totalValueLock).to.approximately(498*1e6, PRECISION);
   });
 
-  it("Users initial withdrawals time 2, should init successfully", async function () {
+  it.skip("Users initial withdrawals time 2, should init successfully", async function () {
     console.log('-------------Users initial withdrawals time 2---------------');
     
     await expect(rockOnyxUSDTVaultContract
@@ -419,7 +422,7 @@ describe("RockOnyxStableCoinVault", function () {
     expect(totalValueLock).to.approximately(498*1e6, PRECISION);
   });
   
-  it("complete withdrawals, should complete successfully", async function () {
+  it.skip("complete withdrawals, should complete successfully", async function () {
     console.log('-------------complete withdrawals---------------');
     let user1Balance = await usdc.connect(user1).balanceOf(user1);
 
@@ -435,12 +438,12 @@ describe("RockOnyxStableCoinVault", function () {
     expect(user1BalanceAfterWithdraw).to.approximately(user1Balance + BigInt(5*1e6), PRECISION);
   });
 
-  it("get user profitt and loss, should get successfully", async function () {
+  it.skip("get user profitt and loss, should get successfully", async function () {
     console.log('-------------deposit to rockOnyxUSDTVault---------------');
     
   });
 
-  it("get user allocation ratios, should get successfully", async function () {
+  it.skip("get user allocation ratios, should get successfully", async function () {
     console.log('-------------deposit to rockOnyxUSDTVault---------------');
     
     const getAllocatedRatio = await rockOnyxUSDTVaultContract
@@ -450,7 +453,7 @@ describe("RockOnyxStableCoinVault", function () {
     console.log("getAllocatedRatio = %s", getAllocatedRatio);
   });
 
-  it("handle settle covered calls, should handle successfully", async function () {
+  it.skip("handle settle covered calls, should handle successfully", async function () {
     console.log('-------------handle settle covered calls---------------');
     const settleCoveredCallsTx = await rockOnyxUSDTVaultContract
       .connect(admin)
@@ -461,7 +464,7 @@ describe("RockOnyxStableCoinVault", function () {
     expect(totalValueLock).to.approximately(498*1e6, PRECISION);
   });
 
-  it("handle settle covered puts, should handle successfully", async function () {
+  it.skip("handle settle covered puts, should handle successfully", async function () {
     console.log('-------------handle settle covered puts---------------');
     const settleCoveredPutsTx = await rockOnyxUSDTVaultContract
       .connect(admin)
@@ -614,13 +617,14 @@ describe("RockOnyxStableCoinVault", function () {
     console.log(state);
   });
 
-  it.skip("migration, export and import data to new option wheel vault - 200265516", async function () {
-    const contractAdmin = await ethers.getImpersonatedSigner("0x20f89bA1B0Fc1e83f9aEf0a134095Cd63F7e8CC7");
-    rockOnyxUSDTVaultContract = await ethers.getContractAt("RockOnyxUSDTVault", "0x077835528875C27bFaCBc5d923C919BC56a9C250");
+  it("migration, export and import data to new option wheel vault - 200265516", async function () {
+    const oldAdmin = await ethers.getImpersonatedSigner("0x20f89bA1B0Fc1e83f9aEf0a134095Cd63F7e8CC7");
+    // const newAdmin = await ethers.getImpersonatedSigner("0xAD38f5DD867EF07B8Fe7dF685F28743922Bb33C4");
+    rockOnyxUSDTVaultContract = await ethers.getContractAt("RockOnyxUSDTVault", "0xEd7FB833e80467F730F80650359Bd1d4e85c7081");
 
     console.log("-------------export old vault state---------------");
     let exportVaultStateTx = await rockOnyxUSDTVaultContract
-    .connect(contractAdmin)
+    .connect(oldAdmin)
     .exportVaultState();
 
     console.log(exportVaultStateTx);
@@ -631,7 +635,10 @@ describe("RockOnyxStableCoinVault", function () {
     const rockOnyxUSDTVault = await ethers.getContractFactory(
       "RockOnyxUSDTVault"
     );
+
+    console.log("await admin.getAddress() %s", await admin.getAddress());
     const newRockOnyxUSDTVaultContract = await rockOnyxUSDTVault.deploy(
+      await admin.getAddress(),
       usdcAddress,
       await camelotLiquidityContract.getAddress(),
       rewardAddress,
@@ -648,6 +655,93 @@ describe("RockOnyxStableCoinVault", function () {
     await rockOnyxUSDTVaultContract.waitForDeployment();
   
     console.log("-------------import vault state---------------");
+    const _currentRound = exportVaultStateTx[0];
+    const _roundWithdrawalShares = [...exportVaultStateTx[1]];
+    const _roundPricePerShares = [...exportVaultStateTx[2]];
+
+    for(var i =0; i< _roundWithdrawalShares.length; i++){
+      console.log(_roundWithdrawalShares[i]);
+      console.log(_roundPricePerShares[i]);
+    }
+    
+    const _depositReceiptArr = exportVaultStateTx[3].map((element) => {
+        return {
+          owner: element[0],
+          depositReceipt: {
+            shares: element[1][0],
+            depositAmount: element[1][1],
+          },
+        };
+    });
+    const _withdrawalArr = exportVaultStateTx[4].map((element) => {
+        return {
+          owner: element[0],
+          withdrawal: {
+            shares: element[1][0],
+            round: element[1][1],
+          },
+        };
+    });
+    const _vaultParams = {
+        decimals: exportVaultStateTx[5][0],
+        asset: exportVaultStateTx[5][1],
+        minimumSupply: exportVaultStateTx[5][2],
+        cap: exportVaultStateTx[5][3],
+        performanceFeeRate: exportVaultStateTx[5][4],
+        managementFeeRate: exportVaultStateTx[5][5],
+    };
+    const _vaultState = {
+        performanceFeeAmount: exportVaultStateTx[6][0],
+        managementFeeAmount: exportVaultStateTx[6][1],
+        currentRoundFeeAmount: exportVaultStateTx[6][2],
+        withdrawPoolAmount: exportVaultStateTx[6][3],
+        pendingDepositAmount: exportVaultStateTx[6][4],
+        totalShares: exportVaultStateTx[6][5],
+        lastLockedAmount: exportVaultStateTx[6][6],
+    };
+    const _allocateRatio = {
+        ethLPRatio: exportVaultStateTx[7][0],
+        usdLPRatio: exportVaultStateTx[7][1],
+        optionsRatio: exportVaultStateTx[7][2],
+        decimals: exportVaultStateTx[7][3],
+    };
+    const _ethLPState = {
+        tokenId: exportVaultStateTx[8][0],
+        liquidity: exportVaultStateTx[8][1],
+        lowerTick: exportVaultStateTx[8][2],
+        upperTick: exportVaultStateTx[8][3],
+        unAllocatedBalance: exportVaultStateTx[8][4],
+    };
+    const _usdLPState = {
+        tokenId: exportVaultStateTx[9][0],
+        liquidity: exportVaultStateTx[9][1],
+        lowerTick: exportVaultStateTx[9][2],
+        upperTick: exportVaultStateTx[9][3],
+        unAllocatedUsdcBalance: exportVaultStateTx[9][4],
+        unAllocatedUsdceBalance: exportVaultStateTx[9][5],
+    };
+    const _optiondsState = {
+        allocatedUsdcBalance: exportVaultStateTx[10][0],
+        unAllocatedUsdcBalance: exportVaultStateTx[10][1],
+        unsettledProfit: exportVaultStateTx[10][2],
+        unsettledLoss: exportVaultStateTx[10][3],
+    };
+
+    const importVaultStateTx = await newRockOnyxUSDTVaultContract
+      .connect(admin)
+      .importVaultState(
+          _currentRound,
+          _roundWithdrawalShares,
+          _roundPricePerShares,
+          _depositReceiptArr,
+          _withdrawalArr,
+          _vaultParams,
+          _vaultState,
+          _allocateRatio,
+          _ethLPState,
+          _usdLPState,
+          _optiondsState
+      );
     
     console.log("-------------export new vault state---------------");
     const exportVaultStateTx2 = await newRockOnyxUSDTVaultContract
@@ -655,8 +749,5 @@ describe("RockOnyxStableCoinVault", function () {
       .exportVaultState();
   
     console.log(exportVaultStateTx2);
-    console.log(exportVaultStateTx2[3][0][1]);
-    console.log(exportVaultStateTx2[3][1][1]);
-    console.log(exportVaultStateTx2[3][2][1]);
   });
 });

@@ -35,8 +35,6 @@ abstract contract BaseRestakingStrategy is BaseSwapVault, RockOnyxAccessControl,
         address[] memory _token1s,
         uint24[] memory _fees
     ) internal virtual {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
-
         usdcToken = IERC20(_usdcAddress);
         ethToken = IERC20(_ethAddress);
         restakingToken = IERC20(_restakingToken);
@@ -115,6 +113,8 @@ abstract contract BaseRestakingStrategy is BaseSwapVault, RockOnyxAccessControl,
      * @return The unallocated balance in the Ethereum Stake & Lend strategy.
      */
     function getEthStakingState() external view returns (EthRestakingState memory) {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+        
         return restakingStratState;
     }
 }

@@ -45,10 +45,10 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
             IWETH(address(ethToken)).withdraw(ethAmount);
 
             // arbitrum
-            renzoRestakeProxy.depositETH{value: ethAmount}(0, block.timestamp + 10 seconds);
+            // renzoRestakeProxy.depositETH{value: ethAmount}(0, block.timestamp + 10 seconds);
 
             // ethereum
-            // renzoRestakeProxy.depositETH{value: ethAmount}();
+            renzoRestakeProxy.depositETH{value: ethAmount}();
         }else{
             ethToken.approve(address(swapProxy), ethAmount);
             swapProxy.swapTo(
@@ -93,5 +93,12 @@ contract RenzoZircuitRestakingStrategy is BaseRestakingStrategy {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         renzoWithdrawRestakingPool = IWithdrawRestakingPool(_renzoWithdrawRestakingPoolAddress);
+    }
+
+    function updateRestakingPoolAddresses(address[] memory _restakingPoolAddresses) external nonReentrant {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+
+        renzoRestakeProxy = IRenzoRestakeProxy(_restakingPoolAddresses[0]);
+        zircuitRestakeProxy = IZircuitRestakeProxy(_restakingPoolAddresses[1]);
     }
 }

@@ -20,6 +20,7 @@ const wstethAddress = WSTETH_ADDRESS[chainId] ?? "";
 const wethAddress = WETH_ADDRESS[chainId] ?? "";
 const aevoAddress = AEVO_ADDRESS[chainId] ?? "";
 const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId] ?? "";
+const admin = '0x7E38b79D0645BE0D9539aec3501f6a8Fb6215392';
 
 let aevoContract: Contracts.Aevo;
 let rockOnyxDeltaNeutralVaultContract: Contracts.RockOnyxDeltaNeutralVault;
@@ -47,7 +48,7 @@ const swapRouterAddress = SWAP_ROUTER_ADDRESS[chainId] || "";
 async function deployCamelotSwapContract() {
   const priceConsumerAddress = PRICE_CONSUMER_ADDRESS[chainId] || "";
   const factory = await ethers.getContractFactory("CamelotSwap");
-  camelotSwapContract = await factory.deploy(swapRouterAddress, priceConsumerAddress);
+  camelotSwapContract = await factory.deploy(admin, swapRouterAddress, priceConsumerAddress);
   await camelotSwapContract.waitForDeployment();
 
   console.log(
@@ -64,7 +65,7 @@ async function main() {
     await deployer.getAddress()
   );
 
-  const camelotSwapAddress = "0x6aCa558d06f5149A4118FbD5218F2a430e3e48cF";
+  const camelotSwapAddress = "0x5c2fEC58221daC4d3945Dd4Ac7a956d6C965ba1c";
   const aevoContractAddress = "0x3D75e9366Fe5A2f1B7481a4Fb05deC21f8038467";
 
   // MAINNET
@@ -84,13 +85,14 @@ async function main() {
   );
 
   rockOnyxDeltaNeutralVaultContract = await rockOnyxDeltaNeutralVault.deploy(
+    admin,
     usdcAddress,
     camelotSwapAddress,
     aevoContractAddress,
     optionsTrader,
     wethAddress,
     wstethAddress,
-    BigInt(parseInt((1.0069*1e6).toString()))
+    BigInt(parseInt((1*1e6).toString()))
   );
   await rockOnyxDeltaNeutralVaultContract.waitForDeployment();
 

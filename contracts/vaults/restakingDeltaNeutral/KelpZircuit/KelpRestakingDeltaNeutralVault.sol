@@ -12,6 +12,7 @@ contract KelpRestakingDeltaNeutralVault is
     BaseDeltaNeutralVault
 {
     constructor(
+        address _admin,
         address _usdc,
         address _weth,
         address _perpDexAddress,
@@ -30,9 +31,7 @@ contract KelpRestakingDeltaNeutralVault is
         PerpDexStrategy()
         BaseDeltaNeutralVault()
     {
-        _grantRole(ROCK_ONYX_ADMIN_ROLE, msg.sender);
-
-        baseDeltaNeutralVault_Initialize(_usdc, _initialPPS, _swapProxy, _token0s, _token1s, _fees);
+        baseDeltaNeutralVault_Initialize(_admin, _usdc, _initialPPS, _swapProxy, _token0s, _token1s, _fees);
         ethRestaking_Initialize(_restakingToken, _usdc, _weth, _stakingProxies, _refId, _swapProxy, _token0s, _token1s, _fees);
         perpDex_Initialize(_perpDexAddress, _perpDexReceiver, _usdc, _perpDexConnector);
     }
@@ -52,7 +51,7 @@ contract KelpRestakingDeltaNeutralVault is
     function rebalanceAsset(uint256 amount) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        if (getTotalRestakingTvl() > getTotalPerpDexAssets()) {
+        if (getTotalRestakingTvl() > getTotalPerpDexTvl()) {
             transferAssetToPerpDex(amount);
             return;
         }
@@ -67,9 +66,9 @@ contract KelpRestakingDeltaNeutralVault is
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         require(usdAmount <= _totalValueLocked(), "INVALID_ACQUIRE_AMOUNT");
-        uint256 totalRestakingPerpDexBalance = getTotalRestakingTvl() + getTotalPerpDexAssets();
+        uint256 totalRestakingPerpDexBalance = getTotalRestakingTvl() + getTotalPerpDexTvl();
         uint256 ethStakeLendRatio =  getTotalRestakingTvl() * 1e4 / totalRestakingPerpDexBalance;
-        uint256 perpDexRatio =  getTotalPerpDexAssets() * 1e4 / totalRestakingPerpDexBalance;
+        uint256 perpDexRatio =  getTotalPerpDexTvl() * 1e4 / totalRestakingPerpDexBalance;
         uint256 ethStakeLendAmount = usdAmount * ethStakeLendRatio / 1e4;
         uint256 perpDexAmount = usdAmount * perpDexRatio / 1e4;
         vaultState.withdrawPoolAmount += acquireFundsFromRestakingStrategy(ethStakeLendAmount);
@@ -81,7 +80,7 @@ contract KelpRestakingDeltaNeutralVault is
      * @param amount the amount in usd we should buy eth
      */
     function transferAssetToEthSpot(uint256 amount) internal {
-        require(amount <= getTotalPerpDexAssets(), "INVALID_TRANSFER_AMOUNT");
+        require(amount <= getTotalPerpDexTvl(), "INVALID_TRANSFER_AMOUNT");
         uint256 depositAmount = acquireFundsFromPerpDex(amount);
         depositToRestakingStrategy(depositAmount);
     }
@@ -105,6 +104,13 @@ contract KelpRestakingDeltaNeutralVault is
         syncPerpDexBalance(perpDexbalance);
     }
 
+    function allocatedRatio() external view returns (uint256, uint256) {
+        uint256 totalRestakingPerpDexBalance = getTotalRestakingTvl() + getTotalPerpDexTvl();
+        uint256 ethStakeLendRatio =  getTotalRestakingTvl() * 1e4 / totalRestakingPerpDexBalance;
+        uint256 perpDexRatio =  getTotalPerpDexTvl() * 1e4 / totalRestakingPerpDexBalance;
+        return (ethStakeLendRatio, perpDexRatio);
+    }
+
     /**
      * @notice get total value locked vault
      */
@@ -113,7 +119,7 @@ contract KelpRestakingDeltaNeutralVault is
             vaultState.pendingDepositAmount +
             vaultState.withdrawPoolAmount +
             getTotalRestakingTvl() +
-            getTotalPerpDexAssets() -
+            getTotalPerpDexTvl() -
             vaultState.managementFeeAmount;
     }
 

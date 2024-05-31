@@ -58,8 +58,6 @@ contract RockOynxEthStakeLendStrategy is
         address _weth,
         address _wstEth
     ) internal {
-        _auth(ROCK_ONYX_ADMIN_ROLE);
-
         ethSwapProxy = ISwapProxy(_swapAddress);
         usd = _usd;
         weth = _weth;
