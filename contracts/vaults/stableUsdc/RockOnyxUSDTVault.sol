@@ -159,7 +159,7 @@ contract RockOnyxUSDTVault is BaseRockOnyxOptionWheelVault {
         require(
             withdrawals[msg.sender].round == currentRound ||
                 withdrawals[msg.sender].shares == 0,
-            "INVALID_WITHDRAW_STATE"
+            "INVALID_SHARES"
         );
         withdrawals[msg.sender].shares += shares;
         withdrawals[msg.sender].round = currentRound;

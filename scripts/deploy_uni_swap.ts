@@ -13,12 +13,13 @@ console.log("chainId ",chainId);
 
 const swapRouterAddress = UNISWAP_ROUTER_ADDRESS[chainId] || "";
 const priceConsumerAddress = PRICE_CONSUMER_ADDRESS[chainId] || "";
-
+const admin = '0xad38f5dd867ef07b8fe7df685f28743922bb33c4';
 let uniSwapContract: Contracts.UniSwap;
 
 async function deployUniSwapContract() {
     const factory = await ethers.getContractFactory("UniSwap");
     uniSwapContract = await factory.deploy(
+      admin,
       swapRouterAddress,
       priceConsumerAddress
     );

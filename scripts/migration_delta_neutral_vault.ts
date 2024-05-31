@@ -8,22 +8,27 @@ import {
 
 const chainId: CHAINID = network.config.chainId;
 const privateKey = process.env.PRIVATE_KEY || "";
+const oldPrivateKey = process.env.OLD_PRIVATE_KEY || "";
 
 let rockOnyxDeltaNeutralVaultContract: Contracts.RockOnyxDeltaNeutralVault;
 let newRockOnyxDeltaNeutralVaultContract: Contracts.RockOnyxDeltaNeutralVault;
 
 async function main() {
     console.log('-------------migration delta neutral---------------');
+    
     const admin = new ethers.Wallet(privateKey, ethers.provider);
-    const vaultAddress = "0x607b19a600F2928FB4049d2c593794fB70aaf9aa";
+    const oldAdmin = new ethers.Wallet(oldPrivateKey, ethers.provider);
+
+    console.log("admin address %s", await admin.getAddress());
+    const vaultAddress = "0x50CDDCBa6289d3334f7D40cF5d312E544576F0f9";
     rockOnyxDeltaNeutralVaultContract = await ethers.getContractAt("RockOnyxDeltaNeutralVault", vaultAddress);
     
-    const newVaultAddress = "";
-    newRockOnyxDeltaNeutralVaultContract = await ethers.getContractAt("RockOnyxDeltaNeutralVault", vaultAddress);
+    const newVaultAddress = "0xC9A079d7d1CF510a6dBa8dA8494745beaE7736E2";
+    newRockOnyxDeltaNeutralVaultContract = await ethers.getContractAt("RockOnyxDeltaNeutralVault", newVaultAddress);
 
     console.log("-------------export old vault state---------------");
     let exportVaultStateTx = await rockOnyxDeltaNeutralVaultContract
-      .connect(admin)
+      .connect(oldAdmin)
       .exportVaultState();
   
     console.log(exportVaultStateTx);

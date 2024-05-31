@@ -111,7 +111,9 @@ async function deployPriceConsumerContract() {
     return;
   }
 
-  contract = await factory.deploy(arr1, arr2, arr3);
+  const admin = "0xad38f5dd867ef07b8fe7df685f28743922bb33c4";
+  
+  contract = await factory.deploy(admin, arr1, arr2, arr3);
   await contract.waitForDeployment();
 
   console.log(

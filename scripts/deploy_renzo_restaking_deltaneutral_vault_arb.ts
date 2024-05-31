@@ -20,10 +20,6 @@ const chainId: CHAINID = network.config.chainId ?? 0;
 console.log("chainId ",chainId);
 
 
-/** TEST */
-// ether mainnet wallet
-const aevoRecipientAddress = "0xC438754927A5A10185Eb20980c3F2eA3eb5E0f09";
-
 const usdcAddress = USDC_ADDRESS[chainId] || "";
 const usdtAddress = USDT_ADDRESS[chainId] || "";
 const daiAddress = DAI_ADDRESS[chainId] || "";
@@ -34,7 +30,12 @@ const aevoAddress = AEVO_ADDRESS[chainId] || "";
 const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId] || "";
 const renzoDepositAddress = RENZO_DEPOSIT_ADDRESS[chainId] || "";
 const zircuitDepositAddress = ZIRCUIT_DEPOSIT_ADDRESS[chainId] || "";
-  
+const admin = '0xDA323b84De8a94088a942F8Cc4437aC40ceE2C56';
+
+/** TEST */
+// ether mainnet wallet
+const aevoRecipientAddress = "0x8513268F086f87a4973295cD23603EdFd3cb0121";
+
 let renzoRestakingDNVault: Contracts.RenzoRestakingDeltaNeutralVault;
 
 async function deployRenzoRestakingDeltaNeutralVault() {
@@ -43,6 +44,7 @@ async function deployRenzoRestakingDeltaNeutralVault() {
     );
 
     renzoRestakingDNVault = await renzoRestakingDeltaNeutralVault.deploy(
+      admin,
       usdcAddress,
       wethAddress,
       aevoAddress,

@@ -8,22 +8,26 @@ import {
 
 const chainId: CHAINID = network.config.chainId;
 const privateKey = process.env.PRIVATE_KEY || "";
+const oldPrivateKey = process.env.OLD_PRIVATE_KEY || "";
 
 let rockOnyxOptionWheelVaultContract: Contracts.RockOnyxUSDTVault;
 let newRockOnyxOptionWheelVaultContract: Contracts.RockOnyxUSDTVault;
 
 async function main() {
     console.log('-------------migration option wheel---------------');
-    const admin = new ethers.Wallet(privateKey, ethers.provider);
-    const vaultAddress = "0xEd7FB833e80467F730F80650359Bd1d4e85c7081";
-    rockOnyxOptionWheelVaultContract = await ethers.getContractAt("RockOnyxUSDTVault", vaultAddress);
     
-    const newVaultAddress = "0xDc7BCA217d22A221A67580611253f16412AF063D";
+    const oldAdmin = new ethers.Wallet(oldPrivateKey, ethers.provider);
+    const oldVaultAddress = "0xEd7FB833e80467F730F80650359Bd1d4e85c7081";
+    rockOnyxOptionWheelVaultContract = await ethers.getContractAt("RockOnyxUSDTVault", oldVaultAddress);
+
+    const newAdmin = new ethers.Wallet(privateKey, ethers.provider);
+    console.log("new admin address %s", await newAdmin.getAddress());
+    const newVaultAddress = "0x0bD37D11e3A25B5BB0df366878b5D3f018c1B24c";
     newRockOnyxOptionWheelVaultContract = await ethers.getContractAt("RockOnyxUSDTVault", newVaultAddress);
 
     console.log("-------------export old vault state---------------");
     let exportVaultStateTx = await rockOnyxOptionWheelVaultContract
-      .connect(admin)
+      .connect(oldAdmin)
       .exportVaultState();
     
     console.log(exportVaultStateTx);
@@ -98,34 +102,33 @@ async function main() {
         unsettledLoss: exportVaultStateTx[10][3],
     };
 
-    // const importVaultStateTx = await newRockOnyxOptionWheelVaultContract
-    //   .connect(admin)
-    //   .importVaultState(
-    //       _currentRound,
-    //       _roundWithdrawalShares,
-    //       _roundPricePerShares,
-    //       _depositReceiptArr,
-    //       _withdrawalArr,
-    //       _vaultParams,
-    //       _vaultState,
-    //       _allocateRatio,
-    //       _ethLPState,
-    //       _usdLPState,
-    //       _optiondsState
-    //   );
+    const importVaultStateTx = await newRockOnyxOptionWheelVaultContract
+      .connect(newAdmin)
+      .importVaultState(
+          _currentRound,
+          _roundWithdrawalShares,
+          _roundPricePerShares,
+          _depositReceiptArr,
+          _withdrawalArr,
+          _vaultParams,
+          _vaultState,
+          _allocateRatio,
+          _ethLPState,
+          _usdLPState,
+          _optiondsState
+      );
     
-    // console.log("-------------export new vault state---------------");
-    // exportVaultStateTx = await newRockOnyxOptionWheelVaultContract
-    //   .connect(admin)
-    //   .exportVaultState();
+    console.log("-------------export new vault state---------------");
+    exportVaultStateTx = await newRockOnyxOptionWheelVaultContract
+      .connect(newAdmin)
+      .exportVaultState();
     
-    // console.log(exportVaultStateTx);
-    // console.log(exportVaultStateTx[3][0][1]);
-    // console.log(exportVaultStateTx[3][1][1]);
-    // console.log(exportVaultStateTx[3][2][1]);
+    console.log(exportVaultStateTx);
+    console.log(exportVaultStateTx[3][0][1]);
+    console.log(exportVaultStateTx[3][1][1]);
+    console.log(exportVaultStateTx[3][2][1]);
   }
 main().catch((error) => {
     console.error(error);
     process.exitCode = 1;
   });
-  

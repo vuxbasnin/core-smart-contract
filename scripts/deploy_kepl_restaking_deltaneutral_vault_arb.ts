@@ -12,6 +12,7 @@ import {
   RSETH_ADDRESS,
   ZIRCUIT_DEPOSIT_ADDRESS,
   KELP_DEPOSIT_ADDRESS,
+  KELP_DEPOSIT_REF_ID,
   UNI_SWAP_ADDRESS,
 } from "../constants";
 import * as Contracts from "../typechain-types";
@@ -19,10 +20,6 @@ import * as Contracts from "../typechain-types";
 const chainId: CHAINID = network.config.chainId ?? 0;
 console.log("chainId ", chainId);
 
-// main
-// const aevoRecipientAddress = "0x0aDf03D895617a95F317892125Cd6fb9ca3b99c1";
-// test
-const aevoRecipientAddress = "0xF4aF6504462E5D574EDBdB161F1063633CCa0274";
 const usdcAddress = USDC_ADDRESS[chainId] || "";
 const usdtAddress = USDT_ADDRESS[chainId] || "";
 const daiAddress = DAI_ADDRESS[chainId] || "";
@@ -32,7 +29,11 @@ const uniSwapAddress = UNI_SWAP_ADDRESS[chainId] || "";
 const aevoAddress = AEVO_ADDRESS[chainId] || "";
 const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId] || "";
 const kelpDepositAddress = KELP_DEPOSIT_ADDRESS[chainId] || "";
+const kelpDepositRefId = KELP_DEPOSIT_REF_ID[chainId] || "";
 const zircuitDepositAddress = ZIRCUIT_DEPOSIT_ADDRESS[chainId] || "";
+
+const contractAdmin = '0x0d4eef21D898883a6bd1aE518B60fEf7A951ce4D';
+const aevoRecipientAddress = "0xF4aF6504462E5D574EDBdB161F1063633CCa0274";
 
 let kelpRestakingDNVault: Contracts.KelpRestakingDeltaNeutralVault;
 
@@ -42,6 +43,7 @@ async function deployKelpRestakingDeltaNeutralVault() {
   );
 
   kelpRestakingDNVault = await kelpRestakingDeltaNeutralVault.deploy(
+    contractAdmin,
     usdcAddress,
     wethAddress,
     aevoAddress,
@@ -50,6 +52,7 @@ async function deployKelpRestakingDeltaNeutralVault() {
     rsEthAddress,
     BigInt(1 * 1e6),
     [kelpDepositAddress, zircuitDepositAddress],
+    kelpDepositRefId,
     uniSwapAddress,
     [usdcAddress, rsEthAddress, usdtAddress, daiAddress],
     [wethAddress, wethAddress, usdcAddress, usdtAddress],

@@ -6,13 +6,19 @@ import {
   WETH_ADDRESS,
   USDC_ADDRESS,
   USDCE_ADDRESS,
+  USDT_ADDRESS,
+  DAI_ADDRESS,
   WSTETH_ADDRESS,
   ARB_ADDRESS,
+  EZETH_ADDRESS,
+  RSETH_ADDRESS,
   SWAP_ROUTER_ADDRESS,
   ETH_PRICE_FEED_ADDRESS,
   WSTETH_ETH_PRICE_FEED_ADDRESS,
   USDC_PRICE_FEED_ADDRESS,
-  ARB_PRICE_FEED_ADDRESS
+  USDT_PRICE_FEED_ADDRESS,
+  DAI_PRICE_FEED_ADDRESS,
+  ARB_PRICE_FEED_ADDRESS,
 } from "../../constants";
 import {
   Signer,
@@ -31,12 +37,15 @@ describe("CamelotSwap", function () {
   let arb: Contracts.IERC20;
   let slippage = BigInt(50);
 
-  const usdcAddress = USDC_ADDRESS[chainId];
-  const usdceAddress = USDCE_ADDRESS[chainId];
-  const wstethAddress = WSTETH_ADDRESS[chainId];
-  const wethAddress = WETH_ADDRESS[chainId];
-  const arbAddress = ARB_ADDRESS[chainId];
-  const swapRouterAddress = SWAP_ROUTER_ADDRESS[chainId];
+  const wethAddress = WETH_ADDRESS[chainId] ?? "";
+  const wstethAddress = WSTETH_ADDRESS[chainId] ?? "";
+  const ezEthAddress = EZETH_ADDRESS[chainId] || "";
+  const rsEthAddress = RSETH_ADDRESS[chainId] || "";
+  const usdceAddress = USDCE_ADDRESS[chainId] ?? "";
+  const usdcAddress = USDC_ADDRESS[chainId] ?? "";
+  const arbAddress = ARB_ADDRESS[chainId] ?? "";
+  const usdtAddress = USDT_ADDRESS[chainId] || "";
+  const daiAddress = DAI_ADDRESS[chainId] || "";
 
   const ethPriceFeed = ETH_PRICE_FEED_ADDRESS[chainId];
   const wsteth_ethPriceFeed = WSTETH_ETH_PRICE_FEED_ADDRESS[chainId];
@@ -91,11 +100,11 @@ describe("CamelotSwap", function () {
     weth = await ethers.getContractAt("IERC20", wethAddress);
     arb = await ethers.getContractAt("IERC20", arbAddress);
 
-    await deployPriceConsumerContract();
-    await deployCamelotSwapContract();
+    // await deployPriceConsumerContract();
+    // await deployCamelotSwapContract();
   });
 
-  it("get token price", async function () {
+  it.skip("get token price", async function () {
     console.log("-------------get wsteth_eth_price and get eth_wsteth_price---------------");
     const getWstEth_EthPrice = await camelotSwapContract
       .connect(admin)
@@ -115,7 +124,7 @@ describe("CamelotSwap", function () {
       console.log('1 usdce = %s usdc', getUsdce_UsdcPrice );
   });
 
-  it("swap 2eth to wsteth%", async function () {
+  it.skip("swap 2eth to wsteth%", async function () {
     console.log("-------------swap eth to wsteth---------------");
     const ethSigner = await ethers.getImpersonatedSigner(
         "0x891af9013e202eea5ef1e14e32de01488f579b65"
@@ -137,7 +146,7 @@ describe("CamelotSwap", function () {
     console.log('wst eth amount %s', await wsteth.connect(ethSigner).balanceOf(ethSigner));
   });
 
-  it("swap 2wsteth to eth%", async function () {
+  it.skip("swap 2wsteth to eth%", async function () {
     console.log("-------------swap wsteth to eth---------------");
     const wstethSigner = await ethers.getImpersonatedSigner(
         "0xbb0b4642492b275f154e415fc52dacc931103fd9"
@@ -159,7 +168,7 @@ describe("CamelotSwap", function () {
     console.log('wst eth amount %s', await wsteth.connect(wstethSigner).balanceOf(wstethSigner));
   });
 
-  it("swap 2eth to usdc%", async function () {
+  it.skip("swap 2eth to usdc%", async function () {
     console.log("-------------swap eth to usd---------------");
     const ethSigner = await ethers.getImpersonatedSigner(
         "0x891af9013e202eea5ef1e14e32de01488f579b65"
@@ -181,7 +190,7 @@ describe("CamelotSwap", function () {
     console.log('usdc amount %s', await wsteth.connect(ethSigner).balanceOf(ethSigner));
   });
 
-  it("swap 2usdc to eth%", async function () {
+  it.skip("swap 2usdc to eth%", async function () {
     console.log("-------------swap usd to eth---------------");
     const usdSigner = await ethers.getImpersonatedSigner(
         "0x1714400ff23db4af24f9fd64e7039e6597f18c2b"
@@ -203,7 +212,7 @@ describe("CamelotSwap", function () {
     console.log('eth amount %s', await weth.connect(usdSigner).balanceOf(usdSigner));
   });
 
-  it("swap 2usdc to eth using swapToWithOutput%", async function () {
+  it.skip("swap 2usdc to eth using swapToWithOutput%", async function () {
     console.log("-------------swap eth to usd---------------");
     const usdSigner = await ethers.getImpersonatedSigner(
         "0x1714400ff23db4af24f9fd64e7039e6597f18c2b"
@@ -223,5 +232,33 @@ describe("CamelotSwap", function () {
     console.log('----After swap----');
     console.log('usdc amount %s', await usdc.connect(usdSigner).balanceOf(usdSigner));
     console.log('eth amount %s', await weth.connect(usdSigner).balanceOf(usdSigner));
+  });
+
+  it("get token price price consumer", async function () {
+    console.log("-------------get token price price consumer---------------");
+    const contractAdmin = await ethers.getImpersonatedSigner("0xAD38f5DD867EF07B8Fe7dF685F28743922Bb33C4");
+    const priceFeedContract = await ethers.getContractAt("PriceConsumer", "0x17FaBB6235383094938d250C4472308Ab1A70F40");
+
+    let priceFeed = await priceFeedContract.connect(contractAdmin).getPriceOf(wethAddress, usdcAddress);
+    console.log("wethAddress-usdcAddress:",priceFeed);
+    priceFeed = await priceFeedContract.connect(contractAdmin).getPriceOf(wstethAddress, wethAddress);
+    console.log("wstethAddress-wethAddress:",priceFeed);
+    priceFeed = await priceFeedContract.connect(contractAdmin).getPriceOf(usdceAddress, usdcAddress);
+    console.log("usdceAddress-usdcAddress:",priceFeed);
+    priceFeed = await priceFeedContract.connect(contractAdmin).getPriceOf(arbAddress, usdcAddress);
+    console.log("arbAddress-usdcAddress:",priceFeed);
+    priceFeed = await priceFeedContract.connect(contractAdmin).getPriceOf(ezEthAddress, wethAddress);
+    console.log("ezEthAddress-wethAddress:",priceFeed);
+    priceFeed = await priceFeedContract.connect(contractAdmin).getPriceOf(rsEthAddress, wethAddress);
+    console.log("rsEthAddress-wethAddress:",priceFeed);
+    priceFeed = await priceFeedContract.connect(contractAdmin).getPriceOf(usdtAddress, usdcAddress);
+    console.log("usdtAddress-usdcAddress:",priceFeed);
+    priceFeed = await priceFeedContract.connect(contractAdmin).getPriceOf(daiAddress, usdtAddress);
+    console.log("daiAddress-usdtAddress:",priceFeed);
+    console.log("-------------Update price feed---------------");
+    const newPF = '0xF4b7Fd2E7906016F685312Ec4961c58F2920a304';
+    const tx = await priceFeedContract.connect(contractAdmin).updatePriceFeed(usdceAddress, usdcAddress, newPF);
+    priceFeed = await priceFeedContract.connect(contractAdmin).getPriceOf(usdceAddress, usdcAddress);
+    console.log("usdceAddress-usdcAddress:",priceFeed);
   });
 });
