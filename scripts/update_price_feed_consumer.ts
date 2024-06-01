@@ -10,7 +10,6 @@ import {
 
 const chainId: CHAINID = network.config.chainId;
 const privateKey = process.env.PRIVATE_KEY || "";
-const oldPrivateKey = process.env.OLD_PRIVATE_KEY || "";
 
 const usdceAddress = USDCE_ADDRESS[chainId] ?? "";
   const usdcAddress = USDC_ADDRESS[chainId] ?? "";
@@ -25,7 +24,7 @@ async function main() {
     console.log("usdceAddress-usdcAddress:",priceFeed);
 
     console.log("-------------Update price feed---------------");
-    const pfAddress = '0xF4b7Fd2E7906016F685312Ec4961c58F2920a304';
+    const pfAddress = '0x4392c8D194C074A98034BB66A1235f9a3B24AC12';
     await priceFeedContract.connect(contractAdmin).updatePriceFeed(usdceAddress, usdcAddress, pfAddress);
     priceFeed = await priceFeedContract.connect(contractAdmin).getPriceOf(usdceAddress, usdcAddress);
     console.log("usdceAddress-usdcAddress:",priceFeed);
