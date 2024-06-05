@@ -88,9 +88,9 @@ contract RockOnyxUSDTVault is BaseRockOnyxOptionWheelVault {
      * @param amount is the amount of `asset` deposited
      */
     function deposit(uint256 amount) external nonReentrant {
-        require(paused == false, "VAULT_PAUSED");
-        require(amount >= vaultParams.minimumSupply, "INVALID_AMOUNT");
-        require(_totalValueLocked() + amount <= vaultParams.cap, "EXCEED_CAP");
+        require(paused == false, "PAUSED");
+        require(amount >= vaultParams.minimumSupply, "MIN_SUP");
+        require(_totalValueLocked() + amount <= vaultParams.cap, "EXD_CAP");
         IERC20(vaultParams.asset).safeTransferFrom(
             msg.sender,
             address(this),
@@ -136,18 +136,10 @@ contract RockOnyxUSDTVault is BaseRockOnyxOptionWheelVault {
      * @notice recalculate allocate ratio vault
      */
     function recalculateAllocateRatio() private {
-        uint256 tvl = getTotalEthLPAssets() +
-            getTotalUsdLPAssets() +
-            getTotalOptionsAmount();
-        allocateRatio.ethLPRatio =
-            (getTotalEthLPAssets() * 10 ** allocateRatio.decimals) /
-            tvl;
-        allocateRatio.usdLPRatio =
-            (getTotalUsdLPAssets() * 10 ** allocateRatio.decimals) /
-            tvl;
-        allocateRatio.optionsRatio =
-            (getTotalOptionsAmount() * 10 ** allocateRatio.decimals) /
-            tvl;
+        uint256 tvl = getTotalEthLPAssets() + getTotalUsdLPAssets() + getTotalOptionsAmount();
+        allocateRatio.ethLPRatio = (getTotalEthLPAssets() * 10 ** allocateRatio.decimals) / tvl;
+        allocateRatio.usdLPRatio = (getTotalUsdLPAssets() * 10 ** allocateRatio.decimals) / tvl;
+        allocateRatio.optionsRatio = (getTotalOptionsAmount() * 10 ** allocateRatio.decimals) / tvl;
     }
 
     /**
@@ -155,12 +147,9 @@ contract RockOnyxUSDTVault is BaseRockOnyxOptionWheelVault {
      * @param shares is the number of shares to withdraw
      */
     function initiateWithdrawal(uint256 shares) external nonReentrant {
-        require(depositReceipts[msg.sender].shares >= shares, "INVALID_SHARES");
-        require(
-            withdrawals[msg.sender].round == currentRound ||
-                withdrawals[msg.sender].shares == 0,
-            "INVALID_SHARES"
-        );
+        require(depositReceipts[msg.sender].shares >= shares, "INV_SHARES");
+        require(withdrawals[msg.sender].round == currentRound || withdrawals[msg.sender].shares == 0, "INV_SHARES");
+
         withdrawals[msg.sender].shares += shares;
         withdrawals[msg.sender].round = currentRound;
         depositReceipts[msg.sender].shares -= shares;
@@ -187,8 +176,7 @@ contract RockOnyxUSDTVault is BaseRockOnyxOptionWheelVault {
      * @notice get profit and loss of user
      */
     function getPnL() public view returns (uint256 profit, uint256 loss) {
-        uint256 shares = withdrawals[msg.sender].shares +
-            depositReceipts[msg.sender].shares;
+        uint256 shares = withdrawals[msg.sender].shares + depositReceipts[msg.sender].shares;
         uint256 currentAmount = (shares * _getPricePerShare()) / 1e6;
 
         profit = currentAmount > depositReceipts[msg.sender].depositAmount
@@ -199,7 +187,6 @@ contract RockOnyxUSDTVault is BaseRockOnyxOptionWheelVault {
             ? ((depositReceipts[msg.sender].depositAmount - currentAmount) *
                 1e6) / depositReceipts[msg.sender].depositAmount
             : 0;
-        return (profit, loss);
     }
 
     /**
@@ -228,11 +215,9 @@ contract RockOnyxUSDTVault is BaseRockOnyxOptionWheelVault {
      * @param shares is the number of shares to withdraw
      */
     function completeWithdrawal(uint256 shares) external nonReentrant {
-        require(withdrawals[msg.sender].shares >= shares, "INVALID_SHARES");
-        require(
-            vaultState.withdrawPoolAmount > 0,
-            "EXCEED_WITHDRAW_POOL_CAPACITY"
-        );
+        require(withdrawals[msg.sender].round < currentRound, "INV_WD_ROUND");
+        require(withdrawals[msg.sender].shares >= shares, "INV_SHARES");
+
         uint256 withdrawAmount = ShareMath.sharesToAsset(
             shares,
             roundPricePerShares[withdrawals[msg.sender].round],
@@ -249,6 +234,9 @@ contract RockOnyxUSDTVault is BaseRockOnyxOptionWheelVault {
             : 0;
         vaultState.performanceFeeAmount += performanceFee;
         withdrawAmount -= (performanceFee + NETWORK_COST);
+
+        require(vaultState.withdrawPoolAmount > withdrawAmount, "EXD_WD_POOL_CAP");
+        
         vaultState.withdrawPoolAmount -= withdrawAmount;
         depositReceipts[msg.sender].depositAmount -=
             (shares * depositReceipts[msg.sender].depositAmount) /
@@ -273,10 +261,9 @@ contract RockOnyxUSDTVault is BaseRockOnyxOptionWheelVault {
      */
     function claimFee() external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        if (
-            vaultState.performanceFeeAmount + vaultState.managementFeeAmount >
-            vaultState.withdrawPoolAmount
-        ) {
+        
+        if (vaultState.performanceFeeAmount + vaultState.managementFeeAmount >
+            vaultState.withdrawPoolAmount) {
             IERC20(vaultParams.asset).safeTransfer(
                 msg.sender,
                 vaultState.withdrawPoolAmount
@@ -306,7 +293,6 @@ contract RockOnyxUSDTVault is BaseRockOnyxOptionWheelVault {
             _totalValueLocked() - vaultState.currentRoundFeeAmount,
             vaultParams.decimals
         );
-        vaultState.totalShares -= roundWithdrawalShares[currentRound];
         recalculateAllocateRatio();
         emit RoundClosed(
             currentRound,
@@ -318,6 +304,7 @@ contract RockOnyxUSDTVault is BaseRockOnyxOptionWheelVault {
 
     function getVaultState() external view returns (VaultState memory) {
         _auth(ROCK_ONYX_ADMIN_ROLE);
+
         return vaultState;
     }
 
@@ -348,27 +335,16 @@ contract RockOnyxUSDTVault is BaseRockOnyxOptionWheelVault {
      */
     function acquireWithdrawalFunds() external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        uint256 withdrawAmountIncludeFee = (roundWithdrawalShares[
-            currentRound - 1
-        ] * roundPricePerShares[currentRound - 1]) /
-            1e6 +
-            vaultState.currentRoundFeeAmount;
-        uint256 withdrawEthLPAmount = (withdrawAmountIncludeFee *
-            allocateRatio.ethLPRatio) / 10 ** allocateRatio.decimals;
-        uint256 withdrawUsdLPAmount = (withdrawAmountIncludeFee *
-            allocateRatio.usdLPRatio) / 10 ** allocateRatio.decimals;
-        uint256 withdrawOptionsAmount = (withdrawAmountIncludeFee *
-            allocateRatio.optionsRatio) / 10 ** allocateRatio.decimals;
-        vaultState.withdrawPoolAmount += acquireWithdrawalFundsEthLP(
-            withdrawEthLPAmount
-        );
-        vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdLP(
-            withdrawUsdLPAmount
-        );
-        vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdOptions(
-            withdrawOptionsAmount
-        );
+        uint256 withdrawAmountIncludeFee = (roundWithdrawalShares[currentRound - 1] * 
+            roundPricePerShares[currentRound - 1]) / 1e6 + vaultState.currentRoundFeeAmount;
+        uint256 withdrawEthLPAmount = (withdrawAmountIncludeFee * allocateRatio.ethLPRatio) / 10 ** allocateRatio.decimals;
+        uint256 withdrawUsdLPAmount = (withdrawAmountIncludeFee * allocateRatio.usdLPRatio) / 10 ** allocateRatio.decimals;
+        uint256 withdrawOptionsAmount = (withdrawAmountIncludeFee * allocateRatio.optionsRatio) / 10 ** allocateRatio.decimals;
+        vaultState.withdrawPoolAmount += acquireWithdrawalFundsEthLP(withdrawEthLPAmount);
+        vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdLP(withdrawUsdLPAmount);
+        vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdOptions(withdrawOptionsAmount);
         vaultState.managementFeeAmount += vaultState.currentRoundFeeAmount;
+        vaultState.totalShares -= roundWithdrawalShares[currentRound];
     }
 
     /**
@@ -381,8 +357,8 @@ contract RockOnyxUSDTVault is BaseRockOnyxOptionWheelVault {
         uint256 _managementFeeRate
     ) external {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        require(_performanceFeeRate <= 100, "INVALID_PF_RATE");
-        require(_managementFeeRate <= 100, "INVALID_MF_RATE");
+        require(_performanceFeeRate <= 100, "INV_PF_RATE");
+        require(_managementFeeRate <= 100, "INV_MF_RATE");
         vaultParams.performanceFeeRate = _performanceFeeRate;
         vaultParams.managementFeeRate = _managementFeeRate;
         emit FeeRatesUpdated(_performanceFeeRate, _managementFeeRate);
@@ -478,7 +454,7 @@ contract RockOnyxUSDTVault is BaseRockOnyxOptionWheelVault {
     function allocatedRatio()
         external
         view
-        returns (uint256 ethLPRatio, uint256 usdLPRatio, uint256 optionsRatio)
+        returns (uint256, uint256, uint256)
     {
         return (
             allocateRatio.ethLPRatio,
