@@ -79,7 +79,7 @@ contract RockOnyxEthLiquidityStrategy is
         uint8 decimals
     ) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        require(ethLPState.liquidity == 0, "POSITION_ALREADY_OPEN");
+        require(ethLPState.liquidity == 0, "POS_ALR_OPEN");
         _rebalanceEthLPAssets(ratio, decimals);
         IERC20(wstEth).approve(
             address(ethLPProvider),
@@ -124,7 +124,7 @@ contract RockOnyxEthLiquidityStrategy is
         uint8 decimals
     ) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        require(ethLPState.liquidity > 0, "POSITION_NOT_OPEN");
+        require(ethLPState.liquidity > 0, "POS_NOT_OPEN");
         _rebalanceEthLPAssets(ratio, decimals);
         IERC20(wstEth).approve(
             address(ethLPProvider),

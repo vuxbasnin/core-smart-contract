@@ -70,7 +70,7 @@ contract RockOynxUsdLiquidityStrategy is
         uint8 decimals
     ) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        require(usdLPState.liquidity == 0, "POSITION_ALREADY_OPEN");
+        require(usdLPState.liquidity == 0, "POS_ALR_OPEN");
 
         _rebalanceUsdLPAssets(ratio, decimals);
 
@@ -130,7 +130,7 @@ contract RockOynxUsdLiquidityStrategy is
         uint8 decimals
     ) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        require(usdLPState.liquidity > 0, "POSITION_HAS_NOT_OPEN");
+        require(usdLPState.liquidity > 0, "POS_NOT_OPEN");
 
         _rebalanceUsdLPAssets(ratio, decimals);
 
