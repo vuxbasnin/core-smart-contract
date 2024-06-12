@@ -14,6 +14,10 @@ contract RenzoRestakingDeltaNeutralVault is
     constructor(
         address _admin,
         address _usdc,
+         uint8 _decimals,
+        uint256 _minimumSupply,
+        uint256 _cap,
+        uint256 _networkCost,
         address _weth,
         address _perpDexAddress,
         address _perpDexReceiver,
@@ -30,7 +34,7 @@ contract RenzoRestakingDeltaNeutralVault is
         PerpDexStrategy()
         BaseDeltaNeutralVault()
     {
-        baseDeltaNeutralVault_Initialize(_admin, _usdc, _initialPPS, _swapProxy, _token0s, _token1s, _fees);
+        baseDeltaNeutralVault_Initialize(_admin, _usdc, _decimals, _minimumSupply, _cap, _networkCost, _initialPPS, _swapProxy, _token0s, _token1s, _fees);
         ethRestaking_Initialize(_restakingToken, _usdc, _weth, _stakingProxies, _swapProxy, _token0s, _token1s, _fees);
         perpDex_Initialize(_perpDexAddress, _perpDexReceiver, _usdc, _perpDexConnector);
     }
@@ -144,7 +148,7 @@ contract RenzoRestakingDeltaNeutralVault is
             withdrawalArr,
             vaultParams,
             vaultState,
-            restakingStratState,
+            restakingState,
             perpDexState
         );
     }
@@ -172,7 +176,7 @@ contract RenzoRestakingDeltaNeutralVault is
 
         vaultParams = _vaultParams;
         vaultState = _vaultState;
-        restakingStratState = _ethRestakingState;
+        restakingState = _ethRestakingState;
         perpDexState = _perpDexState;
     }
 }
