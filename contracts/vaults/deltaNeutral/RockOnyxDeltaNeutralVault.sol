@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../../extensions/RockOnyxAccessControl.sol";
+import "../../extensions/RockOnyx/BaseSwapVault.sol";
 import "../../lib/ShareMath.sol";
 import "./strategies/RockOynxEthStakeLendStrategy.sol";
 import "./strategies/RockOynxPerpDexStrategy.sol";
@@ -12,6 +13,7 @@ import "hardhat/console.sol";
 
 contract RockOnyxDeltaNeutralVault is
     RockOnyxAccessControl,
+    BaseSwapVault,
     RockOynxEthStakeLendStrategy,
     RockOynxPerpDexStrategy
 {
@@ -56,7 +58,11 @@ contract RockOnyxDeltaNeutralVault is
         address _perpDexReceiver,
         address _weth,
         address _wstEth,
-        uint256 _initialPPS
+        uint256 _initialPPS,
+        address _uniSwapProxy,
+        address[] memory _token0s,
+        address[] memory _token1s,
+        uint24[] memory _fees
     ) RockOynxEthStakeLendStrategy() RockOynxPerpDexStrategy() {
         vaultParams = VaultParams(6, _usdc, 5_000_000, 1_000_000 * 1e6, 10, 1);
         vaultState = VaultState(0, 0, 0, 0, 0);
@@ -66,6 +72,7 @@ contract RockOnyxDeltaNeutralVault is
         _grantRole(ROCK_ONYX_OPTIONS_TRADER_ROLE, _admin);
         _grantRole(ROCK_ONYX_OPTIONS_TRADER_ROLE, _perpDexReceiver);
 
+        baseSwapVault_Initialize(_uniSwapProxy, _token0s, _token1s, _fees);
         ethStakeLend_Initialize(_swapProxy, _usdc, _weth, _wstEth);
         perpDex_Initialize(_perpDexProxy, _perpDexReceiver, _usdc);
         initialPPS = _initialPPS;
@@ -75,16 +82,37 @@ contract RockOnyxDeltaNeutralVault is
      * @notice Mints the vault shares for depositor
      * @param amount is the amount of `asset` deposited
      */
-    function deposit(uint256 amount) external nonReentrant {
-        require(paused == false, "VAULT_HAS_BEEN_PAUSED");
-        require(amount >= vaultParams.minimumSupply, "INVALID_DEPOSIT_AMOUNT");
-        require(_totalValueLocked() + amount <= vaultParams.cap, "EXCEED_CAP");
+    function deposit(uint256 amount, address tokenIn, address transitToken) external nonReentrant {
+        require(paused == false, "VAULT_PAUSED");
+        uint256 assetDepositAmount = (tokenIn == vaultParams.asset) ? amount : 
+                            (tokenIn == transitToken) ? amount * swapProxy.getPriceOf(tokenIn, vaultParams.asset) / 10 ** (ERC20(tokenIn).decimals()) :
+                            (amount * swapProxy.getPriceOf(tokenIn, transitToken) * swapProxy.getPriceOf(transitToken, vaultParams.asset)) / 10 ** (ERC20(tokenIn).decimals() + (ERC20(transitToken).decimals()));
 
-        IERC20(vaultParams.asset).safeTransferFrom(
-            msg.sender,
-            address(this),
-            amount
-        );
+        require(assetDepositAmount >= vaultParams.minimumSupply, "MIN_AMOUNT");
+        require(_totalValueLocked() + assetDepositAmount <= vaultParams.cap, "EXCEED_CAP");
+
+        IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amount);
+        if(tokenIn != vaultParams.asset){
+            if(tokenIn != transitToken){
+                IERC20(tokenIn).approve(address(swapProxy), amount);
+                amount = swapProxy.swapTo(
+                    address(this),
+                    address(tokenIn),
+                    amount,
+                    address(transitToken),
+                    getFee(address(tokenIn), address(transitToken))
+                );
+            }
+
+            IERC20(transitToken).approve(address(swapProxy), amount);
+            amount = swapProxy.swapTo(
+                address(this),
+                address(transitToken),
+                amount,
+                address(vaultParams.asset),
+                getFee(address(transitToken), address(vaultParams.asset))
+            );
+        }
 
         uint256 shares = _issueShares(amount);
         DepositReceipt storage depositReceipt = depositReceipts[msg.sender];
@@ -241,6 +269,7 @@ contract RockOnyxDeltaNeutralVault is
             withdrawals[msg.sender].performanceFee) /
             withdrawals[msg.sender].shares;
         withdrawAmount -= (performanceFee + NETWORK_COST);
+
         require(
             vaultState.withdrawPoolAmount > withdrawAmount,
             "EXCEED_WITHDRAW_POOL_CAPACITY"

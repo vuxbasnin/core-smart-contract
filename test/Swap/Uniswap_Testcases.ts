@@ -228,4 +228,26 @@ describe("UniSwap", function () {
     console.log('eth amount %s', await WETH.connect(ezethSigner).balanceOf(ezethSigner));
     console.log('ezeth amount %s', await EZETH.connect(ezethSigner).balanceOf(ezethSigner));
   });
+
+  it.skip("swap usdc to usd, arb mainnet", async function () {
+    console.log("-------------swap usdc to usd, arb mainnet---------------");
+    const ezethSigner = await ethers.getImpersonatedSigner(
+        "0x7354F8aDFDfc6ca4D9F81Fc20d04eb8A7b11b01b"
+      );
+
+    await USDC
+      .connect(ezethSigner)
+      .approve(await uniswapContract.getAddress(), BigInt(100*1e18));
+     
+    console.log('----Before swap----');
+    console.log('eth amount %s', await WETH.connect(ezethSigner).balanceOf(ezethSigner));
+    console.log('ezeth amount %s', await EZETH.connect(ezethSigner).balanceOf(ezethSigner));
+    const swapEzEthToEthTx = await uniswapContract
+      .connect(ezethSigner)
+      .swapToWithOutput(ezethSigner, EZETH, BigInt(0.05*1e18), WETH, 100);
+      await swapEzEthToEthTx.wait();
+    console.log('----After swap----');
+    console.log('eth amount %s', await WETH.connect(ezethSigner).balanceOf(ezethSigner));
+    console.log('ezeth amount %s', await EZETH.connect(ezethSigner).balanceOf(ezethSigner));
+  });
 });
