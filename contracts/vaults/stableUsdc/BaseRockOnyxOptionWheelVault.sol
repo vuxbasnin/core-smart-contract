@@ -89,12 +89,8 @@ contract BaseRockOnyxOptionWheelVault is
     {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        uint256[] memory exportRoundWithdrawalShares = new uint256[](
-            currentRound
-        );
-        uint256[] memory exportRoundPricePerShares = new uint256[](
-            currentRound
-        );
+        uint256[] memory exportRoundWithdrawalShares = new uint256[](currentRound);
+        uint256[] memory exportRoundPricePerShares = new uint256[](currentRound);
         for (uint256 i = 0; i < currentRound; i++) {
             exportRoundWithdrawalShares[i] = roundWithdrawalShares[i];
             exportRoundPricePerShares[i] = roundPricePerShares[i];

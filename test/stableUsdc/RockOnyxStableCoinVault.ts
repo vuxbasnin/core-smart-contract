@@ -10,8 +10,11 @@ import {
   USDCE_ADDRESS,
   WSTETH_ADDRESS,
   ARB_ADDRESS,
+  USDT_ADDRESS,
+  DAI_ADDRESS,
   NonfungiblePositionManager,
   SWAP_ROUTER_ADDRESS,
+  UNISWAP_ROUTER_ADDRESS,
   AEVO_ADDRESS,
   AEVO_CONNECTOR_ADDRESS,
   USDC_IMPERSONATED_SIGNER_ADDRESS,
@@ -22,6 +25,8 @@ import {
   WSTETH_ETH_PRICE_FEED_ADDRESS,
   USDC_PRICE_FEED_ADDRESS,
   ARB_PRICE_FEED_ADDRESS,
+  USDT_PRICE_FEED_ADDRESS,
+  DAI_PRICE_FEED_ADDRESS,
 } from "../../constants";
 import {
   Signer,
@@ -38,13 +43,13 @@ describe("RockOnyxStableCoinVault", function () {
     user1: Signer,
     user2: Signer,
     user3: Signer,
-    user4: Signer,
-    contractAdmin: Signer;
+    user4: Signer;
 
   let optionsReceiver: Signer;
   let priceConsumerContract: Contracts.PriceConsumer;
   let camelotLiquidityContract: Contracts.CamelotLiquidity;
   let rockOnyxUSDTVaultContract: Contracts.RockOnyxUSDTVault;
+  let uniSwapContract: Contracts.UniSwap;
 
   let usdc: Contracts.IERC20;
   let usdce: Contracts.IERC20;
@@ -69,7 +74,10 @@ describe("RockOnyxStableCoinVault", function () {
   const wstethAddress = WSTETH_ADDRESS[chainId];
   const wethAddress = WETH_ADDRESS[chainId];
   const arbAddress = ARB_ADDRESS[chainId];
+  const usdtAddress = USDT_ADDRESS[chainId] || "";
+  const daiAddress = DAI_ADDRESS[chainId] || "";
   const swapRouterAddress = SWAP_ROUTER_ADDRESS[chainId];
+  const uniSwapRouterAddress = UNISWAP_ROUTER_ADDRESS[chainId];
   const aevoAddress = AEVO_ADDRESS[chainId];
   const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId];
 
@@ -77,6 +85,8 @@ describe("RockOnyxStableCoinVault", function () {
   const wsteth_ethPriceFeed = WSTETH_ETH_PRICE_FEED_ADDRESS[chainId];
   const usdcePriceFeed = USDC_PRICE_FEED_ADDRESS[chainId];
   const arbPriceFeed = ARB_PRICE_FEED_ADDRESS[chainId];
+  const usdtPriceFeed = USDT_PRICE_FEED_ADDRESS[chainId];
+  const daiPriceFeed = DAI_PRICE_FEED_ADDRESS[chainId];
 
   let camelotSwapContract: Contracts.CamelotSwap;
 
@@ -84,9 +94,9 @@ describe("RockOnyxStableCoinVault", function () {
     const factory = await ethers.getContractFactory("PriceConsumer");
     priceConsumerContract = await factory.deploy(
       admin,
-      [wethAddress, wstethAddress, usdceAddress, arbAddress],
-      [usdcAddress, wethAddress, usdcAddress, usdcAddress],
-      [ethPriceFeed, wsteth_ethPriceFeed, usdcePriceFeed, arbPriceFeed]
+      [wethAddress, wstethAddress, usdceAddress, arbAddress, usdtAddress, daiAddress],
+      [usdcAddress, wethAddress, usdcAddress, usdcAddress, usdcAddress, usdtAddress],
+      [ethPriceFeed, wsteth_ethPriceFeed, usdcePriceFeed, arbPriceFeed, usdtPriceFeed, daiPriceFeed]
     );
     await priceConsumerContract.waitForDeployment();
 
@@ -135,6 +145,21 @@ describe("RockOnyxStableCoinVault", function () {
     );
   }
 
+  async function deployUniSwapContract() {
+    const factory = await ethers.getContractFactory("UniSwap");
+    uniSwapContract = await factory.deploy(
+      admin,
+      uniSwapRouterAddress,
+      priceConsumerContract.getAddress()
+    );
+    await uniSwapContract.waitForDeployment();
+
+    console.log(
+      "Deployed uni swap contract at address %s",
+      await uniSwapContract.getAddress()
+    );
+  }
+
   async function deployRockOnyxUSDTVault() {
     const rockOnyxUSDTVault = await ethers.getContractFactory(
       "RockOnyxUSDTVault"
@@ -153,7 +178,11 @@ describe("RockOnyxStableCoinVault", function () {
       wethAddress,
       wstethAddress,
       arbAddress,
-      BigInt(0 * 1e6)
+      BigInt(0 * 1e6),
+      await uniSwapContract.getAddress(),
+      [usdtAddress, daiAddress],
+      [usdcAddress, usdtAddress],
+      [100, 100]
     );
     await rockOnyxUSDTVaultContract.waitForDeployment();
 
@@ -179,25 +208,27 @@ describe("RockOnyxStableCoinVault", function () {
   }
 
   before(async function () {
-    [admin, optionsReceiver, user1, user2, user3, user4, contractAdmin] = await ethers.getSigners();
+    [admin, optionsReceiver, user1, user2, user3, user4] = await ethers.getSigners();
 
     usdc = await ethers.getContractAt("IERC20", usdcAddress);
     usdce = await ethers.getContractAt("IERC20", usdceAddress);
     arb = await ethers.getContractAt("IERC20", arbAddress);
+    
     await deployPriceConsumerContract();
     await deployCamelotLiquidity();
     await deployCamelotSwapContract();
+    await deployUniSwapContract();
     await deployAevoContract();
     await deployRockOnyxUSDTVault();
   });
 
   // Helper function for deposit
-  async function deposit(sender: Signer, amount: BigNumberish) {
-    await usdc
+  async function deposit(sender: Signer, amount: BigNumberish, token: Contracts.IERC20, tokenTransit: Contracts.IERC20) {
+    await token
       .connect(sender)
       .approve(await rockOnyxUSDTVaultContract.getAddress(), amount);
 
-    await rockOnyxUSDTVaultContract.connect(sender).deposit(amount);
+    await rockOnyxUSDTVaultContract.connect(sender).deposit(amount, token, tokenTransit);
   }
 
   async function transferUsdcForUser(
@@ -257,10 +288,10 @@ describe("RockOnyxStableCoinVault", function () {
 
   it("deposit to rockOnyxUSDTVault, should deposit successfully", async function () {
     console.log('-------------deposit to rockOnyxUSDTVault---------------');
-    await deposit(user1, 100*1e6);
-    await deposit(user2, 100*1e6);
-    await deposit(user3, 100*1e6);
-    await deposit(user4, 100*1e6);
+    await deposit(user1, 100* 1e6, usdc, usdc);
+    await deposit(user2, 100* 1e6, usdc, usdc);
+    await deposit(user3, 100* 1e6, usdc, usdc);
+    await deposit(user4, 100* 1e6, usdc, usdc);
 
     let totalValueLock = await logAndReturnTotalValueLock();
     expect(totalValueLock).to.approximately(400*1e6, PRECISION);
@@ -338,8 +369,8 @@ describe("RockOnyxStableCoinVault", function () {
 
   it("add more deposits to rockOnyxUSDTVault, should deposit successfully", async function () {
     console.log('-------------add more deposits torockOnyxUSDTVault---------------')
-    await deposit(user1, 100*1e6);
-    await deposit(user2, 100*1e6);
+    await deposit(user1, 100* 1e6, usdc, usdc);
+    await deposit(user2, 100* 1e6, usdc, usdc);
 
     let totalValueLock = await logAndReturnTotalValueLock();
     expect(totalValueLock).to.approximately(600*1e6, PRECISION);

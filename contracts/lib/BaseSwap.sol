@@ -38,6 +38,14 @@ abstract contract BaseSwap {
         return priceConsumer.getPriceOf(token0, token1);
     }
 
+    function getPriceOf(
+        address token0,
+        address token1,
+        address transitToken
+    ) external view returns (uint256) {
+        return priceConsumer.getPriceOf(token0, transitToken) * priceConsumer.getPriceOf(transitToken, token1) / ERC20(transitToken).decimals();
+    }
+
     function getAmountOutMinimum(
         address token0,
         address token1,
