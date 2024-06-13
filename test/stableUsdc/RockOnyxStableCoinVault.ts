@@ -63,8 +63,6 @@ describe("RockOnyxStableCoinVault", function () {
   const LIQUIDITY_AMOUNT_INDEX = 1;
   const PRECISION = 2*1e6;
 
-  let aevoContract: Contracts.Aevo;
-
   const rewardAddress = ANGLE_REWARD_ADDRESS[chainId];
   const nftPositionAddress = NFT_POSITION_ADDRESS[chainId];
   const usdcImpersonatedSigner = USDC_IMPERSONATED_SIGNER_ADDRESS[chainId];
@@ -132,21 +130,6 @@ describe("RockOnyxStableCoinVault", function () {
     );
   }
 
-  async function deployAevoContract() {
-    const factory = await ethers.getContractFactory("Aevo");
-    aevoContract = await factory.deploy(
-      usdcAddress,
-      aevoAddress,
-      aevoConnectorAddress
-    );
-    await aevoContract.waitForDeployment();
-
-    console.log(
-      "Deployed AEVO contract at address %s",
-      await aevoContract.getAddress()
-    );
-  }
-
   async function deployUniSwapContract() {
     const factory = await ethers.getContractFactory("UniSwap");
     uniSwapContract = await factory.deploy(
@@ -178,8 +161,9 @@ describe("RockOnyxStableCoinVault", function () {
       rewardAddress,
       nftPositionAddress,
       await camelotSwapContract.getAddress(),
-      await aevoContract.getAddress(),
+      aevoAddress,
       await optionsReceiver.getAddress(),
+      aevoConnectorAddress,
       usdceAddress,
       wethAddress,
       wstethAddress,
@@ -193,7 +177,7 @@ describe("RockOnyxStableCoinVault", function () {
     await rockOnyxUSDTVaultContract.waitForDeployment();
 
     console.log(
-      "deploy rockOnyxEthLiquidityStrategyContract successfully: %s",
+      "deploy rockOnyxUSDTVaultContract successfully: %s",
       await rockOnyxUSDTVaultContract.getAddress()
     );
   }
@@ -224,7 +208,6 @@ describe("RockOnyxStableCoinVault", function () {
     await deployCamelotLiquidity();
     await deployCamelotSwapContract();
     await deployUniSwapContract();
-    await deployAevoContract();
     await deployRockOnyxUSDTVault();
   });
 
@@ -365,7 +348,7 @@ describe("RockOnyxStableCoinVault", function () {
 
   it("deposit to vendor on aevo, should deposit successfully", async function () {
     console.log('-------------deposit to vendor on aevo---------------');
-    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor(650000, {
       value: ethers.parseEther("0.001753"),
     });
 
@@ -677,17 +660,26 @@ describe("RockOnyxStableCoinVault", function () {
     const newRockOnyxUSDTVaultContract = await rockOnyxUSDTVault.deploy(
       await admin.getAddress(),
       usdcAddress,
+      6,
+      BigInt(5 * 1e6),
+      BigInt(1000000 * 1e6),
+      networkCost,
       await camelotLiquidityContract.getAddress(),
       rewardAddress,
       nftPositionAddress,
       await camelotSwapContract.getAddress(),
-      await aevoContract.getAddress(),
+      aevoAddress,
       await optionsReceiver.getAddress(),
+      aevoConnectorAddress,
       usdceAddress,
       wethAddress,
       wstethAddress,
       arbAddress,
-      BigInt(0 * 1e6)
+      BigInt(0 * 1e6),
+      await uniSwapContract.getAddress(),
+      [usdtAddress, daiAddress],
+      [usdcAddress, usdtAddress],
+      [100, 100]
     );
     await rockOnyxUSDTVaultContract.waitForDeployment();
   

@@ -49,7 +49,6 @@ describe("RockOnyxStableCoinVault", function () {
   let optionsReceiver: Signer;
   let camelotLiquidityContract: Contracts.CamelotLiquidity;
   let rockOnyxUSDTVaultContract: Contracts.RockOnyxUSDTVault;
-  let aevoContract: Contracts.Aevo;
   let camelotSwapContract: Contracts.CamelotSwap;
   let priceConsumerContract: Contracts.PriceConsumer;
   let uniSwapContract: Contracts.UniSwap;
@@ -146,21 +145,6 @@ describe("RockOnyxStableCoinVault", function () {
     );
   }
 
-  async function deployAevoContract() {
-    const factory = await ethers.getContractFactory("Aevo");
-    aevoContract = await factory.deploy(
-      usdcAddress,
-      aevoAddress,
-      aevoConnectorAddress
-    );
-    await aevoContract.waitForDeployment();
-
-    console.log(
-      "Deployed AEVO contract at address %s",
-      await aevoContract.getAddress()
-    );
-  }
-
   async function deployRockOnyxUSDTVault() {
     const rockOnyxUSDTVault = await ethers.getContractFactory(
       "RockOnyxUSDTVault"
@@ -177,8 +161,9 @@ describe("RockOnyxStableCoinVault", function () {
       rewardAddress,
       nftPositionAddress,
       await camelotSwapContract.getAddress(),
-      await aevoContract.getAddress(),
+      aevoAddress,
       await optionsReceiver.getAddress(),
+      aevoConnectorAddress,
       usdceAddress,
       wethAddress,
       wstethAddress,
@@ -217,7 +202,6 @@ describe("RockOnyxStableCoinVault", function () {
     await deployCamelotLiquidity();
     await deployCamelotSwapContract();
     await deployUniSwapContract();
-    await deployAevoContract();
     await deployRockOnyxUSDTVault();
   });
 
@@ -455,8 +439,8 @@ describe("RockOnyxStableCoinVault", function () {
     console.log("-------------mintUsdLP position on Camelot---------------");
 
     console.log("-------------deposit to vendor on aevo---------------");
-    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
-      value: ethers.parseEther("0.000159539385325246"),
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor(650000, {
+      value: ethers.parseEther("0.001753"),
     });
 
     console.log("-------------Users initial withdrawals---------------");
@@ -529,8 +513,8 @@ describe("RockOnyxStableCoinVault", function () {
     console.log("-------------mintUsdLP position on Camelot---------------");
 
     console.log("-------------deposit to vendor on aevo---------------");
-    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
-      value: ethers.parseEther("0.000159539385325246"),
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor(650000, {
+      value: ethers.parseEther("0.001753"),
     });
 
     let usdcBalance = await usdc.balanceOf(
@@ -624,8 +608,8 @@ describe("RockOnyxStableCoinVault", function () {
     console.log("-------------mintUsdLP position on Camelot---------------");
 
     console.log("-------------deposit to vendor on aevo---------------");
-    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
-      value: ethers.parseEther("0.000159539385325246"),
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor(650000, {
+      value: ethers.parseEther("0.001753"),
     });
 
     let usdcBalance = await usdc.balanceOf(
@@ -777,8 +761,8 @@ describe("RockOnyxStableCoinVault", function () {
     await deposit(user1, 5 * 1e6, usdc, usdc);
 
     console.log("-------------deposit to vendor on aevo---------------");
-    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
-      value: ethers.parseEther("0.000159539385325246"),
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor(650000, {
+      value: ethers.parseEther("0.001753"),
     });
 
     console.log("-------------initial withdrawals time 1: 5$---------------");
@@ -879,8 +863,8 @@ describe("RockOnyxStableCoinVault", function () {
     await deposit(user1, 600 * 1e6, usdc, usdc);
 
     console.log("-------------deposit to vendor on aevo---------------");
-    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
-      value: ethers.parseEther("0.000159539385325246"),
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor(650000, {
+      value: ethers.parseEther("0.001753"),
     });
 
     console.log(
@@ -912,8 +896,8 @@ describe("RockOnyxStableCoinVault", function () {
     expect(Number(totalValueLocked) / 1e6).to.equal(initialDepositAmount);
 
     console.log("-------------deposit to vendor on aevo---------------");
-    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
-      value: ethers.parseEther("0.000159539385325246"),
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor(650000, {
+      value: ethers.parseEther("0.001753"),
     });
 
     console.log("------------- mint ETH LP Position ---------------");
@@ -1081,8 +1065,8 @@ describe("RockOnyxStableCoinVault", function () {
     expect(Number(depositReceiptAmount)).to.equal(55000000);
 
     console.log("-------------deposit to vendor on aevo---------------");
-    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
-      value: ethers.parseEther("0.000159539385325246"),
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor(650000, {
+      value: ethers.parseEther("0.001753"),
     });
 
     console.log("-------------initial withdrawals time 1: 5$---------------");
@@ -1143,8 +1127,9 @@ describe("RockOnyxStableCoinVault", function () {
       rewardAddress,
       nftPositionAddress,
       await camelotSwapContract.getAddress(),
-      await aevoContract.getAddress(),
+      aevoAddress,
       await optionsReceiver.getAddress(),
+      aevoConnectorAddress,
       usdceAddress,
       wethAddress,
       wstethAddress,
@@ -1278,8 +1263,8 @@ describe("RockOnyxStableCoinVault", function () {
     expect(Number(totalValueLocked) / 1e6).to.equal(initialDepositAmount);
 
     console.log("-------------deposit to vendor on aevo---------------");
-    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
-      value: ethers.parseEther("0.000159539385325246"),
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor(650000, {
+      value: ethers.parseEther("0.001753"),
     });
 
     console.log("------------- mint ETH LP Position ---------------");

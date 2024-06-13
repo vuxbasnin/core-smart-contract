@@ -41,8 +41,9 @@ contract RockOnyxUSDTVault is BaseSwapVault, BaseRockOnyxOptionWheelVault {
         address _vendorRewardAddress,
         address _vendorNftPositionAddress,
         address _swapProxy,
-        address _optionsVendorProxy,
-        address _optionsReceiver,
+        address _perpDexAddress,
+        address _perpDexReceiver,
+        address _perpDexConnector,
         address _usdce,
         address _weth,
         address _wstEth,
@@ -59,7 +60,7 @@ contract RockOnyxUSDTVault is BaseSwapVault, BaseRockOnyxOptionWheelVault {
     {
         _grantRole(ROCK_ONYX_ADMIN_ROLE, _admin);
         _grantRole(ROCK_ONYX_OPTIONS_TRADER_ROLE, _admin);
-        _grantRole(ROCK_ONYX_OPTIONS_TRADER_ROLE, _optionsReceiver);
+        _grantRole(ROCK_ONYX_OPTIONS_TRADER_ROLE, _perpDexReceiver);
 
         currentRound = 0;
         vaultParams = VaultParams(_decimals, _usdc, _minimumSupply, _cap, 10, 1, _networkCost);
@@ -67,7 +68,7 @@ contract RockOnyxUSDTVault is BaseSwapVault, BaseRockOnyxOptionWheelVault {
         allocateRatio = AllocateRatio(6000, 2000, 2000, 4);
 
         baseSwapVault_Initialize(_uniSwapProxy, _token0s, _token1s, _fees);
-        options_Initialize(_optionsVendorProxy, _optionsReceiver, _usdc);
+        options_Initialize(_perpDexAddress, _perpDexReceiver, _perpDexConnector, _usdc);
         ethLP_Initialize(
             _vendorLiquidityProxy,
             _vendorRewardAddress,
