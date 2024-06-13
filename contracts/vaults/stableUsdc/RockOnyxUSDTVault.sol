@@ -9,7 +9,6 @@ import "../../extensions/RockOnyx/BaseSwapVault.sol";
 import "hardhat/console.sol";
 
 contract RockOnyxUSDTVault is BaseSwapVault, BaseRockOnyxOptionWheelVault {
-    uint256 private constant NETWORK_COST = 1e6;
     using SafeERC20 for IERC20;
     using ShareMath for DepositReceipt;
     using LiquidityAmounts for uint256;
@@ -34,6 +33,10 @@ contract RockOnyxUSDTVault is BaseSwapVault, BaseRockOnyxOptionWheelVault {
     constructor(
         address _admin,
         address _usdc,
+        uint8 _decimals,
+        uint256 _minimumSupply,
+        uint256 _cap,
+        uint256 _networkCost,
         address _vendorLiquidityProxy,
         address _vendorRewardAddress,
         address _vendorNftPositionAddress,
@@ -59,8 +62,8 @@ contract RockOnyxUSDTVault is BaseSwapVault, BaseRockOnyxOptionWheelVault {
         _grantRole(ROCK_ONYX_OPTIONS_TRADER_ROLE, _optionsReceiver);
 
         currentRound = 0;
-        vaultParams = VaultParams(6, _usdc, 5_000_000, 1_000_000 * 1e6, 10, 1);
-        vaultState = VaultState(0, 0, 0, 0, 0, 0, 0);
+        vaultParams = VaultParams(_decimals, _usdc, _minimumSupply, _cap, 10, 1, _networkCost);
+        vaultState = VaultState(0, 0, 0, 0, 0, 0);
         allocateRatio = AllocateRatio(6000, 2000, 2000, 4);
 
         baseSwapVault_Initialize(_uniSwapProxy, _token0s, _token1s, _fees);
@@ -73,15 +76,13 @@ contract RockOnyxUSDTVault is BaseSwapVault, BaseRockOnyxOptionWheelVault {
             _usdc,
             _weth,
             _wstEth,
-            _arb
-        );
+            _arb);
         usdLP_Initialize(
             _vendorLiquidityProxy,
             _vendorNftPositionAddress,
             _swapProxy,
             _usdc,
-            _usdce
-        );
+            _usdce);
 
         if (_initialPPS > 0) {
             currentRound = 1;
@@ -250,16 +251,10 @@ contract RockOnyxUSDTVault is BaseSwapVault, BaseRockOnyxOptionWheelVault {
             vaultParams.decimals
         );
         (uint256 profit, ) = getPnL();
-        uint withdrawProfit = profit > 0
-            ? (profit * withdrawals[msg.sender].shares) /
-                (withdrawals[msg.sender].shares +
-                    depositReceipts[msg.sender].shares)
-            : 0;
-        uint256 performanceFee = withdrawProfit > 0
-            ? (withdrawProfit * vaultParams.performanceFeeRate) / 1e2
-            : 0;
-        vaultState.performanceFeeAmount += performanceFee;
-        withdrawAmount -= (performanceFee + NETWORK_COST);
+        uint withdrawProfit = profit > 0 ? (profit * withdrawals[msg.sender].shares) / (withdrawals[msg.sender].shares + depositReceipts[msg.sender].shares) : 0;
+        uint256 performanceFee = withdrawProfit > 0 ? (withdrawProfit * vaultParams.performanceFeeRate) / 1e2 : 0;
+        vaultState.totalFeeAmount += performanceFee + vaultParams.networkCost;
+        withdrawAmount -= (performanceFee + vaultParams.networkCost);
 
         require(vaultState.withdrawPoolAmount > withdrawAmount, "EXD_WD_POOL_CAP");
         
@@ -288,15 +283,13 @@ contract RockOnyxUSDTVault is BaseSwapVault, BaseRockOnyxOptionWheelVault {
     function claimFee(address receiver) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
         
-        if (vaultState.performanceFeeAmount + vaultState.managementFeeAmount >
-            vaultState.withdrawPoolAmount) {
+        if (vaultState.totalFeeAmount > vaultState.withdrawPoolAmount) {
             IERC20(vaultParams.asset).safeTransfer(msg.sender, vaultState.withdrawPoolAmount);
             return;
         }
-        vaultState.withdrawPoolAmount -= (vaultState.performanceFeeAmount + vaultState.managementFeeAmount);
-        uint256 claimAmount = vaultState.performanceFeeAmount + vaultState.managementFeeAmount;
-        vaultState.performanceFeeAmount = 0;
-        vaultState.managementFeeAmount = 0;
+        vaultState.withdrawPoolAmount -= vaultState.totalFeeAmount;
+        uint256 claimAmount = vaultState.totalFeeAmount;
+        vaultState.totalFeeAmount = 0;
         IERC20(vaultParams.asset).safeTransfer(receiver, claimAmount);
     }
 
@@ -354,7 +347,7 @@ contract RockOnyxUSDTVault is BaseSwapVault, BaseRockOnyxOptionWheelVault {
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsEthLP(withdrawEthLPAmount);
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdLP(withdrawUsdLPAmount);
         vaultState.withdrawPoolAmount += acquireWithdrawalFundsUsdOptions(withdrawOptionsAmount);
-        vaultState.managementFeeAmount += vaultState.currentRoundFeeAmount;
+        vaultState.totalFeeAmount += vaultState.currentRoundFeeAmount;
         vaultState.totalShares -= roundWithdrawalShares[currentRound];
     }
 

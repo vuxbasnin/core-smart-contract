@@ -21,11 +21,11 @@ struct VaultParams {
     uint256 cap;
     uint256 performanceFeeRate;
     uint256 managementFeeRate;
+    uint256 networkCost;
 }
 
 struct VaultState {
-    uint256 performanceFeeAmount;
-    uint256 managementFeeAmount;
+    uint256 totalFeeAmount;
     uint256 withdrawPoolAmount;
     uint256 pendingDepositAmount;
     uint256 totalShares;

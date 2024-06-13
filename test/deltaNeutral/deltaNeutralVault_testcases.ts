@@ -21,7 +21,8 @@ import {
   DAI_PRICE_FEED_ADDRESS,
   USDT_IMPERSONATED_SIGNER_ADDRESS,
   DAI_IMPERSONATED_SIGNER_ADDRESS,
-  UNISWAP_ROUTER_ADDRESS
+  UNISWAP_ROUTER_ADDRESS,
+  NETWORK_COST
 } from "../../constants";
 import { BigNumberish, Signer } from "ethers";
 
@@ -64,6 +65,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
   const usdcePriceFeed = USDC_PRICE_FEED_ADDRESS[chainId];
   const usdtPriceFeed = USDT_PRICE_FEED_ADDRESS[chainId];
   const daiPriceFeed = DAI_PRICE_FEED_ADDRESS[chainId];
+  const networkCost = BigInt(Number(NETWORK_COST[chainId]) * 1e6);
 
   let priceConsumerContract: Contracts.PriceConsumer;
   let camelotSwapContract: Contracts.CamelotSwap;
@@ -134,6 +136,10 @@ describe("RockOnyxDeltaNeutralVault", function () {
     rockOnyxDeltaNeutralVaultContract = await rockOnyxDeltaNeutralVault.deploy(
       admin,
       usdcAddress,
+      6,
+      BigInt(5 * 1e6),
+      BigInt(1000000 * 1e6),
+      networkCost,
       await camelotSwapContract.getAddress(),
       await aevoContract.getAddress(),
       await optionsReceiver.getAddress(),

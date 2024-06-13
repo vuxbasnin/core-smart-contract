@@ -6,10 +6,14 @@ import {
   WETH_ADDRESS,
   USDC_ADDRESS,
   WSTETH_ADDRESS,
+  USDT_ADDRESS,
+  DAI_ADDRESS,
   AEVO_ADDRESS,
   AEVO_CONNECTOR_ADDRESS,
   SWAP_ROUTER_ADDRESS,
-  PRICE_CONSUMER_ADDRESS
+  PRICE_CONSUMER_ADDRESS,
+  UNI_SWAP_ADDRESS,
+  NETWORK_COST
 } from "../constants";
 import * as Contracts from "../typechain-types";
 
@@ -18,8 +22,12 @@ const chainId: CHAINID = network.config.chainId ?? 0;
 const usdcAddress = USDC_ADDRESS[chainId] ?? "";
 const wstethAddress = WSTETH_ADDRESS[chainId] ?? "";
 const wethAddress = WETH_ADDRESS[chainId] ?? "";
+const usdtAddress = USDT_ADDRESS[chainId] || "";
+const daiAddress = DAI_ADDRESS[chainId] || "";
 const aevoAddress = AEVO_ADDRESS[chainId] ?? "";
 const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId] ?? "";
+const uniSwapAddress = UNI_SWAP_ADDRESS[chainId] || "";
+const networkCost = BigInt(Number(NETWORK_COST[chainId]) * 1e6);
 const admin = '0x7E38b79D0645BE0D9539aec3501f6a8Fb6215392';
 
 let aevoContract: Contracts.Aevo;
@@ -66,19 +74,13 @@ async function main() {
   );
 
   const camelotSwapAddress = "0x5c2fEC58221daC4d3945Dd4Ac7a956d6C965ba1c";
-  const aevoContractAddress = "0x3D75e9366Fe5A2f1B7481a4Fb05deC21f8038467";
+  const aevoAddress = "0x3D75e9366Fe5A2f1B7481a4Fb05deC21f8038467";
 
   // MAINNET
-  const optionsTrader = "0x0aDf03D895617a95F317892125Cd6fb9ca3b99c1";
-
-  // Testnet
-  // const optionsTrader = "0xF4aF6504462E5D574EDBdB161F1063633CCa0274";
+  const aevoRecipientAddress = "0x0aDf03D895617a95F317892125Cd6fb9ca3b99c1";
 
   // await deployCamelotSwapContract();
   // const camelotSwapAddress = await camelotSwapContract.getAddress();
-
-  // await deployAevoContract();
-  // const aevoContractAddress = await aevoContract.getAddress();
 
   const rockOnyxDeltaNeutralVault = await ethers.getContractFactory(
     "RockOnyxDeltaNeutralVault"
@@ -87,12 +89,20 @@ async function main() {
   rockOnyxDeltaNeutralVaultContract = await rockOnyxDeltaNeutralVault.deploy(
     admin,
     usdcAddress,
+    6,
+    BigInt(5 * 1e6),
+    BigInt(1000000 * 1e6),
+    networkCost,
     camelotSwapAddress,
-    aevoContractAddress,
-    optionsTrader,
+    aevoAddress,
+    aevoRecipientAddress,
     wethAddress,
     wstethAddress,
-    BigInt(parseInt((1*1e6).toString()))
+    BigInt(parseInt((1*1e6).toString())),
+    uniSwapAddress,
+    [usdtAddress, daiAddress],
+    [usdcAddress, usdtAddress],
+    [100, 100]
   );
   await rockOnyxDeltaNeutralVaultContract.waitForDeployment();
 

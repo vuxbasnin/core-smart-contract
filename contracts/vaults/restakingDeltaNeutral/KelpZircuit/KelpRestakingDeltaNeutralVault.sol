@@ -124,7 +124,7 @@ contract KelpRestakingDeltaNeutralVault is
             vaultState.withdrawPoolAmount +
             getTotalRestakingTvl() +
             getTotalPerpDexTvl() -
-            vaultState.managementFeeAmount;
+            vaultState.totalFeeAmount;
     }
 
     /**

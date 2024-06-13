@@ -14,7 +14,7 @@ contract RenzoRestakingDeltaNeutralVault is
     constructor(
         address _admin,
         address _usdc,
-         uint8 _decimals,
+        uint8 _decimals,
         uint256 _minimumSupply,
         uint256 _cap,
         uint256 _networkCost,
@@ -120,10 +120,8 @@ contract RenzoRestakingDeltaNeutralVault is
     function _totalValueLocked() internal view override returns (uint256) {
         return
             vaultState.pendingDepositAmount +
-            vaultState.withdrawPoolAmount +
             getTotalRestakingTvl() +
-            getTotalPerpDexTvl() -
-            vaultState.managementFeeAmount;
+            getTotalPerpDexTvl();
     }
 
     /**

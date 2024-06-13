@@ -27,6 +27,7 @@ import {
   ARB_PRICE_FEED_ADDRESS,
   USDT_PRICE_FEED_ADDRESS,
   DAI_PRICE_FEED_ADDRESS,
+  NETWORK_COST
 } from "../../constants";
 import {
   Signer,
@@ -87,6 +88,7 @@ describe("RockOnyxStableCoinVault", function () {
   const arbPriceFeed = ARB_PRICE_FEED_ADDRESS[chainId];
   const usdtPriceFeed = USDT_PRICE_FEED_ADDRESS[chainId];
   const daiPriceFeed = DAI_PRICE_FEED_ADDRESS[chainId];
+  const networkCost = BigInt(Number(NETWORK_COST[chainId]) * 1e6);
 
   let camelotSwapContract: Contracts.CamelotSwap;
 
@@ -168,6 +170,10 @@ describe("RockOnyxStableCoinVault", function () {
     rockOnyxUSDTVaultContract = await rockOnyxUSDTVault.deploy(
       await admin.getAddress(),
       usdcAddress,
+      6,
+      BigInt(5 * 1e6),
+      BigInt(1000000 * 1e6),
+      networkCost,
       await camelotLiquidityContract.getAddress(),
       rewardAddress,
       nftPositionAddress,
