@@ -219,6 +219,9 @@ abstract contract BaseDeltaNeutralVault is
 
         if (vaultState.performanceFeeAmount + vaultState.managementFeeAmount > vaultState.withdrawPoolAmount) {
             IERC20(vaultParams.asset).safeTransfer(msg.sender, vaultState.withdrawPoolAmount);
+            vaultState.withdrawPoolAmount = 0;      //reset withdrawPoolAmount to zero
+            vaultState.performanceFeeAmount = 0;    //reset performanceFeeAmount to zero
+            vaultState.managementFeeAmount = 0;     //reset managementFeeAmount to zero
             return;
         }
 
