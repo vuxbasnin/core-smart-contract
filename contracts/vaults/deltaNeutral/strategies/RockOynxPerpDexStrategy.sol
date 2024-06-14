@@ -95,7 +95,6 @@ contract RockOynxPerpDexStrategy is RockOnyxAccessControl, ReentrancyGuard {
     ) internal returns (uint256) {
         if (perpDexState.unAllocatedBalance > amount) {
             perpDexState.unAllocatedBalance -= amount;
-            perpDexState.perpDexBalance -= amount;
             return amount;
         }
 

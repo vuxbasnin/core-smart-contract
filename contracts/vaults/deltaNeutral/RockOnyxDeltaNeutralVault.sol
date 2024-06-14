@@ -466,8 +466,10 @@ contract RockOnyxDeltaNeutralVault is
     function _totalValueLocked() private view returns (uint256) {
         return
             vaultState.pendingDepositAmount +
+            vaultState.withdrawPoolAmount +
             getTotalEthStakeLendAssets() +
-            getTotalPerpDexAssets();
+            getTotalPerpDexAssets() -
+            vaultState.managementFeeAmount;
     }
 
     /**
