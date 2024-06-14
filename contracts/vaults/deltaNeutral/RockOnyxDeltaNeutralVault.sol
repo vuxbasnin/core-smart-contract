@@ -69,7 +69,7 @@ contract RockOnyxDeltaNeutralVault is
         uint24[] memory _fees
     ) RockOynxEthStakeLendStrategy() RockOynxPerpDexStrategy() {
         vaultParams = VaultParams(_decimals, _usdc, _minimumSupply, _cap, 10, 1, _networkCost);
-        vaultState = VaultState(0, 0, 0, 0);
+        vaultState = VaultState(0, 0, 0, 0, 0);
         allocateRatio = DeltaNeutralAllocateRatio(5000, 5000, 4);
 
         _grantRole(ROCK_ONYX_ADMIN_ROLE, _admin);
@@ -187,12 +187,9 @@ contract RockOnyxDeltaNeutralVault is
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         require(usdAmount <= _totalValueLocked(), "INVALID_ACQUIRE_AMOUNT");
-        uint256 ethStakeLendAmount = (usdAmount *
-            allocateRatio.ethStakeLendRatio) / 1e4;
+        uint256 ethStakeLendAmount = (usdAmount * allocateRatio.ethStakeLendRatio) / 1e4;
         uint256 perpDexAmount = (usdAmount * allocateRatio.perpDexRatio) / 1e4;
-        vaultState.withdrawPoolAmount += acquireFundsFromEthStakeLend(
-            ethStakeLendAmount
-        );
+        vaultState.withdrawPoolAmount += acquireFundsFromEthStakeLend(ethStakeLendAmount);
         vaultState.withdrawPoolAmount += acquireFundsFromPerpDex(perpDexAmount);
     }
 
@@ -205,7 +202,7 @@ contract RockOnyxDeltaNeutralVault is
         ethStakeLendPerformanceFeeAmount = acquireFundsFromEthStakeLend(ethStakeLendPerformanceFeeAmount);
         perpDexFeeAmount = acquireFundsFromPerpDex(perpDexFeeAmount);
         performanceFeeAmount = ethStakeLendPerformanceFeeAmount + perpDexFeeAmount;
-        vaultState.totalFeeAmount += performanceFeeAmount;
+        vaultState.managementFeeAmount += performanceFeeAmount;
         vaultState.withdrawPoolAmount += performanceFeeAmount;
     }
 
@@ -260,7 +257,8 @@ contract RockOnyxDeltaNeutralVault is
 
         uint256 withdrawAmount = (shares * withdrawals[msg.sender].withdrawAmount) / withdrawals[msg.sender].shares;
         uint256 performanceFee = (shares * withdrawals[msg.sender].performanceFee) / withdrawals[msg.sender].shares;
-        vaultState.totalFeeAmount += performanceFee + vaultParams.networkCost;
+        vaultState.performanceFeeAmount += performanceFee;
+        vaultState.managementFeeAmount += vaultParams.networkCost;
         withdrawAmount -= (performanceFee + vaultParams.networkCost);
 
         require(vaultState.withdrawPoolAmount > withdrawAmount, "EXCEED_WD_POOL_CAP");
@@ -282,17 +280,21 @@ contract RockOnyxDeltaNeutralVault is
     /**
      * @notice claimFee to claim vault fee.
      */
-    function claimFee() external nonReentrant {
+    function claimFee(address receiver) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
-        if (vaultState.totalFeeAmount > vaultState.withdrawPoolAmount ) {
+        uint256 totalFeeAmount = vaultState.performanceFeeAmount + vaultState.managementFeeAmount;
+        if (totalFeeAmount > vaultState.withdrawPoolAmount) {
+            vaultState.performanceFeeAmount = 0;
+            vaultState.managementFeeAmount = 0;
+            vaultState.withdrawPoolAmount = 0;
             IERC20(vaultParams.asset).safeTransfer(msg.sender, vaultState.withdrawPoolAmount);
             return;
         }
 
-        vaultState.withdrawPoolAmount -= vaultState.totalFeeAmount;
-        uint256 claimAmount = vaultState.totalFeeAmount;
-        vaultState.totalFeeAmount = 0;
-        IERC20(vaultParams.asset).safeTransfer(msg.sender, claimAmount);
+        vaultState.withdrawPoolAmount -= totalFeeAmount;
+        vaultState.performanceFeeAmount = 0;
+        vaultState.managementFeeAmount = 0;
+        IERC20(vaultParams.asset).safeTransfer(receiver, totalFeeAmount);
     }
 
     function getVaultState() external view returns (VaultState memory) {

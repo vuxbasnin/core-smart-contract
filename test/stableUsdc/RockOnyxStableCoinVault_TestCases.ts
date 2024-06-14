@@ -1175,6 +1175,7 @@ describe("RockOnyxStableCoinVault", function () {
       cap: exportVaultStateTx[5][3],
       performanceFeeRate: exportVaultStateTx[5][4],
       managementFeeRate: exportVaultStateTx[5][5],
+      networkCost: exportVaultStateTx[2][6] == 0 ? 1e6 : exportVaultStateTx[2][6]
     };
 
     const _vaultState = {
@@ -1242,15 +1243,6 @@ describe("RockOnyxStableCoinVault", function () {
     console.log(exportVaultStateTx2);
     console.log(exportVaultStateTx2[3][0]);
     console.log(exportVaultStateTx2[4][0]);
-  });
-
-  it.skip("emergencyShutdown", async function () {
-    await deposit(user1, 500 * 1e6, usdc, usdc);
-
-    console.log("-------------emergencyShutdown---------------");
-    await rockOnyxUSDTVaultContract
-      .connect(admin)
-      .emergencyShutdown(admin, usdc, 500 * 1e6);
   });
 
   it.skip("user deposit -> deposit to eavo -> mint eth -> mint usd-> update profit -> close round -> decrease eth -> decrease usd", async function () {
@@ -1335,28 +1327,5 @@ describe("RockOnyxStableCoinVault", function () {
       .connect(admin)
       .acquireWithdrawalFunds();
     await acquireWithdrawalFundsTx.wait();
-  });
-
-  // https://arbiscan.io/address/0x55c4c840F9Ac2e62eFa3f12BaBa1B57A1208B6F5
-  it.skip("deposit error", async function () {
-    console.log(
-      "-------------deposit error 0x55c4c840F9Ac2e62eFa3f12BaBa1B57A1208B6F5---------------"
-    );
-    rockOnyxUSDTVaultContract = await ethers.getContractAt(
-      "RockOnyxUSDTVault",
-      "0x55c4c840F9Ac2e62eFa3f12BaBa1B57A1208B6F5"
-    );
-
-    console.log("-------------deposit time 1: 50$---------------");
-
-    await usdc
-      .connect(user1)
-      .approve(await rockOnyxUSDTVaultContract.getAddress(), 50 * 1e6);
-
-    console.log(
-      "rockOnyxUSDTVaultContract address: ",
-      await rockOnyxUSDTVaultContract.getAddress()
-    );
-    await rockOnyxUSDTVaultContract.connect(user1).deposit(50 * 1e6, usdc, usdc);
   });
 });

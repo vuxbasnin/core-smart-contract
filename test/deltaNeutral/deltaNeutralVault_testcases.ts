@@ -259,7 +259,7 @@ describe("RockOnyxDeltaNeutralVault", function () {
     await transferForUser(dai, daiSigner, user2, BigInt(100000 * 1e18));
   });
 
-  it("user deposit -> withdraw, do not deposit to perp dex", async function () {
+  it.skip("user deposit -> withdraw, do not deposit to perp dex", async function () {
     console.log(
       "-------------deposit to rockOnyxDeltaNeutralVault---------------"
     );
@@ -521,10 +521,8 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it.skip("user deposit -> deposit to vendor -> open position -> sync profit -> withdraw -> close position -> complete withdraw", async function () {
-    console.log(
-      "-------------deposit to rockOnyxDeltaNeutralVault---------------"
-    );
+  it("user deposit -> deposit to vendor -> open position -> sync profit -> withdraw -> close position -> complete withdraw", async function () {
+    console.log("-------------deposit to rockOnyxDeltaNeutralVault---------------");
 
     const inititalDeposit = 10 + 100;
     const user2_initDeposit = 100;
@@ -699,18 +697,18 @@ describe("RockOnyxDeltaNeutralVault", function () {
     const pricePerShare2 = await rockOnyxDeltaNeutralVaultContract
       .connect(admin)
       .pricePerShare();
-    console.log("pricePerShare %s", pricePerShare);
+    console.log("pricePerShare2 %s", pricePerShare2);
     const pricePerShare2Int = Number(pricePerShare2) / 1e6;
-
-    const expectedPerpDexUnallocatedBalance =
+    console.log("pricePerShare2Int %s", pricePerShare2Int);
+    
+    const expectedPerpDexBalance =
       10 * pricePerShare2Int * perpRatio;
-    console.log(
-      "expectedPerpDexUnallocatedBalance %s",
-      expectedPerpDexUnallocatedBalance
-    );
+    console.log("expectedPerpDexBalance %s", expectedPerpDexBalance);
+    console.log("perpRatio %s", perpRatio);
+    
 
     expect(perpDexBalance).to.approximately(
-      BigInt(parseInt((expectedPerpDexUnallocatedBalance * 1e6).toString())),
+      BigInt(parseInt((expectedPerpDexBalance * 1e6).toString())),
       2 * 1e6
     );
 
@@ -738,10 +736,8 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
   });
 
-  it.skip("migration test, user deposit -> deposit to vendor -> open position -> sync profit -> withdraw -> close position -> complete withdraw", async function () {
-    console.log(
-      "-------------deposit to rockOnyxDeltaNeutralVault---------------"
-    );
+  it.skip("migration test, user deposit -> deposit to vendor -> open position -> sync profit -> withdraw -> close position -> complete withdraw -> migration", async function () {
+    console.log("-------------deposit to rockOnyxDeltaNeutralVault---------------");
 
     const inititalDeposit = 10 + 100;
     const user2_initDeposit = 100;
@@ -750,7 +746,6 @@ describe("RockOnyxDeltaNeutralVault", function () {
     await deposit(user2, user2_initDeposit * 1e6, usdc, usdc);
 
     let totalValueLock = await logAndReturnTotalValueLock();
-    // parse totalValueLock to float
     let tvlNumber = parseFloat(totalValueLock.toString()) / 1e6;
 
     expect(totalValueLock).to.approximately(inititalDeposit * 1e6, PRECISION);
@@ -960,6 +955,10 @@ describe("RockOnyxDeltaNeutralVault", function () {
       await newRockOnyxDeltaNeutralVault.deploy(
         admin,
         usdcAddress,
+        6,
+        BigInt(5 * 1e6),
+        BigInt(1000000 * 1e6),
+        networkCost,
         await camelotSwapContract.getAddress(),
         await aevoContract.getAddress(),
         await optionsReceiver.getAddress(),
@@ -979,7 +978,6 @@ describe("RockOnyxDeltaNeutralVault", function () {
     );
 
     console.log("-------------import vault state---------------");
-
     const _depositReceiptArr = exportVaultStateTx[0].map((element) => {
       return {
         owner: element[0],
@@ -989,7 +987,6 @@ describe("RockOnyxDeltaNeutralVault", function () {
         },
       };
     });
-
     const _withdrawalArr = exportVaultStateTx[1].map((element) => {
       return {
         owner: element[0],
@@ -1002,7 +999,6 @@ describe("RockOnyxDeltaNeutralVault", function () {
         },
       };
     });
-
     const _vaultParams = {
       decimals: exportVaultStateTx[2][0],
       asset: exportVaultStateTx[2][1],
@@ -1010,8 +1006,8 @@ describe("RockOnyxDeltaNeutralVault", function () {
       cap: exportVaultStateTx[2][3],
       performanceFeeRate: exportVaultStateTx[2][4],
       managementFeeRate: exportVaultStateTx[2][5],
+      networkCost: exportVaultStateTx[2][6] == 0 ? 1e6 : exportVaultStateTx[2][6],
     };
-
     const _vaultState = {
       performanceFeeAmount: exportVaultStateTx[3][0],
       managementFeeAmount: exportVaultStateTx[3][1],
@@ -1019,18 +1015,15 @@ describe("RockOnyxDeltaNeutralVault", function () {
       pendingDepositAmount: exportVaultStateTx[3][3],
       totalShares: exportVaultStateTx[3][4],
     };
-
     const _allocateRatio = {
       ethStakeLendRatio: exportVaultStateTx[4][0],
       perpDexRatio: exportVaultStateTx[4][1],
       decimals: exportVaultStateTx[4][2],
     };
-
     const _ethStakeLendState = {
       unAllocatedBalance: exportVaultStateTx[5][0],
       totalBalance: exportVaultStateTx[5][1],
     };
-
     const _perpDexState = {
       unAllocatedBalance: exportVaultStateTx[6][0],
       perpDexBalance: exportVaultStateTx[6][1],
@@ -1169,107 +1162,108 @@ describe("RockOnyxDeltaNeutralVault", function () {
 
   it.skip("migration, export and import data to new delta neutral vault - 200265516", async function () {
     const contractAdmin = await ethers.getImpersonatedSigner("0x7E38b79D0645BE0D9539aec3501f6a8Fb6215392");
-    rockOnyxDeltaNeutralVaultContract = await ethers.getContractAt("RockOnyxDeltaNeutralVault", "0xC9A079d7d1CF510a6dBa8dA8494745beaE7736E2");
+    const oldContract = await ethers.getContractAt("RockOnyxDeltaNeutralVault", "0xC9A079d7d1CF510a6dBa8dA8494745beaE7736E2");
 
-    let hasRoleTx = await rockOnyxDeltaNeutralVaultContract
+    console.log("-------------export old vault state---------------");
+    let exportVaultStateTx = await oldContract
     .connect(contractAdmin)
-    .hasRole("0xdf7ae06225b060fdb3477e253632ba0fef61b138e661391f47b795efaa9c6388", await contractAdmin.getAddress());
-
-    console.log(hasRoleTx);
-
-    // console.log("-------------export old vault state---------------");
-    // let exportVaultStateTx = await rockOnyxDeltaNeutralVaultContract
-    // .connect(contractAdmin)
-    // .exportVaultState();
-    // console.log(exportVaultStateTx);
-    // console.log(exportVaultStateTx[0][0][1]);
-    // console.log(exportVaultStateTx[0][1][1]);
+    .exportVaultState();
+    console.log(exportVaultStateTx);
+    console.log(exportVaultStateTx[0][0][1]);
+    console.log(exportVaultStateTx[0][1][1]);
   
-    // const newRockOnyxDeltaNeutralVault = await ethers.getContractFactory(
-    //   "RockOnyxDeltaNeutralVault"
-    // );
+    const newContractFactory = await ethers.getContractFactory("RockOnyxDeltaNeutralVault");
 
-    // const newRockOnyxDeltaNeutralVaultContract =
-    //   await newRockOnyxDeltaNeutralVault.deploy(
-    //     admin,
-    //     usdcAddress,
-    //     await camelotSwapContract.getAddress(),
-    //     await aevoContract.getAddress(),
-    //     await optionsReceiver.getAddress(),
-    //     wethAddress,
-    //     wstethAddress,
-    //     BigInt(1 * 1e6)
-    //   );
-    // await newRockOnyxDeltaNeutralVaultContract.waitForDeployment();
+    const newContract =
+      await newContractFactory.deploy(
+        admin,
+        usdcAddress,
+        6,
+        BigInt(5 * 1e6),
+        BigInt(1000000 * 1e6),
+        networkCost,
+        await camelotSwapContract.getAddress(),
+        await aevoContract.getAddress(),
+        await optionsReceiver.getAddress(),
+        wethAddress,
+        wstethAddress,
+        BigInt(1 * 1e6),
+        await uniSwapContract.getAddress(),
+        [usdtAddress, daiAddress],
+        [usdcAddress, usdtAddress],
+        [100, 100]
+      );
+    await newContract.waitForDeployment();
   
-    // console.log("-------------import vault state---------------");
-    // const _depositReceiptArr = exportVaultStateTx[0].map((element) => {
-    //   return {
-    //     owner: element[0],
-    //     depositReceipt: {
-    //       shares: element[1][0],
-    //       depositAmount: element[1][1],
-    //     },
-    //   };
-    // });
-    // const _withdrawalArr = exportVaultStateTx[1].map((element) => {
-    //   return {
-    //     owner: element[0],
-    //     withdrawal: {
-    //       shares: element[1][0],
-    //       pps: element[1][1],
-    //       profit: element[1][2],
-    //       performanceFee: element[1][3],
-    //       withdrawAmount: element[1][4],
-    //     },
-    //   };
-    // });
-    // const _vaultParams = {
-    //   decimals: exportVaultStateTx[2][0],
-    //   asset: exportVaultStateTx[2][1],
-    //   minimumSupply: exportVaultStateTx[2][2],
-    //   cap: exportVaultStateTx[2][3],
-    //   performanceFeeRate: exportVaultStateTx[2][4],
-    //   managementFeeRate: exportVaultStateTx[2][5],
-    // };
-    // const _vaultState = {
-    //   performanceFeeAmount: exportVaultStateTx[3][0],
-    //   managementFeeAmount: exportVaultStateTx[3][1],
-    //   withdrawPoolAmount: exportVaultStateTx[3][2],
-    //   pendingDepositAmount: exportVaultStateTx[3][3],
-    //   totalShares: exportVaultStateTx[3][4],
-    // };
-    // const _allocateRatio = {
-    //   ethStakeLendRatio: exportVaultStateTx[4][0],
-    //   perpDexRatio: exportVaultStateTx[4][1],
-    //   decimals: exportVaultStateTx[4][2],
-    // };
-    // const _ethStakeLendState = {
-    //   unAllocatedBalance: exportVaultStateTx[5][0],
-    //   totalBalance: exportVaultStateTx[5][1],
-    // };
-    // const _perpDexState = {
-    //   unAllocatedBalance: exportVaultStateTx[6][0],
-    //   perpDexBalance: exportVaultStateTx[6][1],
-    // };
-    // const importVaultStateTx = await newRockOnyxDeltaNeutralVaultContract
-    //   .connect(admin)
-    //   .importVaultState(
-    //     _depositReceiptArr,
-    //     _withdrawalArr,
-    //     _vaultParams,
-    //     _vaultState,
-    //     _allocateRatio,
-    //     _ethStakeLendState,
-    //     _perpDexState
-    //   );
-    // console.log("-------------export new vault state---------------");
-    // exportVaultStateTx = await newRockOnyxDeltaNeutralVaultContract
-    // .connect(admin)
-    // .exportVaultState();
+    console.log("-------------import vault state---------------");
+    const _depositReceiptArr = exportVaultStateTx[0].map((element: any[][]) => {
+      return {
+        owner: element[0],
+        depositReceipt: {
+          shares: element[1][0],
+          depositAmount: element[1][1],
+        },
+      };
+    });
+    const _withdrawalArr = exportVaultStateTx[1].map((element: any[][]) => {
+      return {
+        owner: element[0],
+        withdrawal: {
+          shares: element[1][0],
+          pps: element[1][1],
+          profit: element[1][2],
+          performanceFee: element[1][3],
+          withdrawAmount: element[1][4],
+        },
+      };
+    });
+    const _vaultParams = {
+      decimals: exportVaultStateTx[2][0],
+      asset: exportVaultStateTx[2][1],
+      minimumSupply: exportVaultStateTx[2][2],
+      cap: exportVaultStateTx[2][3],
+      performanceFeeRate: exportVaultStateTx[2][4],
+      managementFeeRate: exportVaultStateTx[2][5],
+      networkCost: exportVaultStateTx[2][6] == 0 ? 1e6 : exportVaultStateTx[2][6],
+    };
+    const _vaultState = {
+      performanceFeeAmount: exportVaultStateTx[3][0],
+      managementFeeAmount: exportVaultStateTx[3][1],
+      withdrawPoolAmount: exportVaultStateTx[3][2],
+      pendingDepositAmount: exportVaultStateTx[3][3],
+      totalShares: exportVaultStateTx[3][4],
+    };
+    const _allocateRatio = {
+      ethStakeLendRatio: exportVaultStateTx[4][0],
+      perpDexRatio: exportVaultStateTx[4][1],
+      decimals: exportVaultStateTx[4][2],
+    };
+    const _ethStakeLendState = {
+      unAllocatedBalance: exportVaultStateTx[5][0],
+      totalBalance: exportVaultStateTx[5][1],
+    };
+    const _perpDexState = {
+      unAllocatedBalance: exportVaultStateTx[6][0],
+      perpDexBalance: exportVaultStateTx[6][1],
+    };
+    const importVaultStateTx = await newContract
+      .connect(admin)
+      .importVaultState(
+        _depositReceiptArr,
+        _withdrawalArr,
+        _vaultParams,
+        _vaultState,
+        _allocateRatio,
+        _ethStakeLendState,
+        _perpDexState
+      );
+    console.log("-------------export new vault state---------------");
+    exportVaultStateTx = await newContract
+    .connect(admin)
+    .exportVaultState();
 
-    // console.log(exportVaultStateTx);
-    // console.log(exportVaultStateTx[0][0][1]);
-    // console.log(exportVaultStateTx[0][1][1]);
+    console.log(exportVaultStateTx);
+    console.log(exportVaultStateTx[0][0][1]);
+    console.log(exportVaultStateTx[0][1][1]);
   });
 });

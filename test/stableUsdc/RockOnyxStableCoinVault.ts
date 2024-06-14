@@ -495,7 +495,7 @@ describe("RockOnyxStableCoinVault", function () {
     expect(totalValueLock).to.approximately(498*1e6, PRECISION);
   });
 
-  it.skip("convert reward to usdc, should convert successfully", async function () {
+  it("convert reward to usdc, should convert successfully", async function () {
     console.log('-------------convert reward to usdc---------------');
 
     const arbSigner = await ethers.getImpersonatedSigner("0x2e383d51d72507e8c8e803f1a7d6651cbe65b151");
@@ -637,13 +637,12 @@ describe("RockOnyxStableCoinVault", function () {
     console.log(state);
   });
 
-  it.skip("migration, export and import data to new option wheel vault - 200265516", async function () {
-    const oldAdmin = await ethers.getImpersonatedSigner("0x20f89bA1B0Fc1e83f9aEf0a134095Cd63F7e8CC7");
-    // const newAdmin = await ethers.getImpersonatedSigner("0xAD38f5DD867EF07B8Fe7dF685F28743922Bb33C4");
-    rockOnyxUSDTVaultContract = await ethers.getContractAt("RockOnyxUSDTVault", "0xEd7FB833e80467F730F80650359Bd1d4e85c7081");
+  it("migration, export and import data to new option wheel vault", async function () {
+    const oldAdmin = await ethers.getImpersonatedSigner("0x0cD2568E24Ed7Ed47E42075545D49C21e895B54c");
+    const oldContract = await ethers.getContractAt("RockOnyxUSDTVault", "0x0bD37D11e3A25B5BB0df366878b5D3f018c1B24c");
 
     console.log("-------------export old vault state---------------");
-    let exportVaultStateTx = await rockOnyxUSDTVaultContract
+    let exportVaultStateTx = await oldContract
     .connect(oldAdmin)
     .exportVaultState();
 
@@ -652,12 +651,10 @@ describe("RockOnyxStableCoinVault", function () {
     console.log(exportVaultStateTx[3][1][1]);
     console.log(exportVaultStateTx[3][2][1]);
   
-    const rockOnyxUSDTVault = await ethers.getContractFactory(
-      "RockOnyxUSDTVault"
-    );
+    const rockOnyxUSDTVault = await ethers.getContractFactory("RockOnyxUSDTVault");
 
     console.log("await admin.getAddress() %s", await admin.getAddress());
-    const newRockOnyxUSDTVaultContract = await rockOnyxUSDTVault.deploy(
+    const newContract = await rockOnyxUSDTVault.deploy(
       await admin.getAddress(),
       usdcAddress,
       6,
@@ -688,12 +685,7 @@ describe("RockOnyxStableCoinVault", function () {
     const _roundWithdrawalShares = [...exportVaultStateTx[1]];
     const _roundPricePerShares = [...exportVaultStateTx[2]];
 
-    for(var i =0; i< _roundWithdrawalShares.length; i++){
-      console.log(_roundWithdrawalShares[i]);
-      console.log(_roundPricePerShares[i]);
-    }
-    
-    const _depositReceiptArr = exportVaultStateTx[3].map((element) => {
+    const _depositReceiptArr = exportVaultStateTx[3].map((element : any[][]) => {
         return {
           owner: element[0],
           depositReceipt: {
@@ -702,7 +694,7 @@ describe("RockOnyxStableCoinVault", function () {
           },
         };
     });
-    const _withdrawalArr = exportVaultStateTx[4].map((element) => {
+    const _withdrawalArr = exportVaultStateTx[4].map((element : any[][]) => {
         return {
           owner: element[0],
           withdrawal: {
@@ -718,6 +710,7 @@ describe("RockOnyxStableCoinVault", function () {
         cap: exportVaultStateTx[5][3],
         performanceFeeRate: exportVaultStateTx[5][4],
         managementFeeRate: exportVaultStateTx[5][5],
+        networkCost: exportVaultStateTx[5][6] == 0n ? 1e6 : exportVaultStateTx[5][6]
     };
     const _vaultState = {
         performanceFeeAmount: exportVaultStateTx[6][0],
@@ -756,7 +749,7 @@ describe("RockOnyxStableCoinVault", function () {
         unsettledLoss: exportVaultStateTx[10][3],
     };
 
-    const importVaultStateTx = await newRockOnyxUSDTVaultContract
+    const importVaultStateTx = await newContract
       .connect(admin)
       .importVaultState(
           _currentRound,
@@ -773,7 +766,7 @@ describe("RockOnyxStableCoinVault", function () {
       );
     
     console.log("-------------export new vault state---------------");
-    const exportVaultStateTx2 = await newRockOnyxUSDTVaultContract
+    const exportVaultStateTx2 = await newContract
       .connect(admin)
       .exportVaultState();
   
