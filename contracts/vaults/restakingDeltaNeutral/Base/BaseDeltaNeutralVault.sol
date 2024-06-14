@@ -17,7 +17,6 @@ abstract contract BaseDeltaNeutralVault is
     RockOnyxAccessControl,
     ReentrancyGuard
 {
-    uint256 private constant NETWORK_COST = 5*1e6;
     uint256 internal initialPPS;
     using ShareMath for uint256;
     using SafeERC20 for IERC20;
@@ -88,11 +87,10 @@ abstract contract BaseDeltaNeutralVault is
         require(_totalValueLocked() + assetDepositAmount <= vaultParams.cap, "EXCEED_CAP");
 
         IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amount);
-        uint256 assetAmount = amount;
         if(tokenIn != vaultParams.asset){
             if(tokenIn != transitToken){
-                IERC20(tokenIn).approve(address(swapProxy), assetAmount);
-                assetAmount = swapProxy.swapTo(
+                IERC20(tokenIn).approve(address(swapProxy), amount);
+                amount = swapProxy.swapTo(
                     address(this),
                     address(tokenIn),
                     amount,
@@ -102,19 +100,19 @@ abstract contract BaseDeltaNeutralVault is
             }
 
             IERC20(transitToken).approve(address(swapProxy), amount);
-            assetAmount = swapProxy.swapTo(
+            amount = swapProxy.swapTo(
                 address(this),
                 address(transitToken),
-                assetAmount,
+                amount,
                 address(vaultParams.asset),
                 getFee(address(transitToken), address(vaultParams.asset))
             );
         }
 
-        uint256 shares = _issueShares(assetAmount);
+        uint256 shares = _issueShares(amount);
         depositReceipts[msg.sender].shares += shares;
-        depositReceipts[msg.sender].depositAmount += assetAmount;
-        vaultState.pendingDepositAmount += assetAmount;
+        depositReceipts[msg.sender].depositAmount += amount;
+        vaultState.pendingDepositAmount += amount;
         vaultState.totalShares += shares;
 
         allocateAssets();
