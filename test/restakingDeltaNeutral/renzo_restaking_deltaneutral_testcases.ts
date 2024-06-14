@@ -415,7 +415,7 @@ describe("RenzoRestakingDeltaNeutralVault", function () {
     expect(totalValueLock).to.approximately(201 * 1e6, PRECISION);
   });
 
-  it.skip("migration, export and import data to new delta neutral vault - 213900665", async function () {
+  it("migration, export and import data to new delta neutral vault - 213900665", async function () {
     const contractAdmin = await ethers.getImpersonatedSigner("0x20f89bA1B0Fc1e83f9aEf0a134095Cd63F7e8CC7");
     const contract = await ethers.getContractAt("RenzoRestakingDeltaNeutralVault", "0xAB2308327A35407d263A1D41eC2E80f0F10Ff45B");
 
@@ -443,7 +443,12 @@ describe("RenzoRestakingDeltaNeutralVault", function () {
 
     const newRockOnyxDeltaNeutralVaultContract =
       await newRockOnyxDeltaNeutralVault.deploy(
+        admin,
         usdcAddress,
+        6,
+        BigInt(5 * 1e6),
+        BigInt(1000000 * 1e6),
+        networkCost,
         wethAddress,
         aevoAddress,
         aevoRecipientAddress,
@@ -487,6 +492,7 @@ describe("RenzoRestakingDeltaNeutralVault", function () {
       cap: exportVaultStateTx[2][3],
       performanceFeeRate: exportVaultStateTx[2][4],
       managementFeeRate: exportVaultStateTx[2][5],
+      networkCost: exportVaultStateTx[2][6] == 0 ? 1e6 : exportVaultStateTx[2][6]
     };
     const _vaultState = {
       performanceFeeAmount: exportVaultStateTx[3][0],
@@ -521,27 +527,6 @@ describe("RenzoRestakingDeltaNeutralVault", function () {
     console.log(exportVaultStateTx);
     console.log(exportVaultStateTx[0][0][1]);
     console.log(exportVaultStateTx[0][1][1]);
-
-    console.log("Deposit ");
-    exportVaultStateTx[0].forEach((element: any[][]) => {
-      console.log(element);
-    });
-
-    console.log("withdraw ");
-    exportVaultStateTx[1].forEach((element: any[][]) => {
-      console.log(element);
-    });
-  });
-
-  it.skip("migration, export and import data to new delta neutral vault - 213900665", async function () {
-    const contractAdmin = await ethers.getImpersonatedSigner("0x20f89bA1B0Fc1e83f9aEf0a134095Cd63F7e8CC7");
-    const contract = await ethers.getContractAt("RenzoRestakingDeltaNeutralVault", "0xED6599C7308B2F6B7cd28A9c1FA794F090E48AC3");
-
-    console.log("-------------export old vault state---------------");
-    let exportVaultStateTx = await contract
-    .connect(contractAdmin)
-    .exportVaultState();
-    console.log(exportVaultStateTx);
 
     console.log("Deposit ");
     exportVaultStateTx[0].forEach((element: any[][]) => {

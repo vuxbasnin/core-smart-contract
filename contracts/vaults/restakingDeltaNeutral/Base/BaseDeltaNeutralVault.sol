@@ -193,10 +193,11 @@ abstract contract BaseDeltaNeutralVault is
         require(withdrawals[msg.sender].shares >= shares, "INVALID_SHARES");
         uint256 withdrawAmount = (shares * withdrawals[msg.sender].withdrawAmount) / withdrawals[msg.sender].shares;
         uint256 performanceFee = (shares * withdrawals[msg.sender].performanceFee) / withdrawals[msg.sender].shares;
+        vaultState.performanceFeeAmount += performanceFee;
+        vaultState.managementFeeAmount += vaultParams.networkCost;
         withdrawAmount -= (performanceFee + vaultParams.networkCost);
 
         require( vaultState.withdrawPoolAmount > withdrawAmount, "EXCEED_WD_POOL_CAP");
-        vaultState.performanceFeeAmount += performanceFee;
         vaultState.withdrawPoolAmount -= withdrawAmount;
         withdrawals[msg.sender].withdrawAmount -= withdrawAmount;
         withdrawals[msg.sender].shares -= shares;
@@ -212,19 +213,22 @@ abstract contract BaseDeltaNeutralVault is
     /**
      * @notice claimFee to claim vault fee.
      */
-    function claimFee() external nonReentrant {
+    function claimFee(address receiver) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        if (vaultState.performanceFeeAmount + vaultState.managementFeeAmount > vaultState.withdrawPoolAmount) {
+        uint256 totalFeeAmount = vaultState.performanceFeeAmount + vaultState.managementFeeAmount;
+        if (totalFeeAmount > vaultState.withdrawPoolAmount) {
+            vaultState.performanceFeeAmount = 0;
+            vaultState.managementFeeAmount = 0;
+            vaultState.withdrawPoolAmount = 0;
             IERC20(vaultParams.asset).safeTransfer(msg.sender, vaultState.withdrawPoolAmount);
             return;
         }
 
-        vaultState.withdrawPoolAmount -= (vaultState.performanceFeeAmount + vaultState.managementFeeAmount);
-        uint256 claimAmount = vaultState.performanceFeeAmount + vaultState.managementFeeAmount;
+        vaultState.withdrawPoolAmount -= totalFeeAmount;
         vaultState.performanceFeeAmount = 0;
         vaultState.managementFeeAmount = 0;
-        IERC20(vaultParams.asset).safeTransfer(msg.sender, claimAmount);
+        IERC20(vaultParams.asset).safeTransfer(receiver, totalFeeAmount);
     }
 
     function getVaultState() external view returns (VaultState memory) {

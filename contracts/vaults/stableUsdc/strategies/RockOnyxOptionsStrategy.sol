@@ -13,9 +13,10 @@ import "hardhat/console.sol";
 contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    address internal vaultAssetAddress;
-    address internal optionsReceiver;
-    IOptionsVendorProxy internal optionsVendor;
+    address perpDexAsset;
+    address perpDexReceiver;
+    address private perpDexConnector;
+    IAevo private AEVO;
     OptionsStrategyState internal optionsState;
 
     /************************************************
@@ -31,18 +32,19 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
 
     event OptionsBalanceChanged(uint256 oldBalance, uint256 newBlanace);
 
-    constructor() {
-        optionsState = OptionsStrategyState(0, 0, 0, 0);
-    }
+    constructor() {}
 
     function options_Initialize(
-        address _vendorAddress,
-        address _optionsReceiver,
-        address _vaultAssetAddress
+        address _perpDexAddress,
+        address _perpDexReceiver,
+        address _perpDexConnector,
+        address _perpDexAsset
     ) internal {
-        optionsVendor = IOptionsVendorProxy(_vendorAddress);
-        optionsReceiver = _optionsReceiver;
-        vaultAssetAddress = _vaultAssetAddress;
+        optionsState = OptionsStrategyState(0, 0, 0, 0);
+        AEVO = IAevo(_perpDexAddress);
+        perpDexAsset = _perpDexAsset;
+        perpDexReceiver = _perpDexReceiver;
+        perpDexConnector = _perpDexConnector;
     }
 
     /**
@@ -75,24 +77,25 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
     /**
      * @notice submit amount to deposit to Vendor
      */
-    function depositToVendor() external payable nonReentrant {
+    function depositToVendor(uint32 gasLimit) external payable nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
+        bytes memory data = "";
         uint256 amount = optionsState.unAllocatedUsdcBalance;
         optionsState.unAllocatedUsdcBalance -= amount;
-        IERC20(vaultAssetAddress).approve(address(optionsVendor), amount);
+        IERC20(perpDexAsset).approve(address(AEVO), amount);
 
-        optionsVendor.depositToVendor{value: msg.value}(
-            optionsReceiver,
-            amount
+        AEVO.depositToAppChain{value: msg.value}(
+            perpDexReceiver,
+            perpDexAsset,
+            amount,
+            gasLimit,
+            perpDexConnector,
+            data
         );
 
         optionsState.allocatedUsdcBalance += amount;
-        emit OptionsVendorDeposited(
-            address(optionsVendor),
-            optionsReceiver,
-            amount
-        );
+        emit OptionsVendorDeposited(perpDexConnector, perpDexReceiver, amount);
     }
 
     /**
@@ -105,7 +108,7 @@ contract RockOnyxOptionStrategy is RockOnyxAccessControl, ReentrancyGuard {
         require(amount > 0, "INVALID_WITHDRAW_AMOUNT");
         _auth(ROCK_ONYX_OPTIONS_TRADER_ROLE);
 
-        IERC20(vaultAssetAddress).safeTransferFrom(
+        IERC20(perpDexAsset).safeTransferFrom(
             msg.sender,
             address(this),
             amount

@@ -10,23 +10,21 @@ const chainId: CHAINID = network.config.chainId;
 const privateKey = process.env.PRIVATE_KEY || "";
 const oldPrivateKey = process.env.OLD_PRIVATE_KEY || "";
 
-let rockOnyxOptionWheelVaultContract: Contracts.RockOnyxUSDTVault;
-let newRockOnyxOptionWheelVaultContract: Contracts.RockOnyxUSDTVault;
-
 async function main() {
     console.log('-------------migration option wheel---------------');
     
     const oldAdmin = new ethers.Wallet(oldPrivateKey, ethers.provider);
-    const oldVaultAddress = "0xEd7FB833e80467F730F80650359Bd1d4e85c7081";
-    rockOnyxOptionWheelVaultContract = await ethers.getContractAt("RockOnyxUSDTVault", oldVaultAddress);
+    const oldVaultAddress = "0x0cD2568E24Ed7Ed47E42075545D49C21e895B54c";
+    const oldContract = await ethers.getContractAt("RockOnyxUSDTVault", oldVaultAddress);
 
     const newAdmin = new ethers.Wallet(privateKey, ethers.provider);
     console.log("new admin address %s", await newAdmin.getAddress());
-    const newVaultAddress = "0x0bD37D11e3A25B5BB0df366878b5D3f018c1B24c";
-    newRockOnyxOptionWheelVaultContract = await ethers.getContractAt("RockOnyxUSDTVault", newVaultAddress);
+
+    const newVaultAddress = "";
+    const newContract = await ethers.getContractAt("RockOnyxUSDTVault", newVaultAddress);
 
     console.log("-------------export old vault state---------------");
-    let exportVaultStateTx = await rockOnyxOptionWheelVaultContract
+    let exportVaultStateTx = await oldContract
       .connect(oldAdmin)
       .exportVaultState();
     
@@ -39,16 +37,16 @@ async function main() {
     const _currentRound = exportVaultStateTx[0];
     const _roundWithdrawalShares = [...exportVaultStateTx[1]];
     const _roundPricePerShares = [...exportVaultStateTx[2]];
-    const _depositReceiptArr = exportVaultStateTx[3].map((element) => {
-        return {
-          owner: element[0],
-          depositReceipt: {
-            shares: element[1][0],
-            depositAmount: element[1][1],
-          },
-        };
+    const _depositReceiptArr = exportVaultStateTx[3].map((element : any[][]) => {
+      return {
+        owner: element[0],
+        depositReceipt: {
+          shares: element[1][0],
+          depositAmount: element[1][1],
+        },
+      };
     });
-    const _withdrawalArr = exportVaultStateTx[4].map((element) => {
+    const _withdrawalArr = exportVaultStateTx[4].map((element : any[][]) => {
         return {
           owner: element[0],
           withdrawal: {
@@ -64,6 +62,7 @@ async function main() {
         cap: exportVaultStateTx[5][3],
         performanceFeeRate: exportVaultStateTx[5][4],
         managementFeeRate: exportVaultStateTx[5][5],
+        networkCost: exportVaultStateTx[5][6] == 0n ? 1e6 : exportVaultStateTx[5][6]
     };
     const _vaultState = {
         performanceFeeAmount: exportVaultStateTx[6][0],
@@ -102,7 +101,7 @@ async function main() {
         unsettledLoss: exportVaultStateTx[10][3],
     };
 
-    const importVaultStateTx = await newRockOnyxOptionWheelVaultContract
+    const importVaultStateTx = await newContract
       .connect(newAdmin)
       .importVaultState(
           _currentRound,
@@ -119,7 +118,7 @@ async function main() {
       );
     
     console.log("-------------export new vault state---------------");
-    exportVaultStateTx = await newRockOnyxOptionWheelVaultContract
+    exportVaultStateTx = await newContract
       .connect(newAdmin)
       .exportVaultState();
     

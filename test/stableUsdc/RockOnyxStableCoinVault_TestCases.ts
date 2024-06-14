@@ -29,6 +29,7 @@ import {
   ARB_PRICE_FEED_ADDRESS,
   USDT_PRICE_FEED_ADDRESS,
   DAI_PRICE_FEED_ADDRESS,
+  NETWORK_COST
 } from "../../constants";
 import {
   Signer,
@@ -48,7 +49,6 @@ describe("RockOnyxStableCoinVault", function () {
   let optionsReceiver: Signer;
   let camelotLiquidityContract: Contracts.CamelotLiquidity;
   let rockOnyxUSDTVaultContract: Contracts.RockOnyxUSDTVault;
-  let aevoContract: Contracts.Aevo;
   let camelotSwapContract: Contracts.CamelotSwap;
   let priceConsumerContract: Contracts.PriceConsumer;
   let uniSwapContract: Contracts.UniSwap;
@@ -86,7 +86,8 @@ describe("RockOnyxStableCoinVault", function () {
   const arbPriceFeed = ARB_PRICE_FEED_ADDRESS[chainId];
   const usdtPriceFeed = USDT_PRICE_FEED_ADDRESS[chainId];
   const daiPriceFeed = DAI_PRICE_FEED_ADDRESS[chainId];
-  
+  const networkCost = BigInt(Number(NETWORK_COST[chainId]) * 1e6);
+
   async function deployPriceConsumerContract() {
     const factory = await ethers.getContractFactory("PriceConsumer");
     priceConsumerContract = await factory.deploy(
@@ -144,21 +145,6 @@ describe("RockOnyxStableCoinVault", function () {
     );
   }
 
-  async function deployAevoContract() {
-    const factory = await ethers.getContractFactory("Aevo");
-    aevoContract = await factory.deploy(
-      usdcAddress,
-      aevoAddress,
-      aevoConnectorAddress
-    );
-    await aevoContract.waitForDeployment();
-
-    console.log(
-      "Deployed AEVO contract at address %s",
-      await aevoContract.getAddress()
-    );
-  }
-
   async function deployRockOnyxUSDTVault() {
     const rockOnyxUSDTVault = await ethers.getContractFactory(
       "RockOnyxUSDTVault"
@@ -167,12 +153,17 @@ describe("RockOnyxStableCoinVault", function () {
     rockOnyxUSDTVaultContract = await rockOnyxUSDTVault.deploy(
       await admin.getAddress(),
       usdcAddress,
+      6,
+      BigInt(5 * 1e6),
+      BigInt(1000000 * 1e6),
+      networkCost,
       await camelotLiquidityContract.getAddress(),
       rewardAddress,
       nftPositionAddress,
       await camelotSwapContract.getAddress(),
-      await aevoContract.getAddress(),
+      aevoAddress,
       await optionsReceiver.getAddress(),
+      aevoConnectorAddress,
       usdceAddress,
       wethAddress,
       wstethAddress,
@@ -211,7 +202,6 @@ describe("RockOnyxStableCoinVault", function () {
     await deployCamelotLiquidity();
     await deployCamelotSwapContract();
     await deployUniSwapContract();
-    await deployAevoContract();
     await deployRockOnyxUSDTVault();
   });
 
@@ -449,8 +439,8 @@ describe("RockOnyxStableCoinVault", function () {
     console.log("-------------mintUsdLP position on Camelot---------------");
 
     console.log("-------------deposit to vendor on aevo---------------");
-    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
-      value: ethers.parseEther("0.000159539385325246"),
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor(650000, {
+      value: ethers.parseEther("0.001753"),
     });
 
     console.log("-------------Users initial withdrawals---------------");
@@ -523,8 +513,8 @@ describe("RockOnyxStableCoinVault", function () {
     console.log("-------------mintUsdLP position on Camelot---------------");
 
     console.log("-------------deposit to vendor on aevo---------------");
-    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
-      value: ethers.parseEther("0.000159539385325246"),
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor(650000, {
+      value: ethers.parseEther("0.001753"),
     });
 
     let usdcBalance = await usdc.balanceOf(
@@ -618,8 +608,8 @@ describe("RockOnyxStableCoinVault", function () {
     console.log("-------------mintUsdLP position on Camelot---------------");
 
     console.log("-------------deposit to vendor on aevo---------------");
-    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
-      value: ethers.parseEther("0.000159539385325246"),
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor(650000, {
+      value: ethers.parseEther("0.001753"),
     });
 
     let usdcBalance = await usdc.balanceOf(
@@ -771,8 +761,8 @@ describe("RockOnyxStableCoinVault", function () {
     await deposit(user1, 5 * 1e6, usdc, usdc);
 
     console.log("-------------deposit to vendor on aevo---------------");
-    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
-      value: ethers.parseEther("0.000159539385325246"),
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor(650000, {
+      value: ethers.parseEther("0.001753"),
     });
 
     console.log("-------------initial withdrawals time 1: 5$---------------");
@@ -873,8 +863,8 @@ describe("RockOnyxStableCoinVault", function () {
     await deposit(user1, 600 * 1e6, usdc, usdc);
 
     console.log("-------------deposit to vendor on aevo---------------");
-    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
-      value: ethers.parseEther("0.000159539385325246"),
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor(650000, {
+      value: ethers.parseEther("0.001753"),
     });
 
     console.log(
@@ -906,8 +896,8 @@ describe("RockOnyxStableCoinVault", function () {
     expect(Number(totalValueLocked) / 1e6).to.equal(initialDepositAmount);
 
     console.log("-------------deposit to vendor on aevo---------------");
-    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
-      value: ethers.parseEther("0.000159539385325246"),
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor(650000, {
+      value: ethers.parseEther("0.001753"),
     });
 
     console.log("------------- mint ETH LP Position ---------------");
@@ -1075,8 +1065,8 @@ describe("RockOnyxStableCoinVault", function () {
     expect(Number(depositReceiptAmount)).to.equal(55000000);
 
     console.log("-------------deposit to vendor on aevo---------------");
-    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
-      value: ethers.parseEther("0.000159539385325246"),
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor(650000, {
+      value: ethers.parseEther("0.001753"),
     });
 
     console.log("-------------initial withdrawals time 1: 5$---------------");
@@ -1137,8 +1127,9 @@ describe("RockOnyxStableCoinVault", function () {
       rewardAddress,
       nftPositionAddress,
       await camelotSwapContract.getAddress(),
-      await aevoContract.getAddress(),
+      aevoAddress,
       await optionsReceiver.getAddress(),
+      aevoConnectorAddress,
       usdceAddress,
       wethAddress,
       wstethAddress,
@@ -1184,6 +1175,7 @@ describe("RockOnyxStableCoinVault", function () {
       cap: exportVaultStateTx[5][3],
       performanceFeeRate: exportVaultStateTx[5][4],
       managementFeeRate: exportVaultStateTx[5][5],
+      networkCost: exportVaultStateTx[2][6] == 0 ? 1e6 : exportVaultStateTx[2][6]
     };
 
     const _vaultState = {
@@ -1253,15 +1245,6 @@ describe("RockOnyxStableCoinVault", function () {
     console.log(exportVaultStateTx2[4][0]);
   });
 
-  it.skip("emergencyShutdown", async function () {
-    await deposit(user1, 500 * 1e6, usdc, usdc);
-
-    console.log("-------------emergencyShutdown---------------");
-    await rockOnyxUSDTVaultContract
-      .connect(admin)
-      .emergencyShutdown(admin, usdc, 500 * 1e6);
-  });
-
   it.skip("user deposit -> deposit to eavo -> mint eth -> mint usd-> update profit -> close round -> decrease eth -> decrease usd", async function () {
     console.log("-------------deposit time: 50$---------------");
     const initialDepositAmount = 50;
@@ -1272,8 +1255,8 @@ describe("RockOnyxStableCoinVault", function () {
     expect(Number(totalValueLocked) / 1e6).to.equal(initialDepositAmount);
 
     console.log("-------------deposit to vendor on aevo---------------");
-    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor({
-      value: ethers.parseEther("0.000159539385325246"),
+    await rockOnyxUSDTVaultContract.connect(admin).depositToVendor(650000, {
+      value: ethers.parseEther("0.001753"),
     });
 
     console.log("------------- mint ETH LP Position ---------------");
@@ -1344,28 +1327,5 @@ describe("RockOnyxStableCoinVault", function () {
       .connect(admin)
       .acquireWithdrawalFunds();
     await acquireWithdrawalFundsTx.wait();
-  });
-
-  // https://arbiscan.io/address/0x55c4c840F9Ac2e62eFa3f12BaBa1B57A1208B6F5
-  it.skip("deposit error", async function () {
-    console.log(
-      "-------------deposit error 0x55c4c840F9Ac2e62eFa3f12BaBa1B57A1208B6F5---------------"
-    );
-    rockOnyxUSDTVaultContract = await ethers.getContractAt(
-      "RockOnyxUSDTVault",
-      "0x55c4c840F9Ac2e62eFa3f12BaBa1B57A1208B6F5"
-    );
-
-    console.log("-------------deposit time 1: 50$---------------");
-
-    await usdc
-      .connect(user1)
-      .approve(await rockOnyxUSDTVaultContract.getAddress(), 50 * 1e6);
-
-    console.log(
-      "rockOnyxUSDTVaultContract address: ",
-      await rockOnyxUSDTVaultContract.getAddress()
-    );
-    await rockOnyxUSDTVaultContract.connect(user1).deposit(50 * 1e6, usdc, usdc);
   });
 });

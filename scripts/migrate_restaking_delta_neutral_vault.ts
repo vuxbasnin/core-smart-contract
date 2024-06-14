@@ -8,27 +8,29 @@ import {
 
 const chainId: CHAINID = network.config.chainId;
 const privateKey = process.env.PRIVATE_KEY || "";
+const oldPrivateKey = process.env.OLD_PRIVATE_KEY || "";
 
 async function main() {
-    console.log('-------------migration delta neutral---------------');
+    console.log('-------------migration contract---------------');
     
-    const admin = new ethers.Wallet(privateKey, ethers.provider);
+    const oldAdmin = new ethers.Wallet(oldPrivateKey, ethers.provider);
+    console.log("old admin address %s", await oldAdmin.getAddress());
 
-    console.log("admin address %s", await admin.getAddress());
-    const vaultAddress = "0x50CDDCBa6289d3334f7D40cF5d312E544576F0f9";
-    const rockOnyxDeltaNeutralVaultContract = await ethers.getContractAt("kelpRestakingDeltaNeutralVault", vaultAddress);
+    const newAdmin = new ethers.Wallet(privateKey, ethers.provider);
+    console.log("new admin address %s", await newAdmin.getAddress());
+
+    const oldVaultAddress = "0x2B7cDAD36a86fd05Ac1680CDc42a0EA16804D80c";
+    const oldContract = await ethers.getContractAt("KelpRestakingDeltaNeutralVault", oldVaultAddress);
     
-    const newVaultAddress = "0xC9A079d7d1CF510a6dBa8dA8494745beaE7736E2";
-    const newRockOnyxDeltaNeutralVaultContract = await ethers.getContractAt("kelpRestakingDeltaNeutralVault", newVaultAddress);
+    const newVaultAddress = "";
+    const newContract = await ethers.getContractAt("KelpRestakingDeltaNeutralVault", newVaultAddress);
 
     console.log("-------------export old vault state---------------");
-    let exportVaultStateTx = await rockOnyxDeltaNeutralVaultContract
-      .connect(admin)
+    let exportVaultStateTx = await oldContract
+      .connect(oldAdmin)
       .exportVaultState();
   
     console.log(exportVaultStateTx);
-    console.log(exportVaultStateTx[0][0][1]);
-    console.log(exportVaultStateTx[1][0][1]);
     
     console.log("-------------import vault state---------------");
     const _depositReceiptArr = exportVaultStateTx[0].map((element: any[][]) => {
@@ -68,40 +70,32 @@ async function main() {
       pendingDepositAmount: exportVaultStateTx[3][3],
       totalShares: exportVaultStateTx[3][4],
     };
-    const _allocateRatio = {
-      ethStakeLendRatio: exportVaultStateTx[4][0],
-      perpDexRatio: exportVaultStateTx[4][1],
-      decimals: exportVaultStateTx[4][2],
-    };
     const _ethStakeLendState = {
-      unAllocatedBalance: exportVaultStateTx[5][0],
-      totalBalance: exportVaultStateTx[5][1],
+      unAllocatedBalance: exportVaultStateTx[4][0],
+      totalBalance: exportVaultStateTx[4][1],
     };
     const _perpDexState = {
-      unAllocatedBalance: exportVaultStateTx[6][0],
-      perpDexBalance: exportVaultStateTx[6][1],
+      unAllocatedBalance: exportVaultStateTx[5][0],
+      perpDexBalance: exportVaultStateTx[5][1],
     };
 
-    const importVaultStateTx = await newRockOnyxDeltaNeutralVaultContract
-      .connect(admin)
+    const importVaultStateTx = await newContract
+      .connect(newAdmin)
       .importVaultState(
         _depositReceiptArr,
         _withdrawalArr,
         _vaultParams,
         _vaultState,
-        _allocateRatio,
         _ethStakeLendState,
         _perpDexState
       );
-
+      
     console.log("-------------export new vault state---------------");
-    exportVaultStateTx = await newRockOnyxDeltaNeutralVaultContract
-      .connect(admin)
+    exportVaultStateTx = await newContract
+      .connect(newAdmin)
       .exportVaultState();
   
     console.log(exportVaultStateTx);
-    console.log(exportVaultStateTx[0][0][1]);
-    console.log(exportVaultStateTx[1][0][1]);
   }
 main().catch((error) => {
     console.error(error);
