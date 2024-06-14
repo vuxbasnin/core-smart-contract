@@ -120,8 +120,10 @@ contract RenzoRestakingDeltaNeutralVault is
     function _totalValueLocked() internal view override returns (uint256) {
         return
             vaultState.pendingDepositAmount +
+            vaultState.withdrawPoolAmount +
             getTotalRestakingTvl() +
-            getTotalPerpDexTvl();
+            getTotalPerpDexTvl() - 
+            vaultState.managementFeeAmount;
     }
 
     /**
