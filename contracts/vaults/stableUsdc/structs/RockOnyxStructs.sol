@@ -8,7 +8,6 @@ struct VaultParams {
     uint256 cap;
     uint256 performanceFeeRate;
     uint256 managementFeeRate;
-    uint256 networkCost;
 }
 
 struct VaultState {

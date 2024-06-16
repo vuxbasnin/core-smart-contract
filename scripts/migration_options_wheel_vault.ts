@@ -14,13 +14,13 @@ async function main() {
     console.log('-------------migration option wheel---------------');
     
     const oldAdmin = new ethers.Wallet(oldPrivateKey, ethers.provider);
-    const oldVaultAddress = "0x0cD2568E24Ed7Ed47E42075545D49C21e895B54c";
+    const oldVaultAddress = "0x0bD37D11e3A25B5BB0df366878b5D3f018c1B24c";
     const oldContract = await ethers.getContractAt("RockOnyxUSDTVault", oldVaultAddress);
 
     const newAdmin = new ethers.Wallet(privateKey, ethers.provider);
     console.log("new admin address %s", await newAdmin.getAddress());
 
-    const newVaultAddress = "";
+    const newVaultAddress = "0x316CDbBEd9342A1109D967543F81FA6288eBC47D";
     const newContract = await ethers.getContractAt("RockOnyxUSDTVault", newVaultAddress);
 
     console.log("-------------export old vault state---------------");
@@ -28,10 +28,23 @@ async function main() {
       .connect(oldAdmin)
       .exportVaultState();
     
-    console.log(exportVaultStateTx);
-    console.log(exportVaultStateTx[3][0][1]);
-    console.log(exportVaultStateTx[3][1][1]);
-    console.log(exportVaultStateTx[3][2][1]);
+    console.log("Current Round %s", exportVaultStateTx[0]);
+    console.log("exportRoundWithdrawalShares %s", exportVaultStateTx[1]);
+    console.log("exportRoundPricePerShares %s", exportVaultStateTx[2]);
+    console.log("depositReceiptArr %s", exportVaultStateTx[3]);
+    console.log("withdrawalArr %s", exportVaultStateTx[4]);
+    console.log("vaultParams %s", exportVaultStateTx[5]);
+    console.log("vaultState %s", exportVaultStateTx[6]);
+    console.log("allocateRatio %s", exportVaultStateTx[7]);
+    console.log("ethLPState %s", exportVaultStateTx[8]);
+    console.log("usdLPState %s", exportVaultStateTx[9]);
+    console.log("optionsState %s", exportVaultStateTx[10]);
+
+    let exportVaultStateTx1 = await oldContract
+      .connect(oldAdmin)
+      .getEthLPState();
+    
+    console.log("exportVaultStateTx1 %s", exportVaultStateTx1);
 
     console.log("-------------import vault state---------------");
     const _currentRound = exportVaultStateTx[0];
@@ -61,8 +74,7 @@ async function main() {
         minimumSupply: exportVaultStateTx[5][2],
         cap: exportVaultStateTx[5][3],
         performanceFeeRate: exportVaultStateTx[5][4],
-        managementFeeRate: exportVaultStateTx[5][5],
-        networkCost: exportVaultStateTx[5][6] == 0n ? 1e6 : exportVaultStateTx[5][6]
+        managementFeeRate: exportVaultStateTx[5][5]
     };
     const _vaultState = {
         performanceFeeAmount: exportVaultStateTx[6][0],
@@ -122,10 +134,17 @@ async function main() {
       .connect(newAdmin)
       .exportVaultState();
     
-    console.log(exportVaultStateTx);
-    console.log(exportVaultStateTx[3][0][1]);
-    console.log(exportVaultStateTx[3][1][1]);
-    console.log(exportVaultStateTx[3][2][1]);
+      console.log("Current Round %s", exportVaultStateTx[0]);
+      console.log("exportRoundWithdrawalShares %s", exportVaultStateTx[1]);
+      console.log("exportRoundPricePerShares %s", exportVaultStateTx[2]);
+      console.log("depositReceiptArr %s", exportVaultStateTx[3]);
+      console.log("withdrawalArr %s", exportVaultStateTx[4]);
+      console.log("vaultParams %s", exportVaultStateTx[5]);
+      console.log("vaultState %s", exportVaultStateTx[6]);
+      console.log("allocateRatio %s", exportVaultStateTx[7]);
+      console.log("ethLPState %s", exportVaultStateTx[8]);
+      console.log("usdLPState %s", exportVaultStateTx[9]);
+      console.log("optionsState %s", exportVaultStateTx[10]);
   }
 main().catch((error) => {
     console.error(error);

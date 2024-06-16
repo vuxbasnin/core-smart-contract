@@ -33,7 +33,9 @@ const kelpDepositRefId = KELP_DEPOSIT_REF_ID[chainId] || "";
 const zircuitDepositAddress = ZIRCUIT_DEPOSIT_ADDRESS[chainId] || "";
 
 const contractAdmin = '0x0d4eef21D898883a6bd1aE518B60fEf7A951ce4D';
-const aevoRecipientAddress = "0xF4aF6504462E5D574EDBdB161F1063633CCa0274";
+
+// mainnet
+const aevoRecipientAddress = "0x0F8C856907DfAFB96871AbE09a76586311632ef8";
 
 let kelpRestakingDNVault: Contracts.KelpRestakingDeltaNeutralVault;
 

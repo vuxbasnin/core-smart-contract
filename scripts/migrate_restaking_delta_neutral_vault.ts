@@ -22,7 +22,7 @@ async function main() {
     const oldVaultAddress = "0x2B7cDAD36a86fd05Ac1680CDc42a0EA16804D80c";
     const oldContract = await ethers.getContractAt("KelpRestakingDeltaNeutralVault", oldVaultAddress);
     
-    const newVaultAddress = "";
+    const newVaultAddress = "0xF30353335003E71b42a89314AAaeC437E7Bc8F0B";
     const newContract = await ethers.getContractAt("KelpRestakingDeltaNeutralVault", newVaultAddress);
 
     console.log("-------------export old vault state---------------");
@@ -61,7 +61,6 @@ async function main() {
       cap: exportVaultStateTx[2][3],
       performanceFeeRate: exportVaultStateTx[2][4],
       managementFeeRate: exportVaultStateTx[2][5],
-      networkCost: exportVaultStateTx[2][6] == 0 ? 1e6 : exportVaultStateTx[2][6]
     };
     const _vaultState = {
       performanceFeeAmount: exportVaultStateTx[3][0],

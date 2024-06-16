@@ -41,7 +41,7 @@ const camelotSwapAddress = CAMELOT_SWAP_ADDRESS[chainId] || "";
 const camelotLiquidityAddress = CAMELOT_LIQUIDITY_ADDRESS[chainId] || "";
 const networkCost = BigInt(Number(NETWORK_COST[chainId]) * 1e6);
 const admin = '0x0cD2568E24Ed7Ed47E42075545D49C21e895B54c';
-const aevoRecipientAddress = "";
+const aevoRecipientAddress = "0xdf46e88E2e26FC90B8e3ca4D36fA524406b0Cc19";
 
 async function main() {
   [deployer] = await ethers.getSigners();
