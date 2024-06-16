@@ -12,6 +12,7 @@ contract RockOnyxUSDTVault is BaseSwapVault, BaseRockOnyxOptionWheelVault {
     using SafeERC20 for IERC20;
     using ShareMath for DepositReceipt;
     using LiquidityAmounts for uint256;
+    uint256 networkCost;
 
     /************************************************
      *  EVENTS
@@ -63,9 +64,10 @@ contract RockOnyxUSDTVault is BaseSwapVault, BaseRockOnyxOptionWheelVault {
         _grantRole(ROCK_ONYX_OPTIONS_TRADER_ROLE, _perpDexReceiver);
 
         currentRound = 0;
-        vaultParams = VaultParams(_decimals, _usdc, _minimumSupply, _cap, 10, 1, _networkCost);
+        vaultParams = VaultParams(_decimals, _usdc, _minimumSupply, _cap, 10, 1);
         vaultState = VaultState(0, 0, 0, 0, 0, 0, 0);
         allocateRatio = AllocateRatio(6000, 2000, 2000, 4);
+        networkCost = _networkCost;
 
         baseSwapVault_Initialize(_uniSwapProxy, _token0s, _token1s, _fees);
         options_Initialize(_perpDexAddress, _perpDexReceiver, _perpDexConnector, _usdc);
@@ -255,8 +257,8 @@ contract RockOnyxUSDTVault is BaseSwapVault, BaseRockOnyxOptionWheelVault {
         uint withdrawProfit = profit > 0 ? (profit * withdrawals[msg.sender].shares) / (withdrawals[msg.sender].shares + depositReceipts[msg.sender].shares) : 0;
         uint256 performanceFee = withdrawProfit > 0 ? (withdrawProfit * vaultParams.performanceFeeRate) / 1e2 : 0;
         vaultState.performanceFeeAmount += performanceFee;
-        vaultState.managementFeeAmount += vaultParams.networkCost;
-        withdrawAmount -= (performanceFee + vaultParams.networkCost);
+        vaultState.managementFeeAmount += networkCost;
+        withdrawAmount -= (performanceFee + networkCost);
 
         require(vaultState.withdrawPoolAmount > withdrawAmount, "EXD_WD_POOL_CAP");
         

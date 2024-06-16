@@ -207,7 +207,7 @@ export const CAMELOT_SWAP_ADDRESS: { [key in CHAINID]?: string } = {
 
 export const CAMELOT_LIQUIDITY_ADDRESS: { [key in CHAINID]?: string } = {
   [CHAINID.ETH_MAINNET]: "",
-  [CHAINID.ARBITRUM_MAINNET]: "0x05AAe168AEB8516a068D9DED91F56f81C76706Eb",
+  [CHAINID.ARBITRUM_MAINNET]: "0x9be0ecF2d0e04796eFa1CeDEcB0Bf5Beb6e86993",
 };
 
 export const UNI_SWAP_ADDRESS: { [key in CHAINID]?: string } = {

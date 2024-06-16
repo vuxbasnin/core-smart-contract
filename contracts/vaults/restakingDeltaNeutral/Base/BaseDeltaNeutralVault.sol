@@ -18,6 +18,7 @@ abstract contract BaseDeltaNeutralVault is
     ReentrancyGuard
 {
     uint256 internal initialPPS;
+    uint256 internal networkCost;
     using ShareMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -50,9 +51,10 @@ abstract contract BaseDeltaNeutralVault is
         address[] memory _token1s,
         uint24[] memory _fees
     ) internal virtual {
-        vaultParams = VaultParams(_decimals, _usdc, _minimumSupply, _cap, 10, 1, _networkCost);
+        vaultParams = VaultParams(_decimals, _usdc, _minimumSupply, _cap, 10, 1);
         vaultState = VaultState(0, 0, 0, 0, 0);
         initialPPS = _initialPPS;
+        networkCost = _networkCost;
 
         _grantRole(ROCK_ONYX_ADMIN_ROLE, _admin);
         _grantRole(ROCK_ONYX_OPTIONS_TRADER_ROLE, _admin);
@@ -194,8 +196,8 @@ abstract contract BaseDeltaNeutralVault is
         uint256 withdrawAmount = (shares * withdrawals[msg.sender].withdrawAmount) / withdrawals[msg.sender].shares;
         uint256 performanceFee = (shares * withdrawals[msg.sender].performanceFee) / withdrawals[msg.sender].shares;
         vaultState.performanceFeeAmount += performanceFee;
-        vaultState.managementFeeAmount += vaultParams.networkCost;
-        withdrawAmount -= (performanceFee + vaultParams.networkCost);
+        vaultState.managementFeeAmount += networkCost;
+        withdrawAmount -= (performanceFee + networkCost);
 
         require( vaultState.withdrawPoolAmount > withdrawAmount, "EXCEED_WD_POOL_CAP");
         vaultState.withdrawPoolAmount -= withdrawAmount;
