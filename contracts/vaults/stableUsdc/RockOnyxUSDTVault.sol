@@ -17,7 +17,7 @@ contract RockOnyxUSDTVault is BaseSwapVault, BaseRockOnyxOptionWheelVault {
     /************************************************
      *  EVENTS
      ***********************************************/
-    event Deposited(address indexed account, uint256 amount, uint256 shares);
+    event Deposited(address indexed account, address indexed tokenIn, uint256 amount, uint256 shares);
     event InitiateWithdrawal(
         address indexed account,
         uint256 amount,
@@ -140,7 +140,7 @@ contract RockOnyxUSDTVault is BaseSwapVault, BaseRockOnyxOptionWheelVault {
         vaultState.pendingDepositAmount += amount;
         vaultState.totalShares += shares;
         allocateAssets();
-        emit Deposited(msg.sender, amount, shares);
+        emit Deposited(msg.sender, tokenIn, amount, shares);
 
         // migration
         updateDepositArr(depositReceipts[msg.sender]);
