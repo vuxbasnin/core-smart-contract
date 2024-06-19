@@ -10,52 +10,56 @@ import "../../Base/BaseSwapVault.sol";
 import "../Base/BaseKelpRenzoProxy.sol";
 
 contract KelpDaoProxy is BaseKelpRenzoProxy, BaseSwapVault {
-    IKelpRestakeProxy private kelpRestakeProxy;
     IERC20 private ethToken;
 
-    constructor(address _addressContractZircuit, UniSwap _swapProxy, IERC20 _restakingToken) {
-        baseKelpRenzoProxyInit(_addressContractZircuit, _swapProxy, _restakingToken);
+    constructor(
+        address _addressContractKelpRestake,
+        address _addressContractZircuit,
+        UniSwap _swapProxy,
+        IERC20 _restakingToken
+    ) {
+        baseKelpRenzoProxyInit(
+            msg.sender,
+            _addressContractKelpRestake,
+            _addressContractZircuit,
+            _swapProxy,
+            _restakingToken
+        );
     }
 
-    function depositToRestakingProxy(uint256 ethAmount, string memory refId) external override {
-        if(address(kelpRestakeProxy) != address(0)) {
-            IWETH(address(ethToken)).withdraw(ethAmount);
+    function depositToRestakingProxy(
+        string memory refId
+    ) external payable override {
+        require(msg.value > 0, "INVALID_AMOUNT_ETH");
+        // ethereum
+        kelpRestakeProxy.depositETH{value: msg.value}(0, refId);
+    }
 
-            // arbitrum
-            // kelpRestakeProxy.swapToRsETH{value: ethAmount}(0, refId);
+    function withdrawFromRestakingProxy(uint256 ethAmount) external override {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+        uint256 stakingTokenAmount = swapProxy.getAmountInMaximum(
+            address(restakingToken),
+            address(ethToken),
+            ethAmount
+        );
 
-            // ethereum
-            kelpRestakeProxy.depositETH{value: ethAmount}(0, refId);
-        }else{
-            ethToken.approve(address(swapProxy), ethAmount);
-            swapProxy.swapTo(
-                address(this),
-                address(ethToken),
-                ethAmount,
+        if (address(zircuitRestakeProxy) != address(0)) {
+            zircuitRestakeProxy.withdraw(
                 address(restakingToken),
-                getFee(address(ethToken), address(restakingToken))
+                stakingTokenAmount
             );
         }
-        
-        if(address(zircuitRestakeProxy) != address(0)){
-            restakingToken.approve(address(zircuitRestakeProxy), restakingToken.balanceOf(address(this)));
-            zircuitRestakeProxy.depositFor(address(restakingToken), address(this), restakingToken.balanceOf(address(this)));
-        }
-    }
 
-    function withdrawFromRestakingProxy(
-        uint256 ethAmount
-    ) external override {
-        uint256 stakingTokenAmount = swapProxy.getAmountInMaximum(address(restakingToken), address(ethToken), ethAmount);
-        
-        if(address(zircuitRestakeProxy) != address(0)){
-            zircuitRestakeProxy.withdraw(address(restakingToken), stakingTokenAmount);
-        }
-
-        if(address(kelpRestakeProxy) != address(0) && address(kelpWithdrawRestakingPool) != address(0)) {
+        if (
+            address(kelpRestakeProxy) != address(0) &&
+            address(kelpWithdrawRestakingPool) != address(0)
+        ) {
             restakingToken.approve(address(swapProxy), stakingTokenAmount);
-            kelpWithdrawRestakingPool.withdraw(address(restakingToken), stakingTokenAmount);
-        }else{
+            kelpWithdrawRestakingPool.withdraw(
+                address(restakingToken),
+                stakingTokenAmount
+            );
+        } else {
             restakingToken.approve(address(swapProxy), stakingTokenAmount);
             swapProxy.swapToWithOutput(
                 address(this),
@@ -65,5 +69,22 @@ contract KelpDaoProxy is BaseKelpRenzoProxy, BaseSwapVault {
                 getFee(address(restakingToken), address(ethToken))
             );
         }
+    }
+
+    function depositForZircuit() external override {
+        restakingToken.approve(
+            address(zircuitRestakeProxy),
+            restakingToken.balanceOf(address(this))
+        );
+        zircuitRestakeProxy.depositFor(
+            address(restakingToken),
+            address(this),
+            restakingToken.balanceOf(address(this))
+        );
+    }
+
+    function updateNewAdmin(address _adminNew) external {
+        _auth(ROCK_ONYX_ADMIN_ROLE);
+        updateAdmin(_adminNew);
     }
 }

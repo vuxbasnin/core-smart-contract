@@ -26,38 +26,88 @@ contract KelpZircuitRestakingStrategy is BaseRestakingStrategy {
         address[] memory _token1s,
         uint24[] memory _fees
     ) internal {
-        super.ethRestaking_Initialize(_restakingToken, _usdcAddress, _ethAddress, _swapAddress, _token0s, _token1s, _fees);
+        super.ethRestaking_Initialize(
+            _restakingToken,
+            _usdcAddress,
+            _ethAddress,
+            _swapAddress,
+            _token0s,
+            _token1s,
+            _fees
+        );
 
         refId = _refId;
         kelpRestakeProxy = IKelpRestakeProxy(_restakingPoolAddresses[0]);
-        kelpDaoProxy = new KelpDaoProxy(_restakingPoolAddresses[1], swapProxy, restakingToken);
+        kelpDaoProxy = new KelpDaoProxy(
+            _restakingPoolAddresses[0],
+            _restakingPoolAddresses[1],
+            swapProxy,
+            restakingToken
+        );
     }
 
-    function syncRestakingBalance() internal override{
+    function syncRestakingBalance() internal override {
         uint256 restakingTokenAmount = restakingToken.balanceOf(address(this));
-        if(address(zircuitRestakeProxy) != address(0)){
-            restakingTokenAmount += zircuitRestakeProxy.balance(address(restakingToken), address(this));
+        if (address(zircuitRestakeProxy) != address(0)) {
+            restakingTokenAmount += zircuitRestakeProxy.balance(
+                address(restakingToken),
+                address(this)
+            );
         }
 
-        uint256 ethAmount = restakingTokenAmount * swapProxy.getPriceOf(address(restakingToken), address(ethToken)) / 1e18;
-        restakingState.totalBalance = restakingState.unAllocatedBalance + ethAmount * swapProxy.getPriceOf(address(ethToken), address(usdcToken)) / 1e18;
+        uint256 ethAmount = (restakingTokenAmount *
+            swapProxy.getPriceOf(address(restakingToken), address(ethToken))) /
+            1e18;
+        restakingState.totalBalance =
+            restakingState.unAllocatedBalance +
+            (ethAmount *
+                swapProxy.getPriceOf(address(ethToken), address(usdcToken))) /
+            1e18;
     }
 
     function depositToRestakingProxy(uint256 ethAmount) internal override {
-        kelpDaoProxy.depositToRestakingProxy(ethAmount, refId);
+        if(address(kelpRestakeProxy) != address(0)) {
+            IWETH(address(ethToken)).withdraw(ethAmount);
+
+            // arbitrum
+            // kelpRestakeProxy.swapToRsETH{value: ethAmount}(0, refId);
+
+            // ethereum
+            kelpDaoProxy.depositToRestakingProxy{value: ethAmount}(refId);
+        }else{
+            ethToken.approve(address(swapProxy), ethAmount);
+            swapProxy.swapTo(
+                address(this),
+                address(ethToken),
+                ethAmount,
+                address(restakingToken),
+                getFee(address(ethToken), address(restakingToken))
+            );
+        }
+        
+        if(address(zircuitRestakeProxy) != address(0)){
+            IERC20(restakingToken).transferFrom(address(this), address(kelpDaoProxy), restakingToken.balanceOf(address(this)));
+            kelpDaoProxy.depositForZircuit();
+        }
     }
 
     function withdrawFromRestakingProxy(uint256 ethAmount) internal override {
         kelpDaoProxy.withdrawFromRestakingProxy(ethAmount);
     }
 
-    function updateKelpWithdrawRestaking(address _kelpWithdrawRestakingPoolAddress) external nonReentrant {
+    function updateKelpWithdrawRestaking(
+        address _kelpWithdrawRestakingPoolAddress
+    ) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
-        kelpDaoProxy.updateKelpWithdrawRestaking(_kelpWithdrawRestakingPoolAddress);
+        kelpDaoProxy.updateKelpWithdrawRestaking(
+            _kelpWithdrawRestakingPoolAddress
+        );
     }
 
-    function updateRestakingPoolAddresses(address[] memory _restakingPoolAddresses) external nonReentrant {
+    function updateRestakingPoolAddresses(
+        address[] memory _restakingPoolAddresses
+    ) external nonReentrant {
         _auth(ROCK_ONYX_ADMIN_ROLE);
 
         kelpRestakeProxy = IKelpRestakeProxy(_restakingPoolAddresses[0]);
