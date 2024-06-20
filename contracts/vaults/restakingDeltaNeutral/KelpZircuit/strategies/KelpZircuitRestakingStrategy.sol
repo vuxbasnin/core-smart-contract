@@ -40,9 +40,7 @@ contract KelpZircuitRestakingStrategy is BaseRestakingStrategy {
         kelpRestakeProxy = IKelpRestakeProxy(_restakingPoolAddresses[0]);
         kelpDaoProxy = new KelpDaoProxy(
             _restakingPoolAddresses[0],
-            _restakingPoolAddresses[1],
-            swapProxy,
-            restakingToken
+            _restakingPoolAddresses[1]
         );
     }
 
@@ -92,7 +90,7 @@ contract KelpZircuitRestakingStrategy is BaseRestakingStrategy {
     }
 
     function withdrawFromRestakingProxy(uint256 ethAmount) internal override {
-        kelpDaoProxy.withdrawFromRestakingProxy(ethAmount);
+        kelpDaoProxy.withdrawFromRestakingProxy(ethAmount, address(this));
     }
 
     function updateKelpWithdrawRestaking(

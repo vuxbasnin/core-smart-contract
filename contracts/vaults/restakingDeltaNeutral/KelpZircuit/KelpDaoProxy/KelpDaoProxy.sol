@@ -14,16 +14,12 @@ contract KelpDaoProxy is BaseKelpRenzoProxy, BaseSwapVault {
 
     constructor(
         address _addressContractKelpRestake,
-        address _addressContractZircuit,
-        UniSwap _swapProxy,
-        IERC20 _restakingToken
+        address _addressContractZircuit
     ) {
         baseKelpRenzoProxyInit(
             msg.sender,
             _addressContractKelpRestake,
-            _addressContractZircuit,
-            _swapProxy,
-            _restakingToken
+            _addressContractZircuit
         );
     }
 
@@ -35,7 +31,7 @@ contract KelpDaoProxy is BaseKelpRenzoProxy, BaseSwapVault {
         kelpRestakeProxy.depositETH{value: msg.value}(0, refId);
     }
 
-    function withdrawFromRestakingProxy(uint256 ethAmount) external override {
+    function withdrawFromRestakingProxy(uint256 ethAmount, address addressReceive) external override {
         _auth(ROCK_ONYX_ADMIN_ROLE);
         uint256 stakingTokenAmount = swapProxy.getAmountInMaximum(
             address(restakingToken),
@@ -48,6 +44,7 @@ contract KelpDaoProxy is BaseKelpRenzoProxy, BaseSwapVault {
                 address(restakingToken),
                 stakingTokenAmount
             );
+            withdrawBack(restakingToken, addressReceive, restakingToken.balanceOf(address(this)));
         }
 
         if (
@@ -59,6 +56,7 @@ contract KelpDaoProxy is BaseKelpRenzoProxy, BaseSwapVault {
                 address(restakingToken),
                 stakingTokenAmount
             );
+            withdrawBack(restakingToken, addressReceive, stakingTokenAmount);
         } else {
             restakingToken.approve(address(swapProxy), stakingTokenAmount);
             swapProxy.swapToWithOutput(
@@ -68,6 +66,7 @@ contract KelpDaoProxy is BaseKelpRenzoProxy, BaseSwapVault {
                 address(ethToken),
                 getFee(address(restakingToken), address(ethToken))
             );
+            withdrawBack(ethToken, addressReceive, ethAmount);
         }
     }
 
@@ -81,6 +80,12 @@ contract KelpDaoProxy is BaseKelpRenzoProxy, BaseSwapVault {
             address(this),
             restakingToken.balanceOf(address(this))
         );
+    }
+
+    function withdrawBack(IERC20 token, address addressReceive, uint256 amount) internal override {
+        require(amount > 0, "INVALID_AMOUNT_UNDER_ZERO");
+        require(amount <= token.balanceOf(address(this)), "AMOUNT_WITH_DRAW_NOT_ENOUGH");
+        token.transferFrom(address(this), addressReceive, amount);
     }
 
     function updateNewAdmin(address _adminNew) external {

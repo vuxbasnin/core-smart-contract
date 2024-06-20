@@ -11,16 +11,13 @@ import "../../../../extensions/RockOnyxAccessControl.sol";
 abstract contract BaseKelpRenzoProxy is ReentrancyGuard, RockOnyxAccessControl {
     IZircuitRestakeProxy internal zircuitRestakeProxy;
     IKelpRestakeProxy internal kelpRestakeProxy;
-    UniSwap internal swapProxy;
     IERC20 internal restakingToken;
     IWithdrawRestakingPool internal kelpWithdrawRestakingPool;
     address internal admin;
 
-    function baseKelpRenzoProxyInit(address _admin, address _addressContractKelpRestake, address _addressContractZircuit, UniSwap _swapProxy, IERC20 _restakingToken) internal virtual {
+    function baseKelpRenzoProxyInit(address _admin, address _addressContractKelpRestake, address _addressContractZircuit) internal virtual {
         zircuitRestakeProxy = IZircuitRestakeProxy(_addressContractZircuit);
         kelpRestakeProxy = IKelpRestakeProxy(_addressContractKelpRestake);
-        swapProxy = _swapProxy;
-        restakingToken = _restakingToken;
         admin = _admin;
         _grantRole(ROCK_ONYX_ADMIN_ROLE, _admin);
     }
@@ -35,11 +32,18 @@ abstract contract BaseKelpRenzoProxy is ReentrancyGuard, RockOnyxAccessControl {
 
     function depositToRestakingProxy(string memory refId) external virtual payable nonReentrant {}
 
-    function withdrawFromRestakingProxy(uint256 ethAmount) external virtual nonReentrant {}
+    function withdrawFromRestakingProxy(uint256 ethAmount, address addressWithdraw) external virtual nonReentrant {}
 
     function depositForZircuit() external virtual nonReentrant {}
 
+    function withdrawBack(IERC20 token, address addressReceive, uint256 amount) internal virtual nonReentrant {}
+
     function updateAdmin(address _adminNew) internal nonReentrant {
         admin = _adminNew;
+        _grantRole(ROCK_ONYX_ADMIN_ROLE, admin);
+    }
+
+    function updateRestakingToken(address _restakingToken) external nonReentrant {
+        restakingToken = IERC20(_restakingToken);
     }
 }
