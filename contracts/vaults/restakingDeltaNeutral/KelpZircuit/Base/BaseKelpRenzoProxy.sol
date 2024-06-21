@@ -12,13 +12,15 @@ abstract contract BaseKelpRenzoProxy is ReentrancyGuard, RockOnyxAccessControl {
     IZircuitRestakeProxy internal zircuitRestakeProxy;
     IKelpRestakeProxy internal kelpRestakeProxy;
     IERC20 internal restakingToken;
+    IERC20 internal ethToken;
     IWithdrawRestakingPool internal kelpWithdrawRestakingPool;
     address internal admin;
 
-    function baseKelpRenzoProxyInit(address _admin, address _addressContractKelpRestake, address _addressContractZircuit) internal virtual {
+    function baseKelpRenzoProxyInit(address _admin, address _addressContractKelpRestake, address _addressContractZircuit, address _ethToken) internal virtual {
         zircuitRestakeProxy = IZircuitRestakeProxy(_addressContractZircuit);
         kelpRestakeProxy = IKelpRestakeProxy(_addressContractKelpRestake);
         admin = _admin;
+        ethToken = IERC20(_ethToken);
         _grantRole(ROCK_ONYX_ADMIN_ROLE, _admin);
     }
 

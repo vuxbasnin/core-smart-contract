@@ -10,18 +10,33 @@ import "../../Base/BaseSwapVault.sol";
 import "../Base/BaseKelpRenzoProxy.sol";
 
 contract KelpDaoProxy is BaseKelpRenzoProxy, BaseSwapVault {
-    IERC20 private ethToken;
 
     constructor(
         address _addressContractKelpRestake,
-        address _addressContractZircuit
+        address _addressContractZircuit,
+        address _ethToken
     ) {
         baseKelpRenzoProxyInit(
             msg.sender,
             _addressContractKelpRestake,
-            _addressContractZircuit
+            _addressContractZircuit,
+            _ethToken
         );
     }
+
+    // function init(
+    //     address _admin,
+    //     address _addressContractKelpRestake,
+    //     address _addressContractZircuit,
+    //     address _ethToken
+    // ) internal {
+    //     super.baseKelpRenzoProxyInit(
+    //         _admin,
+    //         _addressContractKelpRestake,
+    //         _addressContractZircuit,
+    //         _ethToken
+    //     );
+    // }
 
     function depositToRestakingProxy(
         string memory refId
@@ -31,7 +46,10 @@ contract KelpDaoProxy is BaseKelpRenzoProxy, BaseSwapVault {
         kelpRestakeProxy.depositETH{value: msg.value}(0, refId);
     }
 
-    function withdrawFromRestakingProxy(uint256 ethAmount, address addressReceive) external override {
+    function withdrawFromRestakingProxy(
+        uint256 ethAmount,
+        address addressReceive
+    ) external override {
         _auth(ROCK_ONYX_ADMIN_ROLE);
         uint256 stakingTokenAmount = swapProxy.getAmountInMaximum(
             address(restakingToken),
@@ -44,7 +62,11 @@ contract KelpDaoProxy is BaseKelpRenzoProxy, BaseSwapVault {
                 address(restakingToken),
                 stakingTokenAmount
             );
-            withdrawBack(restakingToken, addressReceive, restakingToken.balanceOf(address(this)));
+            withdrawBack(
+                restakingToken,
+                addressReceive,
+                restakingToken.balanceOf(address(this))
+            );
         }
 
         if (
@@ -82,9 +104,16 @@ contract KelpDaoProxy is BaseKelpRenzoProxy, BaseSwapVault {
         );
     }
 
-    function withdrawBack(IERC20 token, address addressReceive, uint256 amount) internal override {
+    function withdrawBack(
+        IERC20 token,
+        address addressReceive,
+        uint256 amount
+    ) internal override {
         require(amount > 0, "INVALID_AMOUNT_UNDER_ZERO");
-        require(amount <= token.balanceOf(address(this)), "AMOUNT_WITH_DRAW_NOT_ENOUGH");
+        require(
+            amount <= token.balanceOf(address(this)),
+            "AMOUNT_WITH_DRAW_NOT_ENOUGH"
+        );
         token.transferFrom(address(this), addressReceive, amount);
     }
 
@@ -92,4 +121,12 @@ contract KelpDaoProxy is BaseKelpRenzoProxy, BaseSwapVault {
         _auth(ROCK_ONYX_ADMIN_ROLE);
         updateAdmin(_adminNew);
     }
+
+    function getRestakingTokenCurrent() external view returns(address) {
+        return address(restakingToken);
+    }
+
+    receive() external payable {}
+    
+    fallback() external payable {}
 }

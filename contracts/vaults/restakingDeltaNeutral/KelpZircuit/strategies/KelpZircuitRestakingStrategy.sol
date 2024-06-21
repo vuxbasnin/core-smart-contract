@@ -7,6 +7,7 @@ import "../../../../interfaces/IWETH.sol";
 import "./../../Base/strategies/BaseRestakingStrategy.sol";
 import "./../../Base/BaseSwapVault.sol";
 import "../KelpDaoProxy/KelpDaoProxy.sol";
+import "../../../../interfaces/IKelpDaoProxy.sol";
 
 contract KelpZircuitRestakingStrategy is BaseRestakingStrategy {
     IKelpRestakeProxy private kelpRestakeProxy;
@@ -40,8 +41,10 @@ contract KelpZircuitRestakingStrategy is BaseRestakingStrategy {
         kelpRestakeProxy = IKelpRestakeProxy(_restakingPoolAddresses[0]);
         kelpDaoProxy = new KelpDaoProxy(
             _restakingPoolAddresses[0],
-            _restakingPoolAddresses[1]
+            _restakingPoolAddresses[1],
+            address(ethToken)
         );
+        // kelpDaoProxy = IKelpDaoProxy(address(this));
     }
 
     function syncRestakingBalance() internal override {
@@ -64,7 +67,7 @@ contract KelpZircuitRestakingStrategy is BaseRestakingStrategy {
     }
 
     function depositToRestakingProxy(uint256 ethAmount) internal override {
-        if(address(kelpRestakeProxy) != address(0)) {
+        if (address(kelpRestakeProxy) != address(0)) {
             IWETH(address(ethToken)).withdraw(ethAmount);
 
             // arbitrum
@@ -72,7 +75,7 @@ contract KelpZircuitRestakingStrategy is BaseRestakingStrategy {
 
             // ethereum
             kelpDaoProxy.depositToRestakingProxy{value: ethAmount}(refId);
-        }else{
+        } else {
             ethToken.approve(address(swapProxy), ethAmount);
             swapProxy.swapTo(
                 address(this),
@@ -82,9 +85,13 @@ contract KelpZircuitRestakingStrategy is BaseRestakingStrategy {
                 getFee(address(ethToken), address(restakingToken))
             );
         }
-        
-        if(address(zircuitRestakeProxy) != address(0)){
-            IERC20(restakingToken).transferFrom(address(this), address(kelpDaoProxy), restakingToken.balanceOf(address(this)));
+
+        if (address(zircuitRestakeProxy) != address(0)) {
+            IERC20(restakingToken).transferFrom(
+                address(this),
+                address(kelpDaoProxy),
+                restakingToken.balanceOf(address(this))
+            );
             kelpDaoProxy.depositForZircuit();
         }
     }
