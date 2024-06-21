@@ -50,8 +50,6 @@ describe('KelpDaoProxy', () => {
     const wethAddress = WETH_ADDRESS[chainId] || '';
     const rsEthAddress = RSETH_ADDRESS[chainId] || '';
     const swapRouterAddress = UNISWAP_ROUTER_ADDRESS[chainId] || '';
-    const aevoAddress = AEVO_ADDRESS[chainId] || '';
-    const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId] || '';
     const ethPriceFeed = ETH_PRICE_FEED_ADDRESS[chainId] || '';
     const rsEth_EthPriceFeed = RSETH_ETH_PRICE_FEED_ADDRESS[chainId] || '';
     const usdtPriceFeed = USDT_PRICE_FEED_ADDRESS[chainId] || '';
@@ -64,6 +62,7 @@ describe('KelpDaoProxy', () => {
     let kelpDaoProxyContract: Contracts.KelpDaoProxy;
     let uniSwapContract: Contracts.UniSwap;
     let priceConsumerContract: Contracts.PriceConsumer;
+    let kelpZircuitRestakingStrategyContract: Contracts.KelpZircuitRestakingStrategy;
 
     async function deployPriceConsumerContract() {
         const factory = await ethers.getContractFactory('PriceConsumer');
@@ -82,21 +81,6 @@ describe('KelpDaoProxy', () => {
         );
     }
 
-    async function deployKelpDaoProxyContract() {
-        console.log('NINVB => factory');
-        const factory = await ethers.getContractFactory('KelpDaoProxy');
-
-        kelpDaoProxyContract = await factory.deploy(
-            admin,
-            kelpDepositAddress,
-            zircuitDepositAddress
-        );
-        console.log(
-            'Deploy kelp dao proxy contract at address %s',
-            await kelpDaoProxyContract.getAddress()
-        );
-    }
-
     async function deployUniSwapContract() {
         const factory = await ethers.getContractFactory('UniSwap');
         uniSwapContract = await factory.deploy(
@@ -112,19 +96,56 @@ describe('KelpDaoProxy', () => {
         );
     }
 
+    async function deployKelpZircuitRestakingStrategy() {
+        const factory = await ethers.getContractFactory(
+            'KelpZircuitRestakingStrategy'
+        );
+        kelpZircuitRestakingStrategyContract = await factory.deploy(
+            rsEthAddress,
+            usdcAddress,
+            wethAddress,
+            swapRouterAddress,
+            [usdcAddress, rsEthAddress, usdtAddress, daiAddress],
+            [wethAddress, wethAddress, usdcAddress, usdtAddress],
+            [500, 100, 100, 100]
+        );
+
+        await kelpZircuitRestakingStrategyContract.waitForDeployment();
+        console.log(
+            'Deploy kelpZircuitRestakingStrategyContract at address %s',
+            await kelpZircuitRestakingStrategyContract.getAddress()
+        );
+    }
+
+    
+    async function deployKelpDaoProxyContract() {
+        const factory = await ethers.getContractFactory('KelpDaoProxy');
+        console.log("NINVB");
+        
+        kelpDaoProxyContract = await factory.deploy(
+            admin,
+            kelpDepositAddress,
+            zircuitDepositAddress
+        );
+        console.log(
+            'Deploy kelp dao proxy contract at address %s',
+            await kelpDaoProxyContract.getAddress()
+        );
+    }
+
     beforeEach(async () => {
         [admin, user1, user2, user3, user4] = await ethers.getSigners();
         receiveAddress = await user4.getAddress();
-
+        
         //deploy
         await deployPriceConsumerContract();
         await deployUniSwapContract();
         await deployKelpDaoProxyContract();
-        console.log('Deploy kelp dao proxy smart contract');
+        await deployKelpZircuitRestakingStrategy();
+        console.log('Deploy smart contract');
     });
 
-    it('should run a simple test', function () {
-        console.log('Simple test is running');
-        expect(true).to.equal(true);
+    it('Deposit to kelp dao proxy test', async () => {
+        console.log('Deposit to kdp');
     });
 });
