@@ -42,6 +42,7 @@ contract KelpDaoProxy is BaseKelpRenzoProxy, BaseSwapVault {
         string memory refId
     ) external payable override {
         require(msg.value > 0, "INVALID_AMOUNT_ETH");
+        require(address(kelpRestakeProxy) != address(0), "INVALID_ADDRESS_KELP_RESTAKING_0x");
         // ethereum
         kelpRestakeProxy.depositETH{value: msg.value}(0, refId);
     }
@@ -124,6 +125,14 @@ contract KelpDaoProxy is BaseKelpRenzoProxy, BaseSwapVault {
 
     function getRestakingTokenCurrent() external view returns(address) {
         return address(restakingToken);
+    }
+
+    function getAdminCurrent() external override view returns(address) { 
+        return admin;
+    }
+
+    function getKelpRestakeProxy() external view returns(address) {
+        return address(kelpRestakeProxy);
     }
 
     receive() external payable {}

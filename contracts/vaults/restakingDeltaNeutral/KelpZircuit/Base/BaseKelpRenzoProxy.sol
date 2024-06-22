@@ -45,6 +45,8 @@ abstract contract BaseKelpRenzoProxy is ReentrancyGuard, RockOnyxAccessControl {
         _grantRole(ROCK_ONYX_ADMIN_ROLE, admin);
     }
 
+    function getAdminCurrent() external virtual view returns(address) {}
+
     function updateRestakingToken(address _restakingToken) external nonReentrant {
         restakingToken = IERC20(_restakingToken);
     }

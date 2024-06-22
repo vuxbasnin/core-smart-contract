@@ -1,3 +1,4 @@
+import { IKelpRestakeProxy } from './../../../typechain-types/contracts/interfaces/IKelpRestakeProxy';
 const { expect } = require('chai');
 const { ethers, network } = require('hardhat');
 import { KelpDaoProxy } from './../../../typechain-types/contracts/vaults/restakingDeltaNeutral/KelpZircuit/KelpDaoProxy/KelpDaoProxy';
@@ -9,11 +10,6 @@ import {
     USDT_ADDRESS,
     DAI_ADDRESS,
     UNISWAP_ROUTER_ADDRESS,
-    AEVO_ADDRESS,
-    AEVO_CONNECTOR_ADDRESS,
-    USDC_IMPERSONATED_SIGNER_ADDRESS,
-    USDT_IMPERSONATED_SIGNER_ADDRESS,
-    DAI_IMPERSONATED_SIGNER_ADDRESS,
     ETH_PRICE_FEED_ADDRESS,
     USDT_PRICE_FEED_ADDRESS,
     DAI_PRICE_FEED_ADDRESS,
@@ -25,7 +21,7 @@ import {
     NETWORK_COST,
 } from '../../../constants';
 import { BigNumberish, Signer } from 'ethers';
-import { assert } from 'console';
+import { kelpDaoProxy } from '../../../typechain-types/contracts/vaults/restakingDeltaNeutral/KelpZircuit';
 
 const chainId: CHAINID = network.config.chainId;
 console.log('chainId: ', chainId);
@@ -41,20 +37,12 @@ describe('KelpDaoProxy', () => {
         user3: Signer,
         user4: Signer;
 
-    const usdcImpersonatedSigner =
-        USDC_IMPERSONATED_SIGNER_ADDRESS[chainId] || '';
-    const usdtImpersonatedSigner =
-        USDT_IMPERSONATED_SIGNER_ADDRESS[chainId] || '';
-    const daiImpersonatedSigner =
-        DAI_IMPERSONATED_SIGNER_ADDRESS[chainId] || '';
     const usdcAddress = USDC_ADDRESS[chainId] || '';
     const usdtAddress = USDT_ADDRESS[chainId] || '';
     const daiAddress = DAI_ADDRESS[chainId] || '';
     const wethAddress = WETH_ADDRESS[chainId] || '';
     const rsEthAddress = RSETH_ADDRESS[chainId] || '';
     const swapRouterAddress = UNISWAP_ROUTER_ADDRESS[chainId] || '';
-    const aevoAddress = AEVO_ADDRESS[chainId] || '';
-    const aevoConnectorAddress = AEVO_CONNECTOR_ADDRESS[chainId] || '';
     const ethPriceFeed = ETH_PRICE_FEED_ADDRESS[chainId] || '';
     const rsEth_EthPriceFeed = RSETH_ETH_PRICE_FEED_ADDRESS[chainId] || '';
     const usdtPriceFeed = USDT_PRICE_FEED_ADDRESS[chainId] || '';
@@ -67,8 +55,7 @@ describe('KelpDaoProxy', () => {
     let kelpDaoProxyContract: Contracts.KelpDaoProxy;
     let uniSwapContract: Contracts.UniSwap;
     let priceConsumerContract: Contracts.PriceConsumer;
-    let kelpZircuitRestakingStrategyContract: Contracts.KelpZircuitRestakingStrategy;
-    let zircuitProxyContract: Contracts.IZircuitRestakeProxy;
+    let kelpRestakeProxy: Contracts.IKelpRestakeProxy;
 
     async function deployPriceConsumerContract() {
         const factory = await ethers.getContractFactory('PriceConsumer');
@@ -84,16 +71,6 @@ describe('KelpDaoProxy', () => {
         console.log(
             'Deployed price consumer contract at address %s',
             await priceConsumerContract.getAddress()
-        );
-    }
-
-    async function deployZircuitRestakProxy() {
-        const factory = await ethers.getContractAt('IZircuitRestakeProxy');
-        zircuitProxyContract = await factory.deploy(admin);
-        await zircuitProxyContract.waitForDeployment();
-        console.log(
-            'Deployed zircuit restake proxy at address %s',
-            await zircuitProxyContract.getAddress()
         );
     }
 
@@ -125,6 +102,15 @@ describe('KelpDaoProxy', () => {
         );
     }
 
+    async function depositToKelpDaoProxy() {
+        await expect(() =>
+            admin.sendTransaction({
+                to: kelpDaoProxyContract.getAddress(),
+                value: ETH_AMOUNT,
+            })
+        ).to.changeEtherBalance(kelpDaoProxyContract, ETH_AMOUNT);
+    }
+
     beforeEach(async () => {
         [admin, user1, user2, user3, user4] = await ethers.getSigners();
         receiveAddress = await user4.getAddress();
@@ -133,7 +119,6 @@ describe('KelpDaoProxy', () => {
         await deployPriceConsumerContract();
         await deployUniSwapContract();
         await deployKelpDaoProxyContract();
-        // await deployZircuitRestakProxy();
         console.log('Deploy smart contract');
     });
 
@@ -141,16 +126,16 @@ describe('KelpDaoProxy', () => {
         await kelpDaoProxyContract
             .connect(admin)
             .updateRestakingToken(wethAddress);
-        expect(await kelpDaoProxyContract.getRestakingTokenCurrent()).to.equal(
-            wethAddress
-        );
+        await expect(
+            await kelpDaoProxyContract.getRestakingTokenCurrent()
+        ).to.equal(wethAddress);
     });
 
     it('Update restaking token test --- unhappy part', async () => {
         await kelpDaoProxyContract
             .connect(admin)
             .updateKelpWithdrawRestaking(wethAddress);
-        expect(
+        await expect(
             await kelpDaoProxyContract.getRestakingTokenCurrent()
         ).not.to.equal(usdcAddress);
     });
@@ -162,24 +147,87 @@ describe('KelpDaoProxy', () => {
                 value: ETH_AMOUNT,
             })
         ).to.changeEtherBalance(kelpDaoProxyContract, ETH_AMOUNT);
-        // await kelpDaoProxyContract.connect(admin).depositToRestakingProxy(kelpDepositRefId, { value: ETH_AMOUNT });
         let balance = await ethers.provider.getBalance(
             kelpDaoProxyContract.getAddress()
         );
-        expect(await balance).to.equal(ETH_AMOUNT);
+        await expect(balance).to.equal(ETH_AMOUNT);
     });
 
     it('Deposit ETH to kelp dao proxy --- unhappy part', async () => {
-        await expect(() =>
-            admin.sendTransaction({
-                to: kelpDaoProxyContract.getAddress(),
-                value: ETH_AMOUNT,
-            })
-        ).to.changeEtherBalance(kelpDaoProxyContract, ETH_AMOUNT);
-        // await kelpDaoProxyContract.connect(admin).depositToRestakingProxy(kelpDepositRefId, { value: ETH_AMOUNT });
+        await depositToKelpDaoProxy();
         let balance = await ethers.provider.getBalance(
             kelpDaoProxyContract.getAddress()
         );
-        expect(await balance).not.to.equal(ETH_AMOUNT_UHP);
+        await expect(balance).not.to.equal(ETH_AMOUNT_UHP);
+    });
+
+    it('Update new admin --- happy part', async () => {
+        await kelpDaoProxyContract.connect(admin).updateNewAdmin(user1);
+        await expect(await kelpDaoProxyContract.getAdminCurrent()).to.equal(
+            user1
+        );
+    });
+
+    it('Update new admin --- unhappy part', async () => {
+        await expect(
+            kelpDaoProxyContract.connect(user1).updateNewAdmin(user2)
+        ).to.be.revertedWith('ROCK_ONYX_ADMIN_ROLE_ERROR');
+    });
+
+    it('Deposit ETH to kelp restake proxy --- happy part', async () => {
+        await depositToKelpDaoProxy();
+        
+        const kelpRestakeProxy =
+            await kelpDaoProxyContract.getKelpRestakeProxy();
+        console.log('Kelp Restake Proxy Address: ', kelpRestakeProxy);
+
+        // Kiểm tra số dư ban đầu của admin
+        const adminInitialBalance = await ethers.provider.getBalance(
+            admin.getAddress()
+        );
+        console.log('Admin Initial Balance: ', adminInitialBalance.toString());
+
+        // Kiểm tra số dư ban đầu của kelpDaoProxyContract
+        const contractInitialBalance = await ethers.provider.getBalance(
+            kelpDaoProxyContract.getAddress()
+        );
+        console.log(
+            'Contract Initial Balance: ',
+            contractInitialBalance.toString()
+        );
+
+        await expect(() =>
+            kelpDaoProxyContract
+                .connect(admin)
+                .depositToRestakingProxy(kelpDepositRefId, {
+                    value: ETH_AMOUNT,
+                })
+        ).to.changeEtherBalances(
+            [admin, kelpRestakeProxy],
+            [-ETH_AMOUNT, ETH_AMOUNT]
+        );
+
+        // Kiểm tra số dư cuối cùng của admin
+        const adminFinalBalance = await ethers.provider.getBalance(
+            admin.getAddress()
+        );
+        console.log('Admin Final Balance: ', adminFinalBalance.toString());
+
+        // Kiểm tra số dư cuối cùng của kelpDaoProxyContract
+        const contractFinalBalance = await ethers.provider.getBalance(
+            kelpDaoProxyContract.getAddress()
+        );
+        console.log(
+            'Contract Final Balance: ',
+            contractFinalBalance.toString()
+        );
+    });
+    it('Deposit ETH ro kelp restake proxy --- unhappy part', async () => {
+        await depositToKelpDaoProxy();
+        await expect(
+            kelpDaoProxyContract
+                .connect(admin)
+                .depositToRestakingProxy(kelpDepositRefId, { value: 0 })
+        ).to.be.revertedWith('INVALID_AMOUNT_ETH');
     });
 });
